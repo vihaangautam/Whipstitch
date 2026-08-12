@@ -1,0 +1,1 @@
+"""Whipstitch application package."""
