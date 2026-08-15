@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+::selection {
+  background: #b9f612;
+  color: #111317;
+}
+
+body {
+  background-color: #111317;
+  color: #e1e5d0;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Material Symbols Outlined */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Ambient Grid Pattern */
+.bg-grid-pattern {
+  background-image: linear-gradient(to right, rgba(67, 73, 52, 0.12) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(67, 73, 52, 0.12) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Glass Panel */
+.glass-panel {
+  background: rgba(30, 32, 36, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(67, 73, 52, 0.3);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #434934;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b9f612;
+}
+
+/* Custom Component Classes */
+@layer components {
+  .btn-primary {
+    @apply bg-lime text-charcoal font-nav-item text-nav-item px-4 py-2 rounded
+           border border-lime hover:bg-[#a6de10] transition-all duration-200
+           active:scale-95 shadow-btn-lime inline-flex items-center justify-center gap-2 cursor-pointer font-semibold;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-container hover:bg-surface-container-high text-primary
+           font-nav-item text-nav-item px-4 py-2 rounded border border-outline-variant
+           transition-all duration-200 active:scale-95 inline-flex items-center justify-center gap-2 cursor-pointer;
+  }
+
+  .card-container {
+    @apply bg-surface-container border border-outline-variant rounded-lg
+           transition-all duration-200;
+  }
+
+  .badge-lime {
+    @apply inline-flex items-center px-2 py-0.5 rounded
+           bg-lime/10 text-lime border border-lime/30
+           font-mono text-xs tabular-nums;
+  }
+
+  .badge-blue {
+    @apply inline-flex items-center px-2 py-1 rounded
+           bg-status-blue/10 text-status-blue border border-status-blue/30
+           font-label-sm text-label-sm;
+  }
+
+  .badge-pink {
+    @apply inline-flex items-center px-2 py-1 rounded
+           bg-status-pink/10 text-status-pink border border-status-pink/30
+           font-label-sm text-label-sm;
+  }
+}

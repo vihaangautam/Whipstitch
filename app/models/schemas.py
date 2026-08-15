@@ -101,3 +101,44 @@ class EventStatusResponse(BaseModel):
     enrichment_summary: Optional[dict] = None
     qualification_summary: Optional[dict] = None
 
+
+class TriggerOutboundRequest(BaseModel):
+    tenant_id: str = Field(default="trifid_media", description="Tenant identifier")
+    batch_size: int = Field(default=5, ge=1, le=50, description="Number of prospects to discover and process")
+
+
+class TriggerOutboundResponse(BaseModel):
+    workflow_id: str
+    status: str
+    prospects_targeted: int
+    message: str
+
+
+class OutboundProspectResponse(BaseModel):
+    id: str
+    tenant_id: str
+    company_name: str
+    domain: str
+    industry: Optional[str] = None
+    scrape_status: str
+    disqualification_reason: Optional[str] = None
+    decision_maker_name: Optional[str] = None
+    decision_maker_title: Optional[str] = None
+    decision_maker_linkedin: Optional[str] = None
+    signals_json: dict = Field(default_factory=dict)
+    fit_markdown: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+
+class ApproveProspectRequest(BaseModel):
+    action: Literal["approve", "reject"] = Field(..., description="Action to take on staged prospect")
+    rejection_reason: Optional[str] = Field(default=None, description="Reason if rejecting")
+
+
+class ApproveProspectResponse(BaseModel):
+    prospect_id: str
+    status: str
+    message: str
+
+

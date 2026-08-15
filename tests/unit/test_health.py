@@ -6,9 +6,13 @@ import pytest
 async def test_root_endpoint(async_client):
     response = await async_client.get("/")
     assert response.status_code == 200
-    data = response.json()
+
+    info_res = await async_client.get("/api/info")
+    assert info_res.status_code == 200
+    data = info_res.json()
     assert data["name"] == "Whipstitch API Engine"
     assert data["status"] == "running"
+
 
 
 @pytest.mark.asyncio

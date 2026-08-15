@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Whipstitch AI - Inbound Leads</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#07006c",
+                      "on-secondary": "#1000a9",
+                      "on-primary-fixed-variant": "#384e00",
+                      "surface-dim": "#111317",
+                      "surface-container-highest": "#333539",
+                      "tertiary-fixed": "#ffd8e7",
+                      "on-tertiary-container": "#ab3779",
+                      "on-primary-fixed": "#141f00",
+                      "surface-container": "#1e2024",
+                      "inverse-surface": "#e2e2e8",
+                      "primary-fixed": "#b9f612",
+                      "on-primary": "#253500",
+                      "primary-fixed-dim": "#a1d800",
+                      "secondary": "#c0c1ff",
+                      "inverse-primary": "#4b6700",
+                      "on-surface-variant": "#c3caad",
+                      "primary-container": "#b9f612",
+                      "on-error": "#690005",
+                      "primary": "#ffffff",
+                      "surface-variant": "#333539",
+                      "error": "#ffb4ab",
+                      "surface-container-low": "#1a1c20",
+                      "on-tertiary-fixed-variant": "#85145a",
+                      "tertiary": "#ffffff",
+                      "surface-container-high": "#282a2e",
+                      "on-tertiary-fixed": "#3d0026",
+                      "secondary-container": "#3131c0",
+                      "surface-tint": "#a1d800",
+                      "on-primary-container": "#506e00",
+                      "outline": "#8d947a",
+                      "surface-bright": "#37393e",
+                      "inverse-on-surface": "#2f3035",
+                      "on-secondary-fixed-variant": "#2f2ebe",
+                      "tertiary-container": "#ffd8e7",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#ffafd3",
+                      "on-background": "#e2e2e8",
+                      "outline-variant": "#434934",
+                      "surface": "#111317",
+                      "on-tertiary": "#620040",
+                      "on-surface": "#e2e2e8",
+                      "background": "#111317",
+                      "error-container": "#93000a",
+                      "on-secondary-container": "#b0b2ff",
+                      "surface-container-lowest": "#0c0e12",
+                      "secondary-fixed-dim": "#c0c1ff",
+                      "secondary-fixed": "#e1e0ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "48px",
+                      "gutter": "20px",
+                      "margin": "32px",
+                      "xs": "8px",
+                      "lg": "32px",
+                      "base": "4px",
+                      "md": "24px",
+                      "sm": "16px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Geist"
+                      ],
+                      "headline-lg": [
+                              "Geist"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Geist"
+                      ],
+                      "data-mono": [
+                              "Geist"
+                      ],
+                      "headline-md": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .table-row-hover:hover td {
+            background-color: var(--color-surface-container);
+        }
+      </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface dark:bg-surface h-screen w-64 flex flex-col fixed left-0 top-0 border-r border-outline-variant dark:border-outline-variant z-50">
+<div class="flex flex-col h-full py-lg px-sm">
+<div class="mb-lg px-sm">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Whipstitch AI</h1>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mt-1">Enterprise Lead Orchestration</p>
+</div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-primary dark:text-primary-fixed bg-surface-container-high dark:bg-surface-container-highest border-l-4 border-primary dark:border-primary-fixed active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">login</span>
+<span class="font-body-md text-body-md">Inbound</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md text-body-md">Outbound</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-body-md text-body-md">ICP Studio</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</a>
+</div>
+<div class="mt-auto space-y-1 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md text-body-md">Support</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 flex flex-col h-screen relative">
+<!-- TopAppBar -->
+<header class="bg-surface-container-low dark:bg-surface-container-low h-16 w-full sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant">
+<div class="flex items-center justify-between px-lg h-full">
+<h2 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Trifid Media</h2>
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface border border-outline-variant rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:border-primary-fixed text-on-surface placeholder-on-surface-variant w-64" placeholder="Search leads..." type="text"/>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-all cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-all cursor-pointer">
+<span class="material-symbols-outlined">settings_suggest</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-all cursor-pointer">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-lg overflow-auto flex gap-lg">
+<!-- Main Table Area -->
+<div class="flex-1 bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden flex flex-col">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-primary">Inbound Leads</h3>
+<p class="text-on-surface-variant text-sm mt-1">Showing 42 recent AI-scored leads</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-4 py-2 border border-outline-variant rounded-lg text-on-surface hover:bg-surface-container transition-colors text-sm">
+<span class="material-symbols-outlined text-[18px]">filter_list</span> Filter
+                        </button>
+<button class="flex items-center gap-xs px-4 py-2 bg-primary-container text-on-primary-container rounded-lg font-bold hover:bg-primary-fixed-dim transition-colors text-sm">
+<span class="material-symbols-outlined text-[18px]">add</span> Add Lead
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
+<th class="p-sm font-medium">Company</th>
+<th class="p-sm font-medium">Contact</th>
+<th class="p-sm font-medium">Score</th>
+<th class="p-sm font-medium">Provider</th>
+<th class="p-sm font-medium">Status</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<tr class="border-b border-outline-variant table-row-hover cursor-pointer bg-surface-container transition-colors relative">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm">N</div>
+<span class="font-bold text-primary">Nexus Corp</span>
+</div>
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-fixed"></div>
+</td>
+<td class="p-sm text-on-surface">Priya Sharma <span class="text-on-surface-variant text-xs block">VP Eng</span></td>
+<td class="p-sm font-data-mono text-primary-fixed font-bold">98</td>
+<td class="p-sm text-on-surface-variant">Clearbit</td>
+<td class="p-sm">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant text-on-surface text-xs font-medium border border-outline-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span> Synced
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant table-row-hover cursor-pointer transition-colors">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-sm">A</div>
+<span class="font-medium text-on-surface">Acme Logistics</span>
+</div>
+</td>
+<td class="p-sm text-on-surface">David Chen <span class="text-on-surface-variant text-xs block">Director Ops</span></td>
+<td class="p-sm font-data-mono text-on-surface">85</td>
+<td class="p-sm text-on-surface-variant">ZoomInfo</td>
+<td class="p-sm">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant text-on-surface text-xs font-medium border border-outline-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span> Synced
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant table-row-hover cursor-pointer transition-colors">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-sm">G</div>
+<span class="font-medium text-on-surface">Global Retail</span>
+</div>
+</td>
+<td class="p-sm text-on-surface">Sarah Jenkins <span class="text-on-surface-variant text-xs block">CMO</span></td>
+<td class="p-sm font-data-mono text-on-surface-variant">42</td>
+<td class="p-sm text-on-surface-variant">LinkedIn</td>
+<td class="p-sm">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-error-container/20 text-error text-xs font-medium border border-error/30">
+                                        Low Fit
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant table-row-hover cursor-pointer transition-colors">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-sm">T</div>
+<span class="font-medium text-on-surface">TechFlow AI</span>
+</div>
+</td>
+<td class="p-sm text-on-surface">Marcus Webb <span class="text-on-surface-variant text-xs block">Founder</span></td>
+<td class="p-sm font-data-mono text-on-surface">76</td>
+<td class="p-sm text-on-surface-variant">Direct Form</td>
+<td class="p-sm">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant text-on-surface text-xs font-medium border border-outline-variant">
+                                        Review
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Slide-over Detail Panel -->
+<div class="w-[400px] bg-surface-container-low border border-outline-variant rounded-lg flex flex-col overflow-hidden shrink-0 shadow-lg relative">
+<div class="p-md border-b border-outline-variant flex justify-between items-start bg-surface-container">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-headline-md text-headline-md font-bold text-primary">Priya Sharma</h3>
+<span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-primary-container text-on-primary-container">Hot Lead</span>
+</div>
+<p class="text-on-surface-variant text-sm">VP Engineering @ Nexus Corp</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-md flex-1 overflow-y-auto space-y-md">
+<!-- Quick Stats -->
+<div class="grid grid-cols-2 gap-sm">
+<div class="bg-surface p-sm rounded border border-outline-variant">
+<span class="text-on-surface-variant text-xs uppercase tracking-wider font-semibold block mb-1">Company Size</span>
+<span class="font-data-mono text-lg text-primary">220 <span class="text-xs text-on-surface-variant">emp</span></span>
+</div>
+<div class="bg-surface p-sm rounded border border-outline-variant">
+<span class="text-on-surface-variant text-xs uppercase tracking-wider font-semibold block mb-1">Industry</span>
+<span class="text-sm text-primary font-medium">Fintech</span>
+</div>
+</div>
+<!-- AI Reasoning -->
+<div>
+<h4 class="font-label-caps text-label-caps text-on-surface-variant mb-2 flex items-center gap-1 uppercase">
+<span class="material-symbols-outlined text-[16px]">psychology</span> AI Fit Reasoning
+                        </h4>
+<div class="bg-surface border border-outline-variant rounded p-sm text-sm text-on-surface">
+<p class="mb-2">Nexus Corp recently announced a $15M Series B focused on scaling their engineering team. Priya has been actively hiring for DevOps roles, indicating a need for better orchestration tools.</p>
+<ul class="list-disc pl-4 space-y-1 text-on-surface-variant">
+<li>High intent signal from G2 category views.</li>
+<li>Tech stack match: AWS, Kubernetes, Terraform.</li>
+</ul>
+</div>
+</div>
+<!-- Draft Email -->
+<div>
+<h4 class="font-label-caps text-label-caps text-on-surface-variant mb-2 flex items-center gap-1 uppercase">
+<span class="material-symbols-outlined text-[16px]">edit_document</span> Pre-written Draft
+                        </h4>
+<div class="bg-surface border border-outline-variant rounded flex flex-col">
+<div class="border-b border-outline-variant p-2 flex justify-between items-center bg-surface-container-lowest">
+<span class="text-xs text-on-surface-variant">Subject: Orchestrating Nexus Corp's scaling infrastructure</span>
+<button class="text-xs text-primary-fixed hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">auto_fix_high</span> Refine
+                                </button>
+</div>
+<div class="p-sm text-sm text-on-surface-variant font-body-md leading-relaxed whitespace-pre-wrap">Hi Priya,
+
+Noticed the recent Series B news and the push to expand the DevOps team at Nexus. Scaling Kubernetes across AWS usually introduces some massive orchestration bottlenecks.
+
+Whipstitch AI helps teams like yours automate 40% of those manual orchestration tasks. Worth a brief chat next week?</div>
+</div>
+</div>
+</div>
+<div class="p-md border-t border-outline-variant bg-surface-container-lowest">
+<button class="w-full py-3 px-4 bg-primary-container text-on-primary-container rounded font-bold hover:bg-primary-fixed-dim transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">open_in_new</span>
+                        Open Record in HubSpot CRM
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

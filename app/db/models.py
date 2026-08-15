@@ -119,3 +119,27 @@ class SLAEscalation(Base):
     slack_message_id = Column(String(255), nullable=True)
 
 
+class OutboundProspect(Base):
+    __tablename__ = "outbound_prospects"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    company_name = Column(String(255), nullable=False)
+    domain = Column(String(255), nullable=False, index=True)
+    industry = Column(String(255), nullable=True)
+    scrape_status = Column(
+        String(32),
+        nullable=False,
+        default="discovered",
+    )  # discovered, circuit_disqualified, researched, scored, staged_awaiting_approval, approved, rejected
+    disqualification_reason = Column(Text, nullable=True)
+    decision_maker_name = Column(String(255), nullable=True)
+    decision_maker_title = Column(String(255), nullable=True)
+    decision_maker_linkedin = Column(String(255), nullable=True)
+    signals_json = Column(JSONB, nullable=False, default=dict)
+    fit_markdown = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
+

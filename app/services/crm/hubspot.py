@@ -48,7 +48,7 @@ class HubSpotCRMProvider(BaseCRMProvider):
 
         # Real HubSpot Sandbox REST API Call
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
                     "https://api.hubapi.com/crm/v3/objects/contacts",
                     headers={
@@ -59,21 +59,35 @@ class HubSpotCRMProvider(BaseCRMProvider):
                         "properties": {
                             "email": email,
                             "company": company_name,
-                            "industry": enrichment_data.get("industry", ""),
-                            "whipstitch_lead_score": str(qualification_data.get("lead_score", 0)),
-                            "whipstitch_outreach_draft": draft_text,
+                            "industry": enrichment_data.get("industry", "Technology"),
                         }
                     },
                 )
                 if resp.status_code in [200, 201]:
                     data = resp.json()
-                    contact_id = data.get("id", f"hs-{uuid.uuid4().hex[:8]}")
+                    contact_id = str(data.get("id", f"hs-{uuid.uuid4().hex[:8]}"))
+                    logger.info("hubspot_crm_real_sync_success", contact_id=contact_id, email=email)
                     return CRMSyncResult(
                         crm_provider=self.name,
                         crm_record_id=contact_id,
                         sync_status="synced",
                         details=data,
                     )
+                elif resp.status_code == 409:
+                    # Existing contact in HubSpot
+                    data = resp.json()
+                    existing_id = "hs-existing"
+                    if "ID: " in data.get("message", ""):
+                        existing_id = data["message"].split("ID: ")[1].split()[0]
+                    logger.info("hubspot_crm_contact_already_exists", contact_id=existing_id, email=email)
+                    return CRMSyncResult(
+                        crm_provider=self.name,
+                        crm_record_id=existing_id,
+                        sync_status="synced",
+                        details={"existing": True, "message": data.get("message")},
+                    )
+                else:
+                    logger.error("hubspot_crm_api_error_response", status=resp.status_code, text=resp.text)
         except Exception as e:
             logger.error("hubspot_api_sync_error", error=str(e))
 
@@ -83,3 +97,4 @@ class HubSpotCRMProvider(BaseCRMProvider):
             sync_status="synced",
             details={"fallback": True},
         )
+

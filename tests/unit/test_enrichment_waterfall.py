@@ -4,42 +4,62 @@ from app.services.enrichment.waterfall import WaterfallEnricher
 
 @pytest.mark.asyncio
 async def test_waterfall_primary_success():
-    enricher = WaterfallEnricher()
-    profile = await enricher.execute_waterfall(
-        email="lead@company.com",
-        company_name="Acme Corp",
-        waterfall_order=["apollo", "people_data_labs", "llm_fallback"],
-    )
-    assert profile is not None
-    assert profile.provider_used == "apollo"
-    assert profile.confidence_score == 0.95
-    assert profile.raw_data.get("fallback_triggered") is False
+    from app.core.config import settings
+    original = settings.MOCK_APOLLO
+    settings.MOCK_APOLLO = True
+    try:
+        enricher = WaterfallEnricher()
+        profile = await enricher.execute_waterfall(
+            email="lead@company.com",
+            company_name="Acme Corp",
+            waterfall_order=["apollo", "people_data_labs", "llm_fallback"],
+        )
+        assert profile is not None
+        assert profile.provider_used == "apollo"
+        assert profile.confidence_score == 0.95
+        assert profile.raw_data.get("fallback_triggered") is False
+    finally:
+        settings.MOCK_APOLLO = original
+
 
 
 @pytest.mark.asyncio
 async def test_waterfall_primary_failure_fallback():
-    enricher = WaterfallEnricher()
-    profile = await enricher.execute_waterfall(
-        email="fail@company.com",  # Triggers Apollo mock failure
-        company_name="Fail Corp",
-        waterfall_order=["apollo", "people_data_labs", "llm_fallback"],
-    )
-    assert profile is not None
-    assert profile.provider_used == "people_data_labs"
-    assert profile.raw_data.get("fallback_triggered") is True
+    from app.core.config import settings
+    original = settings.MOCK_APOLLO
+    settings.MOCK_APOLLO = True
+    try:
+        enricher = WaterfallEnricher()
+        profile = await enricher.execute_waterfall(
+            email="fail@company.com",  # Triggers Apollo mock failure
+            company_name="Fail Corp",
+            waterfall_order=["apollo", "people_data_labs", "llm_fallback"],
+        )
+        assert profile is not None
+        assert profile.provider_used == "people_data_labs"
+        assert profile.raw_data.get("fallback_triggered") is True
+    finally:
+        settings.MOCK_APOLLO = original
 
 
 @pytest.mark.asyncio
 async def test_waterfall_all_failed_llm_fallback():
-    enricher = WaterfallEnricher()
-    profile = await enricher.execute_waterfall(
-        email="fail_pdl_fail_hunter_fail_diffbot_fail_crawl_fail@company.com",
-        company_name="fail_fail",
-        waterfall_order=["apollo", "people_data_labs", "hunter", "diffbot", "crawl4ai", "llm_fallback"],
-    )
-    assert profile is not None
-    assert profile.provider_used == "llm_fallback"
-    assert profile.raw_data.get("fallback_triggered") is True
+    from app.core.config import settings
+    original = settings.MOCK_APOLLO
+    settings.MOCK_APOLLO = True
+    try:
+        enricher = WaterfallEnricher()
+        profile = await enricher.execute_waterfall(
+            email="fail_pdl_fail_hunter_fail_diffbot_fail_crawl_fail@company.com",
+            company_name="fail_fail",
+            waterfall_order=["apollo", "people_data_labs", "hunter", "diffbot", "crawl4ai", "llm_fallback"],
+        )
+        assert profile is not None
+        assert profile.provider_used == "llm_fallback"
+        assert profile.raw_data.get("fallback_triggered") is True
+    finally:
+        settings.MOCK_APOLLO = original
+
 
 
 
