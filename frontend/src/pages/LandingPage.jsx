@@ -1,209 +1,191 @@
 import React, { useState } from 'react';
-import SeamAnimation from '../components/SeamAnimation';
-import BentoGridFeatures from '../components/BentoGridFeatures';
+import {
+  ShieldCheck,
+  Inbox,
+  Rocket,
+  KeyRound,
+  Database,
+  ArrowRight,
+  CheckCircle2,
+  Terminal,
+  Layers,
+  FileText,
+  Activity,
+  ChevronDown
+} from 'lucide-react';
 
-export default function LandingPage({ setCurrentView, onSimulateEvent }) {
-  const [activeTab, setActiveTab] = useState('inbound');
+export default function LandingPage({ setCurrentView }) {
   const [openFaq, setOpenFaq] = useState(null);
+
+  const capabilities = [
+    {
+      title: 'Evidence-Based MEDDPICC Diagnostic',
+      desc: 'Ingest raw sales transcripts (.vtt, .txt, .docx, .pdf) and evaluate deals across 8 scoring rubrics with verbatim buyer quotes and anti-sentiment filters.',
+      icon: ShieldCheck,
+      badge: 'Deal Intelligence',
+    },
+    {
+      title: '5-Stage Waterfall Enrichment',
+      desc: 'Automatically enrich inbound webhooks through Apollo, PeopleDataLabs, Crawl4AI BM25 scraping, and LLM fallbacks with deterministic deduplication.',
+      icon: Inbox,
+      badge: 'Inbound Ingestion',
+    },
+    {
+      title: 'Outbound Discovery & Human-in-the-Loop',
+      desc: 'Identify high-fit decision makers, verify company signals, and stage structured Observation-Link-Ask outreach drafts for one-click approval.',
+      icon: Rocket,
+      badge: 'Outbound Staging',
+    },
+    {
+      title: 'Zero-Capital BYOK Security Vault',
+      desc: 'Bring your own API keys for OpenAI, Gemini, Groq, Anthropic, Apollo, and HubSpot with AES-256 Fernet encryption at rest and zero platform markup.',
+      icon: KeyRound,
+      badge: 'Security & BYOK',
+    },
+  ];
 
   const faqs = [
     {
-      q: 'Is this production-ready for Enterprise?',
-      a: 'Yes. Whipstitch is built on scalable, fault-tolerant infrastructure designed to handle tens of thousands of concurrent orchestrations. We provide SLA guarantees and dedicated support for enterprise tiers.',
+      q: 'How does the zero-capital BYOK model work?',
+      a: 'Whipstitch does not resell or mark up third-party APIs. You can either use pre-configured free-tier limits (Gemini 2.0 Flash, Groq Llama 3.3, Google Serper free credits) or provide your own API keys. All keys are encrypted at rest with AES-256 Fernet and decrypted in memory only during workflow execution.',
     },
     {
-      q: 'How do you prevent duplicates in the CRM?',
-      a: 'We use a multi-stage deduplication engine before pushing to your CRM. It checks primary keys, secondary identifiers, and employs fuzzy matching on company names and domains to merge data rather than duplicate it.',
+      q: 'How does the MEDDPICC engine prevent false optimism?',
+      a: 'The qualification prompt enforces Rule 1.4: positive meeting sentiment, demo enthusiasm, and polite curiosity are banned from raising scores. Scores only increase when verbatim buyer evidence exists in the transcript. Economic Buyer and Champion scores are hard-capped at 7/15 if direct access or internal selling actions are unverified.',
     },
     {
-      q: 'What CRMs do you support natively?',
-      a: 'We offer deep, bi-directional sync with Salesforce, HubSpot, and Pipedrive natively. For custom setups, our robust API and webhook capabilities allow integration with virtually any system of record.',
+      q: 'What transcript formats are supported?',
+      a: 'Whipstitch accepts raw text paste, WebVTT (.vtt) and SRT (.srt) subtitle exports with automatic timestamp stripping, Microsoft Word (.docx) documents, and multi-page PDF files.',
+    },
+    {
+      q: 'How is data synchronized to HubSpot CRM?',
+      a: 'We use bidirectional HubSpot API integration. Inbound leads are staged or synced with enriched firmographic properties, while MEDDPICC diagnostic runs update deal stages (Advance, Rescue, Nurture, Disqualify) and attach executive follow-up drafts directly to the CRM record.',
     },
   ];
 
   return (
-    <div className="flex-grow z-10 relative flex flex-col items-center bg-[#0C0D10] text-on-surface">
-      {/* ═══════════════════════════════════════════════════════════════
-          HERO SECTION (Spline Plain Background & Exact Pill CTAs)
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="w-full max-w-7xl mx-auto px-container-padding pt-4 md:pt-6 pb-12 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left Column: High Impact Copy & CTAs */}
-          <div className="lg:col-span-6 flex flex-col items-start text-left z-20">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium text-white leading-[1.12] mb-6 tracking-tight">
-              Your fast lane to intelligent lead orchestration.
-            </h1>
+    <div className="w-full bg-[#F8FAFC] text-slate-900 flex flex-col items-center">
+      {/* Hero Section */}
+      <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-16 pb-14 text-center space-y-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+          Production-Grade B2B Lead & Deal Orchestration Engine
+        </div>
 
-            <p className="text-zinc-400 text-lg sm:text-xl font-normal mb-10 leading-relaxed max-w-xl">
-              Experience ultra-low latency, global reach, and instant scalability. All through a single, intelligent pipeline.
-            </p>
+        <h1 className="text-3xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-tight max-w-3xl mx-auto">
+          Durable lead ingestion, waterfall enrichment, and evidence-backed deal intelligence.
+        </h1>
 
-            <div className="flex flex-row gap-3 items-center">
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className="bg-white hover:bg-zinc-200 text-black px-7 py-3.5 rounded-full font-medium text-sm transition-all active:scale-95 cursor-pointer shadow-md"
+        <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          Whipstitch automates inbound webhook processing, deep waterfall contact enrichment, outbound prospect discovery, and strict 8-box MEDDPICC deal diagnostics with zero platform markup.
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="btn-primary px-5 py-2.5 text-sm"
+          >
+            <span>Open Interactive Dashboard</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setCurrentView('deal-health')}
+            className="btn-secondary px-5 py-2.5 text-sm"
+          >
+            <span>Test MEDDPICC Diagnostic</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Architecture Highlights */}
+      <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-12 border-t border-slate-200">
+        <div className="text-center max-w-xl mx-auto mb-10 space-y-1">
+          <h2 className="text-xl font-bold text-slate-900">Engine Architecture & Features</h2>
+          <p className="text-xs text-slate-500">Built on Temporal, FastAPI, PostgreSQL, and Redis for distributed reliability.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {capabilities.map((cap, idx) => {
+            const Icon = cap.icon;
+            return (
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3 hover:border-slate-300 transition"
               >
-                Book a demo
-              </button>
-              <button
-                onClick={() => setCurrentView('config')}
-                className="bg-transparent hover:bg-white/5 border border-zinc-700 hover:border-zinc-500 text-zinc-300 px-7 py-3.5 rounded-full font-medium text-sm transition-all active:scale-95 cursor-pointer"
-              >
-                View Documentation
-              </button>
-            </div>
-          </div>
-
-          {/* Right Column: 3D Revolving Fluid Noise Sphere */}
-          <div className="lg:col-span-6 w-full flex items-center justify-center relative">
-            <SeamAnimation />
-          </div>
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-slate-100 rounded-lg text-slate-800 border border-slate-200">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
+                    {cap.badge}
+                  </span>
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">{cap.title}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">{cap.desc}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TRUSTED BY SECTION
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="w-full border-y border-outline-variant bg-surface-container-low py-10 relative overflow-hidden z-10">
-        <div className="max-w-7xl mx-auto px-container-padding flex flex-col items-center">
-          <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-8">
-            Trusted by Revenue Operations at
-          </p>
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-            <div className="flex items-center gap-2 font-headline-md text-headline-md font-bold text-primary">
-              <span className="material-symbols-outlined text-3xl">token</span>
-              <span>NexaCore</span>
-            </div>
-            <div className="flex items-center gap-2 font-headline-md text-headline-md font-bold text-primary">
-              <span className="material-symbols-outlined text-3xl">hive</span>
-              <span>Synapse Systems</span>
-            </div>
-            <div className="flex items-center gap-2 font-headline-md text-headline-md font-bold text-primary">
-              <span className="material-symbols-outlined text-3xl">architecture</span>
-              <span>Vertex AI</span>
-            </div>
-            <div className="flex items-center gap-2 font-headline-md text-headline-md font-bold text-primary">
-              <span className="material-symbols-outlined text-3xl">language</span>
-              <span>Global Data Grid</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          CORE ORCHESTRATION VECTORS (MINIMALIST BENTO GRID)
-          ═══════════════════════════════════════════════════════════════ */}
-      <BentoGridFeatures setCurrentView={setCurrentView} />
-
-      {/* ═══════════════════════════════════════════════════════════════
-          "THE ENGINE" BENTO GRID SECTION
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="w-full bg-surface-container-low py-24 mt-16 border-y border-outline-variant z-10" id="engine">
-        <div className="max-w-7xl mx-auto px-container-padding">
-          <div className="text-center mb-16">
-            <h2 className="font-display-lg text-display-lg font-bold text-primary mb-4 tracking-tight">The Orchestration Engine</h2>
-            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Built on enterprise-grade architecture. We frame technical reliability as budget protection and absolute data integrity.
-            </p>
+      {/* Interactive Workflow Diagram / Mechanics */}
+      <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-12 border-t border-slate-200">
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <span className="text-xs font-semibold text-emerald-800">System Mechanics</span>
+            <h2 className="text-lg font-bold text-slate-900 mt-0.5">End-to-End Orchestration Lifecycle</h2>
           </div>
 
-          {/* Bento Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-card-gap auto-rows-[minmax(200px,auto)]">
-            {/* Feature 1: Large Span */}
-            <div className="md:col-span-2 border border-outline-variant rounded-lg bg-surface p-6 flex flex-col justify-between group hover:border-lime/50 transition-colors">
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <span className="material-symbols-outlined text-3xl text-primary group-hover:text-lime transition-colors">memory</span>
-                  <span className="px-2 py-1 rounded bg-surface-container border border-outline-variant font-label-sm text-label-sm text-on-surface-variant">Architecture</span>
-                </div>
-                <h3 className="font-headline-lg text-headline-lg font-bold text-primary mb-2">Temporal Saga Pattern</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mb-6 max-w-lg leading-relaxed">
-                  Long-running workflows demand resilience. Our engine uses the Saga pattern to handle distributed transactions. If a step fails (e.g., API timeout), the system autonomously executes compensating logic, ensuring no lead is ever left in a phantom state.
-                </p>
-              </div>
-              <div className="h-2 w-full bg-surface-container rounded overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-lime to-status-blue w-full animate-[pulse_3s_ease-in-out_infinite]"></div>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
+              <div className="text-xs text-slate-500 font-bold">Step 1 &bull; Ingest</div>
+              <div className="font-semibold text-slate-900">Idempotent Webhooks</div>
+              <p className="text-xs text-slate-600 leading-relaxed">Redis Lua token bucket & SHA-256 keys guarantee deduplication.</p>
             </div>
-
-            {/* Feature 2: Tall Span */}
-            <div className="md:row-span-2 border border-outline-variant rounded-lg bg-surface p-6 flex flex-col group hover:border-status-blue/50 transition-colors relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-status-blue/5 rounded-full blur-2xl"></div>
-              <div className="flex justify-between items-start mb-4 relative z-10">
-                <span className="material-symbols-outlined text-3xl text-primary group-hover:text-status-blue transition-colors">filter_alt</span>
-                <span className="px-2 py-1 rounded bg-surface-container border border-outline-variant font-label-sm text-label-sm text-on-surface-variant">Data Integrity</span>
-              </div>
-              <h3 className="font-headline-lg text-headline-lg font-bold text-primary mb-2 relative z-10">Zero Duplicates Guarantee</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant mb-6 relative z-10 flex-grow leading-relaxed">
-                Duplicate records destroy CRM integrity and AE trust. Whipstitch employs deterministic hashing on composite keys (Email + Domain + Source) before any commit.
-              </p>
-              <div className="bg-surface-container rounded border border-outline-variant p-4 mt-auto relative z-10">
-                <div className="flex justify-between items-center mb-2 border-b border-outline-variant pb-2">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Incoming Lead</span>
-                  <span className="material-symbols-outlined text-[16px] text-lime">arrow_downward</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-mono text-[10px] text-on-secondary-container">Hash: a7b89f21c...</span>
-                  <span className="px-1.5 py-0.5 rounded bg-error/10 text-error text-[10px] border border-error/30 font-bold">Collision</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Action</span>
-                  <span className="font-label-sm text-label-sm text-status-blue font-bold">Merge & Update</span>
-                </div>
-              </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
+              <div className="text-xs text-slate-500 font-bold">Step 2 &bull; Enrich</div>
+              <div className="font-semibold text-slate-900">Waterfall Cascade</div>
+              <p className="text-xs text-slate-600 leading-relaxed">Apollo &rarr; PeopleDataLabs &rarr; Crawl4AI &rarr; Gemini LLM fallback.</p>
             </div>
-
-            {/* Feature 3 */}
-            <div className="border border-outline-variant rounded-lg bg-surface p-6 group hover:border-status-pink/50 transition-colors">
-              <div className="flex justify-between items-start mb-4">
-                <span className="material-symbols-outlined text-3xl text-primary group-hover:text-status-pink transition-colors">speed</span>
-              </div>
-              <h3 className="font-headline-md text-headline-md font-bold text-primary mb-2">Rate Limit Protection</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                Intelligent queuing and backoff algorithms protect your API budgets and ensure compliance with external service limits automatically.
-              </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
+              <div className="text-xs text-slate-500 font-bold">Step 3 &bull; Score</div>
+              <div className="font-semibold text-slate-900">8-Box MEDDPICC</div>
+              <p className="text-xs text-slate-600 leading-relaxed">Evidence quotes verified against strict anti-sentiment rubrics.</p>
             </div>
-
-            {/* Feature 4 */}
-            <div className="border border-outline-variant rounded-lg bg-surface p-6 group hover:border-primary/50 transition-colors">
-              <div className="flex justify-between items-start mb-4">
-                <span className="material-symbols-outlined text-3xl text-primary transition-colors">webhook</span>
-              </div>
-              <h3 className="font-headline-md text-headline-md font-bold text-primary mb-2">Agnostic Webhooks</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                Consume signals from any modern application. If it can send a POST request, Whipstitch can orchestrate it.
-              </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
+              <div className="text-xs text-slate-500 font-bold">Step 4 &bull; Sync</div>
+              <div className="font-semibold text-slate-900">HubSpot CRM Sync</div>
+              <p className="text-xs text-slate-600 leading-relaxed">Stage recommendations, executive notes & follow-up emails synced.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TECHNICAL FAQ ACCORDION SECTION
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="w-full max-w-3xl mx-auto px-container-padding py-section-margin mt-8 mb-24 z-10" id="faq">
-        <h2 className="font-display-lg text-display-lg font-bold text-primary mb-8 text-center tracking-tight">Technical FAQ</h2>
-        <div className="space-y-4">
-          {faqs.map((f, idx) => {
+      {/* FAQ Section */}
+      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-12 border-t border-slate-200 space-y-6">
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
+          <p className="text-xs text-slate-500">Technical and operational details about Whipstitch.</p>
+        </div>
+
+        <div className="space-y-3">
+          {faqs.map((faq, idx) => {
             const isOpen = openFaq === idx;
             return (
-              <div key={idx} className="border border-outline-variant bg-surface-container rounded-lg overflow-hidden">
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 rounded-xl shadow-card overflow-hidden transition"
+              >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full text-left px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-surface-container-high transition-colors cursor-pointer"
+                  className="w-full text-left p-4 flex items-center justify-between text-xs font-semibold text-slate-900 hover:bg-slate-50 transition cursor-pointer"
                 >
-                  <span className="font-headline-md text-headline-md text-primary font-semibold">{f.q}</span>
-                  <span
-                    className={`material-symbols-outlined text-on-surface-variant transition-transform duration-300 ${
-                      isOpen ? 'rotate-180 text-lime' : ''
-                    }`}
-                  >
-                    expand_more
-                  </span>
+                  <span>{faq.q}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-4 text-on-surface-variant font-body-md text-body-md leading-relaxed animate-fade-in border-t border-outline-variant/40 pt-3">
-                    {f.a}
+                  <div className="px-4 pb-4 text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                    {faq.a}
                   </div>
                 )}
               </div>
@@ -212,30 +194,41 @@ export default function LandingPage({ setCurrentView, onSimulateEvent }) {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          FOOTER CTA SECTION
-          ═══════════════════════════════════════════════════════════════ */}
-      <footer className="w-full border-t border-outline-variant bg-surface-container-lowest py-16 mt-auto relative overflow-hidden z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-lime/5 pointer-events-none"></div>
-        <div className="max-w-4xl mx-auto px-container-padding text-center relative z-10">
-          <h2 className="font-display-lg text-display-lg font-bold text-primary mb-4 tracking-tight">Ready to architect your revenue engine?</h2>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-xl mx-auto leading-relaxed">
-            Deploy structured logic to your pipeline today. Stop manually stitching tools together.
-          </p>
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="bg-lime text-charcoal font-nav-item text-nav-item px-8 py-3 rounded border border-lime hover:bg-[#a6de10] transition-all active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] flex items-center justify-center gap-2 mx-auto cursor-pointer font-semibold"
-          >
-            <span>Get Started</span>
-            <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
-          </button>
-          <div className="mt-16 flex flex-col md:flex-row justify-between items-center border-t border-outline-variant pt-8 text-on-surface-variant font-body-md text-body-md">
-            <div>© 2026 Whipstitch AI. All rights reserved.</div>
-            <div className="flex gap-4 mt-4 md:mt-0">
-              <a className="hover:text-primary transition-colors" href="#features">Privacy Policy</a>
-              <a className="hover:text-primary transition-colors" href="#features">Terms of Service</a>
-              <a className="hover:text-primary transition-colors" href="/docs" target="_blank" rel="noreferrer">API Status</a>
+      {/* Clean Footer */}
+      <footer className="w-full border-t border-slate-200 bg-white py-8 px-4 sm:px-6 mt-12">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
+              W
             </div>
+            <span className="font-semibold text-slate-900">Whipstitch</span>
+            <span>&bull;</span>
+            <span>B2B GTM & Deal Intelligence Platform</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCurrentView('privacy')}
+              className="hover:text-slate-900 transition"
+            >
+              Privacy Policy
+            </button>
+            <span>&bull;</span>
+            <button
+              onClick={() => setCurrentView('terms')}
+              className="hover:text-slate-900 transition"
+            >
+              Terms and Conditions
+            </button>
+            <span>&bull;</span>
+            <a
+              href="/docs"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-slate-900 transition"
+            >
+              API Docs
+            </a>
           </div>
         </div>
       </footer>

@@ -3,7 +3,12 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --color-primary: #0F172A;
+  --color-accent: #059669;
+  --color-background: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-card: #FFFFFF;
 }
 
 *,
@@ -15,14 +20,14 @@
 }
 
 ::selection {
-  background: #b9f612;
-  color: #111317;
+  background: #059669;
+  color: #FFFFFF;
 }
 
 body {
-  background-color: #111317;
-  color: #e1e5d0;
-  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -34,7 +39,7 @@ body {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -47,22 +52,7 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Ambient Grid Pattern */
-.bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(67, 73, 52, 0.12) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(67, 73, 52, 0.12) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* Glass Panel */
-.glass-panel {
-  background: rgba(30, 32, 36, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(67, 73, 52, 0.3);
-}
-
-/* Scrollbar */
+/* Subtle Clean Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -71,47 +61,38 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #434934;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b9f612;
+  background: #94A3B8;
 }
 
-/* Custom Component Classes */
+/* Clean UI Utility Classes */
 @layer components {
   .btn-primary {
-    @apply bg-lime text-charcoal font-nav-item text-nav-item px-4 py-2 rounded
-           border border-lime hover:bg-[#a6de10] transition-all duration-200
-           active:scale-95 shadow-btn-lime inline-flex items-center justify-center gap-2 cursor-pointer font-semibold;
+    @apply bg-slate-900 text-white font-medium text-sm px-3.5 py-2 rounded-lg
+           border border-slate-900 hover:bg-slate-800 transition-all duration-150
+           inline-flex items-center justify-center gap-2 cursor-pointer shadow-sm;
+  }
+
+  .btn-teal {
+    @apply bg-teal-700 text-white font-medium text-sm px-3.5 py-2 rounded-lg
+           border border-teal-700 hover:bg-teal-800 transition-all duration-150
+           inline-flex items-center justify-center gap-2 cursor-pointer shadow-sm;
   }
 
   .btn-secondary {
-    @apply bg-surface-container hover:bg-surface-container-high text-primary
-           font-nav-item text-nav-item px-4 py-2 rounded border border-outline-variant
-           transition-all duration-200 active:scale-95 inline-flex items-center justify-center gap-2 cursor-pointer;
+    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm px-3.5 py-2
+           rounded-lg border border-slate-200 transition-all duration-150
+           inline-flex items-center justify-center gap-2 cursor-pointer shadow-sm;
   }
 
   .card-container {
-    @apply bg-surface-container border border-outline-variant rounded-lg
-           transition-all duration-200;
+    @apply bg-white border border-slate-200 rounded-xl shadow-card transition-all duration-150;
   }
 
-  .badge-lime {
-    @apply inline-flex items-center px-2 py-0.5 rounded
-           bg-lime/10 text-lime border border-lime/30
-           font-mono text-xs tabular-nums;
-  }
-
-  .badge-blue {
-    @apply inline-flex items-center px-2 py-1 rounded
-           bg-status-blue/10 text-status-blue border border-status-blue/30
-           font-label-sm text-label-sm;
-  }
-
-  .badge-pink {
-    @apply inline-flex items-center px-2 py-1 rounded
-           bg-status-pink/10 text-status-pink border border-status-pink/30
-           font-label-sm text-label-sm;
+  .tag-pill {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border;
   }
 }

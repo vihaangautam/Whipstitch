@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
+import { Rocket, CheckCircle2, XCircle, RefreshCw, Building2, User, Linkedin, Globe, Sparkles } from 'lucide-react';
 import { fetchOutboundProspects, triggerOutboundBatch, approveOutboundProspect } from '../api';
 
 export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
@@ -27,7 +27,6 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
   };
 
   const handleApprove = async (id) => {
-    confetti({ particleCount: 45, spread: 60, origin: { y: 0.8 }, colors: ['#b9f612', '#c0c1ff', '#ffffff'] });
     setProspects((prev) => prev.map((p) => (p.id === id ? { ...p, scrape_status: 'approved' } : p)));
     try { await approveOutboundProspect(id, 'approve'); } catch (e) { console.warn(e); }
   };
@@ -38,111 +37,130 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-wrap justify-between items-center gap-4">
+    <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="font-headline-lg text-headline-lg font-bold text-primary">Outbound Queue</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">Human-in-the-loop approval staging pipeline.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Outbound Prospecting Queue</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Verified decision makers, Crawl4AI signal filtering & Human-in-the-Loop CRM staging.
+          </p>
         </div>
-        <button onClick={handleTriggerBatch} disabled={isTriggering} className="btn-primary disabled:opacity-50">
-          <span className={`material-symbols-outlined text-[18px] ${isTriggering ? 'animate-spin' : ''}`}>
-            {isTriggering ? 'sync' : 'rocket_launch'}
-          </span>
-          <span>{isTriggering ? 'Running Discovery...' : 'Trigger Batch'}</span>
+        <button
+          onClick={handleTriggerBatch}
+          disabled={isTriggering}
+          className="btn-primary px-4 py-2.5 text-sm"
+        >
+          {isTriggering ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
+          <span>{isTriggering ? 'Running Discovery...' : 'Trigger Batch (3)'}</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-5">
         {isLoading ? (
-          <div className="bg-surface-container border border-outline-variant rounded-lg p-12 text-center text-sm font-mono text-on-surface-variant">
+          <div className="bg-white border border-slate-200 rounded-xl p-16 text-center text-sm text-slate-400">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
             Querying staged prospects...
           </div>
         ) : prospects.length === 0 ? (
-          <div className="bg-surface-container border border-outline-variant rounded-lg p-12 text-center space-y-3">
-            <p className="text-body-md text-on-surface">No prospects currently awaiting approval.</p>
-            <button onClick={handleTriggerBatch} className="text-sm font-mono text-lime hover:underline cursor-pointer font-bold">
-              Trigger batch discovery now →
+          <div className="bg-white border border-slate-200 rounded-xl p-16 text-center space-y-3 shadow-card">
+            <p className="text-sm text-slate-600 font-medium">No prospects currently awaiting approval.</p>
+            <button
+              onClick={handleTriggerBatch}
+              className="text-sm font-semibold text-emerald-800 hover:text-emerald-900 transition"
+            >
+              Trigger batch discovery now &rarr;
             </button>
           </div>
         ) : (
           prospects.map((p) => {
             const isApproved = p.scrape_status === 'approved';
             const isRejected = p.scrape_status === 'rejected';
+
             return (
               <div
                 key={p.id}
-                className={`bg-surface-container border border-outline-variant rounded-lg p-5 space-y-3.5 border-l-4 transition-all ${
-                  isApproved ? 'border-l-lime' : isRejected ? 'border-l-error opacity-60' : 'border-l-status-blue'
-                }`}
+                className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4 hover:border-slate-300 transition"
               >
-                <div className="flex flex-wrap justify-between items-start gap-2">
-                  <div>
-                    <h3 className="font-headline-md text-headline-md font-bold text-primary flex items-center gap-2">
-                      <span>{p.company_name}</span>
-                      <span className="text-xs font-mono text-on-surface-variant">({p.domain})</span>
-                    </h3>
-                    <div className="text-body-md text-on-surface-variant font-mono mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="text-status-blue font-semibold">Decision Maker:</span>
-                      <span className="text-primary font-bold">{p.decision_maker_name || 'Alex Chen'}</span>
-                      <span className="text-outline-variant">—</span>
-                      <span>{p.decision_maker_title || 'Head of Growth'}</span>
-                      {p.decision_maker_linkedin && (
-                        <a href={p.decision_maker_linkedin} target="_blank" rel="noreferrer" className="text-lime hover:underline flex items-center gap-0.5" aria-label="LinkedIn profile">
-                          <span className="material-symbols-outlined text-[16px]">link</span>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm">
+                      {p.company_name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-bold text-base text-slate-900">{p.company_name}</h3>
+                        <a
+                          href={`https://${p.domain}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1 font-medium"
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                          {p.domain}
                         </a>
-                      )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">
+                        {p.industry || 'B2B Software'}
+                      </div>
                     </div>
                   </div>
-                  <span className={`font-mono text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded ${
-                    isApproved ? 'badge-lime font-bold' : isRejected ? 'bg-error/10 text-error border border-error/30' : 'badge-blue font-bold'
-                  }`}>
-                    {p.scrape_status}
-                  </span>
+
+                  <div className="flex items-center gap-3">
+                    {isApproved ? (
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Approved & Synced
+                      </span>
+                    ) : isRejected ? (
+                      <span className="px-3 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                        <XCircle className="w-4 h-4 text-rose-600" /> Rejected
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          onClick={() => handleReject(p.id)}
+                          className="px-3.5 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleApprove(p.id)}
+                          className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition shadow-sm"
+                        >
+                          Approve & Stage in CRM
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Intent Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {['Hiring Growth Engineers', 'Series A Funding', 'Modern MarTech Stack'].map((tag, idx) => (
-                    <span key={idx} className="px-2.5 py-0.5 rounded bg-surface-container-high border border-outline-variant text-xs font-mono text-on-surface flex items-center gap-1">
-                      <span className={`material-symbols-outlined text-[14px] ${idx % 2 === 0 ? 'text-lime' : 'text-status-blue'}`}>label</span>
-                      <span>{tag}</span>
-                    </span>
-                  ))}
-                </div>
+                {/* Decision Maker & Fit Markdown */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
+                    <div className="text-xs text-slate-400 font-semibold">Resolved Decision Maker</div>
+                    <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                      <User className="w-4 h-4 text-slate-500" />
+                      {p.decision_maker_name || 'Executive Lead'}
+                    </div>
+                    <div className="text-xs text-slate-600">{p.decision_maker_title || 'VP Growth / Marketing'}</div>
+                    {p.decision_maker_linkedin && (
+                      <a
+                        href={p.decision_maker_linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-blue-700 hover:underline inline-flex items-center gap-1 font-medium pt-1"
+                      >
+                        <Linkedin className="w-3.5 h-3.5" /> View LinkedIn Profile
+                      </a>
+                    )}
+                  </div>
 
-                {/* Outreach Copy */}
-                <div className="bg-surface-container-lowest p-3.5 rounded border border-outline-variant text-body-md space-y-1.5 font-mono leading-relaxed">
-                  <p><strong className="text-lime">[Observation]</strong> Noticed {p.company_name} is scaling growth engineering in Q3...</p>
-                  <p><strong className="text-status-blue">[Capability]</strong> Our engine automates lead qualification and CRM syncing in &lt;5s...</p>
-                  <p><strong className="text-primary">[Ask]</strong> Worth sending a 2-minute overview?</p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
+                    <div className="text-xs text-slate-400 font-semibold">BM25 Fit Markdown Extract</div>
+                    <p className="text-slate-700 leading-relaxed text-xs sm:text-sm">
+                      {p.fit_markdown || 'Identified active growth hiring and tech stack modernizations aligning with high-velocity lead intake.'}
+                    </p>
+                  </div>
                 </div>
-
-                {/* Actions */}
-                {isApproved ? (
-                  <div className="text-xs text-lime font-mono font-semibold flex items-center gap-1.5 pt-1">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    <span>Approved & staged to HubSpot CRM Sandbox</span>
-                  </div>
-                ) : isRejected ? (
-                  <div className="text-xs text-error font-mono flex items-center gap-1.5 pt-1">
-                    <span className="material-symbols-outlined text-[18px]">cancel</span>
-                    <span>Prospect rejected.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 pt-1">
-                    <button onClick={() => handleApprove(p.id)} className="btn-primary">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      <span>Approve & Sync</span>
-                    </button>
-                    <button
-                      onClick={() => handleReject(p.id)}
-                      className="bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-error font-nav-item text-nav-item px-4 py-2 rounded border border-outline-variant transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">close</span>
-                      <span>Reject</span>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })

@@ -34,12 +34,19 @@ class Settings(BaseSettings):
     # External APIs
     GROQ_API_KEY: str = "mock-groq-key"
     GEMINI_API_KEY: str = "mock-gemini-key"
+    OPENAI_API_KEY: str = "mock-openai-key"
+    ANTHROPIC_API_KEY: str = "mock-anthropic-key"
+    SERPER_API_KEY: str = "mock-serper-key"
     HUBSPOT_SANDBOX_API_KEY: str = "mock-hubspot-key"
     APOLLO_API_KEY: str = "mock-apollo-key"
     MOCK_APOLLO: bool = True
+
+    # Security & BYOK Encryption Key (32 url-safe base64-encoded bytes)
+    ENCRYPTION_MASTER_KEY: str = "4ZtQzL5tL8zG7D9fR1sX2wV3yU4bN5mA6cE7gH8jK9I="
 
     # Alerting
     SLACK_WEBHOOK_URL: str = "https://hooks.slack.com/services/mock/webhook/test"
 
 
 settings = Settings()
+

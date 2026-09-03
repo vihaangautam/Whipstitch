@@ -1,12 +1,32 @@
 import React from 'react';
+import {
+  LayoutDashboard,
+  Inbox,
+  Rocket,
+  ShieldCheck,
+  KeyRound,
+  Sliders,
+  BarChart3,
+  Database,
+  Activity,
+  Calendar,
+  Swords
+} from 'lucide-react';
 
 export default function Sidebar({ currentView, setCurrentView, summaryData }) {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'inbound', label: 'Inbound Pipeline', icon: 'input' },
-    { id: 'outbound', label: 'Outbound Queue', icon: 'rocket_launch', badge: summaryData?.staged_awaiting_approval || 18 },
-    { id: 'config', label: 'ICP & Logic Studio', icon: 'tune' },
-    { id: 'analytics', label: 'Pipeline Analytics', icon: 'bar_chart' },
+  const mainNav = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'inbound', label: 'Inbound Pipeline', icon: Inbox },
+    { id: 'outbound', label: 'Outbound Queue', icon: Rocket, badge: summaryData?.staged_awaiting_approval || 18 },
+    { id: 'deal-health', label: 'Deal Health (MEDDPICC)', icon: ShieldCheck },
+  ];
+
+  const engineNav = [
+    { id: 'battlecards', label: 'Battlecards & Signals', icon: Swords },
+    { id: 'meeting-prep', label: 'Meeting Intel & Prep', icon: Calendar },
+    { id: 'byok-settings', label: 'BYOK Key Vault', icon: KeyRound },
+    { id: 'config', label: 'Logic & ICP Studio', icon: Sliders },
+    { id: 'analytics', label: 'Pipeline Analytics', icon: BarChart3 },
   ];
 
   const creditsUsed = summaryData?.apollo_credits_used || 12;
@@ -14,76 +34,128 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
   const budgetPct = Math.min(100, Math.round((creditsUsed / creditsMax) * 100));
 
   return (
-    <aside className="w-60 border-r border-outline-variant bg-surface-container-low flex flex-col justify-between hidden md:flex shrink-0 z-20" role="navigation" aria-label="Dashboard navigation">
-      <div className="p-4 space-y-5">
-        <div className="px-2">
-          <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">
-            Engine Controls
-          </span>
+    <aside className="w-64 border-r border-slate-200 bg-white flex flex-col justify-between hidden md:flex shrink-0 z-20 select-none">
+      <div className="p-4 space-y-6">
+        {/* Main Section */}
+        <div className="space-y-1.5">
+          <div className="px-3 pb-1">
+            <span className="text-xs font-semibold text-slate-400 block">
+              Pipeline Workspace
+            </span>
+          </div>
+
+          <nav className="space-y-1">
+            {mainNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-100 text-slate-900 font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-slate-900' : 'text-slate-500'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                      isActive ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-nav-item font-nav-item transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-surface-container-high text-primary border-l-2 border-l-lime shadow-sm font-semibold'
-                    : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <div className="flex items-center gap-2.5 truncate">
-                  <span className={`material-symbols-outlined text-[20px] ${isActive ? 'text-lime' : 'text-on-surface-variant'}`}>
-                    {item.icon}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                </div>
-                {item.badge !== undefined && (
-                  <span className={`font-mono text-[11px] font-bold px-1.5 py-0.5 rounded ${
-                    isActive ? 'bg-lime text-charcoal' : 'bg-surface-container text-on-surface-variant'
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Engine Section */}
+        <div className="space-y-1.5">
+          <div className="px-3 pb-1">
+            <span className="text-xs font-semibold text-slate-400 block">
+              Intelligence & Logic
+            </span>
+          </div>
+
+          <nav className="space-y-1">
+            {engineNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-100 text-slate-900 font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-slate-900' : 'text-slate-500'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      {/* Apollo Credit Guard Card */}
-      <div className="p-4 border-t border-outline-variant space-y-3 bg-surface-container-lowest/50">
-        <div className="p-3 bg-surface-container border border-outline-variant rounded-lg space-y-2">
-          <div className="flex justify-between items-center text-xs font-mono">
-            <span className="text-on-surface-variant flex items-center gap-1">
-              <span className="material-symbols-outlined text-lime text-[16px]">database</span>
-              <span>Apollo Budget</span>
+      {/* Footer / Budget & System Status */}
+      <div className="p-4 border-t border-slate-200 space-y-3 bg-slate-50/50">
+        {/* Apollo Budget Pill */}
+        <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-card">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-600 font-medium flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5 text-slate-500" />
+              <span>Apollo Credits</span>
             </span>
-            <span className="text-lime font-bold tabular-nums">{creditsUsed}/{creditsMax}</span>
+            <span className="text-slate-900 font-bold text-xs">{creditsUsed}/{creditsMax}</span>
           </div>
 
-          <div className="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden" role="progressbar" aria-valuenow={creditsUsed} aria-valuemin={0} aria-valuemax={creditsMax}>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
             <div
-              className="bg-lime h-full rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(185,246,18,0.4)]"
+              className="bg-emerald-600 h-full rounded-full transition-all duration-300"
               style={{ width: `${budgetPct}%` }}
-            ></div>
+            />
           </div>
-
-          <p className="text-[11px] text-on-surface-variant/80 font-body-md leading-tight">
-            Redis guard active · 50 credits/mo limit
-          </p>
+          <div className="text-[11px] text-slate-400">50 credits / month free tier</div>
         </div>
 
-        <div className="px-1 text-xs font-mono text-on-surface-variant flex items-center justify-between">
-          <span>Temporal v1.25</span>
-          <span className="text-lime flex items-center gap-1 font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse"></span>
-            <span>Running</span>
+        {/* Temporal Worker Liveness */}
+        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+          <span className="flex items-center gap-1.5 font-medium">
+            <Activity className="w-3.5 h-3.5 text-slate-400" />
+            <span>Temporal Engine</span>
           </span>
+          <span className="text-emerald-800 font-semibold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Active
+          </span>
+        </div>
+
+        {/* Legal links */}
+        <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-200">
+          <button
+            onClick={() => setCurrentView('privacy')}
+            className="hover:text-slate-700 transition"
+          >
+            Privacy Policy
+          </button>
+          <span>&bull;</span>
+          <button
+            onClick={() => setCurrentView('terms')}
+            className="hover:text-slate-700 transition"
+          >
+            Terms of Service
+          </button>
         </div>
       </div>
     </aside>

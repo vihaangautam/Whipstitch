@@ -57,7 +57,7 @@ export function initHeroAnimation(targetElementOrId = 'hero-anim') {
         transform: translateX(0);
       }
       .font-mono-tag {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Plus Jakarta Sans', sans-serif;
       }
       @media (max-width: 768px) {
         #hero-anim { height: 360px !important; }

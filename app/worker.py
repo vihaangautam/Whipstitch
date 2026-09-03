@@ -5,6 +5,12 @@ from temporalio.worker import Worker
 
 from app.activities.audit_activity import log_execution_step_activity
 from app.activities.crm_activity import sync_to_crm_activity
+from app.activities.deal_diagnostic_activity import (
+    extract_medpicc_scores_activity,
+    parse_transcript_activity,
+    render_medpicc_pdf_activity,
+    update_crm_deal_stage_activity,
+)
 from app.activities.enrichment_activity import enrich_lead_waterfall_activity
 from app.activities.outbound_activity import (
     discover_decision_maker_activity,
@@ -18,6 +24,7 @@ from app.activities.qualification_activity import qualify_lead_llm_activity
 from app.activities.sla_activity import trigger_sla_escalation_activity
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.workflows.deal_diagnostic_workflow import DealDiagnosticWorkflow
 from app.workflows.inbound_lead import WhipstitchLeadWorkflow
 from app.workflows.outbound_workflow import OutboundProspectingWorkflow
 
@@ -41,7 +48,7 @@ async def run_worker():
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
-        workflows=[WhipstitchLeadWorkflow, OutboundProspectingWorkflow],
+        workflows=[WhipstitchLeadWorkflow, OutboundProspectingWorkflow, DealDiagnosticWorkflow],
         activities=[
             log_execution_step_activity,
             enrich_lead_waterfall_activity,
@@ -54,11 +61,16 @@ async def run_worker():
             research_prospect_activity,
             qualify_outbound_prospect_activity,
             stage_prospect_in_crm_activity,
+            parse_transcript_activity,
+            extract_medpicc_scores_activity,
+            update_crm_deal_stage_activity,
+            render_medpicc_pdf_activity,
         ],
     )
 
     logger.info("temporal_worker_running")
     await worker.run()
+
 
 
 

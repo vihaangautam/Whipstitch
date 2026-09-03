@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sliders, Save, CheckCircle2, Layers, Clock, Building2, Plus, X } from 'lucide-react';
 import { saveTenantConfig } from '../api';
 
 export default function TenantConfigStudio({ currentTenant }) {
@@ -11,7 +12,7 @@ export default function TenantConfigStudio({ currentTenant }) {
   const [isSaving, setIsSaving] = useState(false);
 
   const waterfall = [
-    { rank: 1, name: 'Apollo API (Primary)', latency: '42ms' },
+    { rank: 1, name: 'Apollo.io API (Primary)', latency: '42ms' },
     { rank: 2, name: 'PeopleDataLabs (Fallback 1)', latency: '85ms' },
     { rank: 3, name: 'Crawl4AI BM25 Scraper (Fallback 2)', latency: '350ms' },
     { rank: 4, name: 'Google Gemini LLM (Final Fallback)', latency: '400ms' },
@@ -22,6 +23,10 @@ export default function TenantConfigStudio({ currentTenant }) {
       setIndustries([...industries, newIndustry.trim()]);
       setNewIndustry('');
     }
+  };
+
+  const handleRemoveIndustry = (ind) => {
+    setIndustries(industries.filter((i) => i !== ind));
   };
 
   const handleSave = async (e) => {
@@ -40,139 +45,144 @@ export default function TenantConfigStudio({ currentTenant }) {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl animate-fade-in">
-      <div>
-        <h1 className="font-headline-lg text-headline-lg font-bold text-primary">ICP & Logic Studio</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">ICP boundaries, waterfall priority, and SLA escalation thresholds.</p>
+    <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
+      <div className="border-b border-slate-200 pb-5">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">ICP & Logic Studio</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Configure Ideal Customer Profile boundaries, waterfall enrichment priorities, and SLA escalation thresholds.
+        </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-5">
+      <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
         {/* 1. Employee Count */}
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-5 space-y-3">
-          <div className="flex items-center gap-2 text-lime">
-            <span className="material-symbols-outlined text-xl">tune</span>
-            <h3 className="font-label-sm text-label-sm uppercase tracking-wider font-mono">01 · Employee Count Boundaries</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Sliders className="w-4 h-4 text-slate-600" />
+            <span>01 &bull; Employee Count Boundaries</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="text-xs font-mono text-on-surface-variant block" htmlFor="min-emp">Minimum Employees</label>
+              <label className="text-xs sm:text-sm font-medium text-slate-600">Minimum Employees</label>
               <input
-                id="min-emp"
                 type="number"
                 value={minEmp}
                 onChange={(e) => setMinEmp(e.target.value)}
-                className="w-full bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-body-md text-primary font-mono focus:border-lime focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-mono text-on-surface-variant block" htmlFor="max-emp">Maximum Employees</label>
+              <label className="text-xs sm:text-sm font-medium text-slate-600">Maximum Employees</label>
               <input
-                id="max-emp"
                 type="number"
                 value={maxEmp}
                 onChange={(e) => setMaxEmp(e.target.value)}
-                className="w-full bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-body-md text-primary font-mono focus:border-lime focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* 2. Target Industries */}
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-5 space-y-3">
-          <div className="flex items-center gap-2 text-lime">
-            <span className="material-symbols-outlined text-xl">category</span>
-            <h3 className="font-label-sm text-label-sm uppercase tracking-wider font-mono">02 · Target Industries</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Building2 className="w-4 h-4 text-slate-600" />
+            <span>02 &bull; Target ICP Industries</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {industries.map((ind, idx) => (
-              <span key={idx} className="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant text-body-md font-mono text-primary flex items-center gap-2">
+          <div className="flex flex-wrap gap-2.5">
+            {industries.map((ind) => (
+              <span
+                key={ind}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-800 rounded-lg text-xs sm:text-sm font-medium border border-slate-200"
+              >
                 <span>{ind}</span>
                 <button
                   type="button"
-                  onClick={() => setIndustries(industries.filter((i) => i !== ind))}
-                  className="text-on-surface-variant hover:text-error transition-colors cursor-pointer text-base"
-                  aria-label={`Remove ${ind}`}
+                  onClick={() => handleRemoveIndustry(ind)}
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
-                  ×
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </span>
             ))}
           </div>
-          <div className="flex items-center gap-2 max-w-sm pt-1">
+
+          <div className="flex gap-3 max-w-md pt-2">
             <input
               type="text"
+              placeholder="Add industry (e.g. Healthcare Tech)"
               value={newIndustry}
               onChange={(e) => setNewIndustry(e.target.value)}
-              placeholder="Add industry..."
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded px-3 py-1.5 text-body-md text-primary font-mono focus:border-lime focus:outline-none"
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs sm:text-sm text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
             />
             <button
               type="button"
               onClick={handleAddIndustry}
-              className="bg-surface-container-high hover:bg-surface-container border border-outline-variant text-primary px-3 py-1.5 rounded text-sm font-nav-item cursor-pointer"
+              className="btn-secondary text-xs sm:text-sm px-4"
             >
+              <Plus className="w-4 h-4" />
               Add
             </button>
           </div>
         </div>
 
-        {/* 3. Waterfall Order */}
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-5 space-y-3">
-          <div className="flex items-center gap-2 text-lime">
-            <span className="material-symbols-outlined text-xl">water_drop</span>
-            <h3 className="font-label-sm text-label-sm uppercase tracking-wider font-mono">03 · Enrichment Waterfall</h3>
+        {/* 3. Waterfall Priority */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Layers className="w-4 h-4 text-slate-600" />
+            <span>03 &bull; Waterfall Enrichment Sequence</span>
           </div>
-          <div className="space-y-2">
-            {waterfall.map((item) => (
-              <div key={item.rank} className="p-3 bg-surface-container-lowest border border-outline-variant rounded flex items-center justify-between font-mono text-body-md">
+          <div className="space-y-2.5">
+            {waterfall.map((w) => (
+              <div
+                key={w.rank}
+                className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
+              >
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center text-xs font-bold text-on-surface-variant">
-                    {item.rank}
+                  <span className="w-6 h-6 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                    {w.rank}
                   </span>
-                  <span className="text-primary font-medium">{item.name}</span>
+                  <span className="font-semibold text-slate-900">{w.name}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-on-surface-variant text-xs">{item.latency}</span>
-                  <span className="badge-lime font-bold">active</span>
-                </div>
+                <span className="text-slate-500 text-xs font-medium">~{w.latency}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* 4. SLA Window */}
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-5 space-y-3">
-          <div className="flex items-center gap-2 text-lime">
-            <span className="material-symbols-outlined text-xl">timer</span>
-            <h3 className="font-label-sm text-label-sm uppercase tracking-wider font-mono">04 · SLA Escalation Timer</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Clock className="w-4 h-4 text-slate-600" />
+            <span>04 &bull; SLA Escalation Timer</span>
           </div>
-          <div className="space-y-1.5 max-w-xs">
-            <label className="text-xs font-mono text-on-surface-variant block" htmlFor="sla-window">Alert Window (Minutes)</label>
+          <div className="max-w-xs space-y-1.5">
+            <label className="text-xs sm:text-sm font-medium text-slate-600">Uncontacted Lead Escalation Window (Minutes)</label>
             <input
-              id="sla-window"
               type="number"
               value={slaWindow}
               onChange={(e) => setSlaWindow(e.target.value)}
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-body-md text-primary font-mono focus:border-lime focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
             />
-            <span className="text-xs text-on-surface-variant font-mono block mt-1">
-              Fires Slack alert if hot lead (score≥80) unassigned after {slaWindow}m.
-            </span>
           </div>
         </div>
 
-        {/* Save Actions */}
-        <div className="flex items-center gap-3 pt-2">
-          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
-            <span className="material-symbols-outlined text-[18px]">save</span>
-            <span>{isSaving ? 'Saving...' : 'Save Configuration'}</span>
-          </button>
+        <div className="flex items-center justify-between pt-2">
           {isSaved && (
-            <span className="text-xs font-mono text-lime flex items-center gap-1.5 animate-fade-in font-bold">
-              <span className="material-symbols-outlined text-[16px]">check_circle</span>
-              <span>Saved to PostgreSQL & Redis</span>
+            <span className="text-xs sm:text-sm font-semibold text-emerald-800 bg-emerald-50 px-3.5 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              Tenant configuration saved successfully!
             </span>
           )}
+          <div className="ml-auto">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-primary px-5 py-2.5 text-sm"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

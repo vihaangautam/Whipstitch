@@ -11,3 +11,9 @@ httpx>=0.26.0
 structlog>=24.1.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+cryptography>=42.0.0
+pypdf>=4.0.0
+python-docx>=1.1.0
+python-multipart>=0.0.9
+tiktoken>=0.6.0
+

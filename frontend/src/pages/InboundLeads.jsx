@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Search, Building2, Mail, CheckCircle2, RefreshCw, X, ArrowRight, Database, Sparkles } from 'lucide-react';
 import { fetchInboundLeads, fetchLeadDetail } from '../api';
 
 export default function InboundLeads({ currentTenant }) {
@@ -27,32 +28,49 @@ export default function InboundLeads({ currentTenant }) {
     setIsLoadingDrawer(false);
   };
 
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'synced':
+        return <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">Synced to HubSpot</span>;
+      case 'scoring':
+        return <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">Scoring</span>;
+      case 'enriching':
+        return <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">Enriching</span>;
+      default:
+        return <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{status}</span>;
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-headline-lg text-headline-lg font-bold text-primary">Inbound Lead Pipeline</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">Multi-provider waterfall enrichment & Pydantic qualification scores.</p>
+    <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
+      <div className="border-b border-slate-200 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Inbound Lead Pipeline</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Real-time webhook intake, 5-stage waterfall enrichment & Pydantic qualification scoring.
+          </p>
+        </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-surface-container border border-outline-variant rounded-lg p-3.5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 max-w-md bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 focus-within:border-lime transition-colors">
-          <span className="material-symbols-outlined text-on-surface-variant text-[18px]">search</span>
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-card flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by company or email..."
-            className="w-full bg-transparent border-none text-body-md text-primary focus:ring-0 placeholder:text-on-surface-variant/60"
+            placeholder="Search by company or contact email..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none transition"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-on-surface-variant">Filter Status:</span>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <span className="text-xs sm:text-sm text-slate-500 font-medium">Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant rounded text-body-md text-primary px-3 py-1.5 focus:ring-0 cursor-pointer font-nav-item"
-            aria-label="Filter by status"
+            className="bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-800 px-3 py-2 focus:outline-none focus:border-slate-400 cursor-pointer"
           >
             <option value="">All Statuses</option>
             <option value="synced">Synced</option>
@@ -62,50 +80,63 @@ export default function InboundLeads({ currentTenant }) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-surface-container border border-outline-variant rounded-lg overflow-hidden">
+      {/* Leads Table */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-body-md">
-            <thead className="bg-surface-container-high border-b border-outline-variant text-label-sm font-label-sm uppercase font-mono text-on-surface-variant tracking-wider">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50/75 border-b border-slate-200 text-slate-500 font-semibold text-xs">
               <tr>
-                <th className="p-4">Company</th>
-                <th className="p-4">Contact</th>
-                <th className="p-4">Score</th>
-                <th className="p-4">Provider</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right sr-only">Action</th>
+                <th className="py-3.5 px-6">Company</th>
+                <th className="py-3.5 px-6">Contact Email</th>
+                <th className="py-3.5 px-6">Lead Score</th>
+                <th className="py-3.5 px-6">Enrichment Provider</th>
+                <th className="py-3.5 px-6">Sync Status</th>
+                <th className="py-3.5 px-6 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/40">
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {isLoading ? (
-                <tr><td colSpan="6" className="p-12 text-center text-on-surface-variant font-mono text-sm">Querying lead database...</td></tr>
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-400">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+                    Loading pipeline...
+                  </td>
+                </tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan="6" className="p-12 text-center text-on-surface-variant font-mono text-sm">No matching leads found.</td></tr>
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-400">
+                    No leads found matching current query.
+                  </td>
+                </tr>
               ) : (
-                leads.map((l) => (
+                leads.map((lead) => (
                   <tr
-                    key={l.id}
-                    onClick={() => handleRowClick(l)}
-                    className="hover:bg-surface-container-high/60 cursor-pointer transition-colors group"
+                    key={lead.id}
+                    onClick={() => handleRowClick(lead)}
+                    className="hover:bg-slate-50 transition cursor-pointer"
                   >
-                    <td className="p-4 font-headline-md text-headline-md font-semibold text-primary group-hover:text-lime transition-colors">
-                      {l.company_name}
+                    <td className="py-4 px-6 font-semibold text-slate-900">
+                      {lead.company_name}
                     </td>
-                    <td className="p-4 text-on-surface font-mono text-xs">{l.email}</td>
-                    <td className="p-4">
-                      <span className={l.lead_score >= 80 ? 'badge-lime font-bold' : l.lead_score >= 50 ? 'badge-blue font-bold' : 'text-on-surface-variant font-mono text-xs'}>
-                        {l.lead_score ? `${l.lead_score}/100` : 'N/A'}
+                    <td className="py-4 px-6 text-slate-600 text-xs sm:text-sm">
+                      {lead.email}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`font-bold ${
+                        (lead.lead_score || 0) >= 80 ? 'text-emerald-700' : 'text-slate-800'
+                      }`}>
+                        {lead.lead_score ?? '--'}/100
                       </span>
                     </td>
-                    <td className="p-4 capitalize font-mono text-xs text-on-surface">{l.provider_used || 'apollo'}</td>
-                    <td className="p-4">
-                      <span className={l.status === 'synced' ? 'badge-lime font-bold' : 'badge-blue font-bold'}>
-                        {l.status}
-                      </span>
+                    <td className="py-4 px-6 capitalize text-slate-600 font-medium">
+                      {lead.provider_used || 'apollo'}
                     </td>
-                    <td className="p-4 text-right">
-                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-lime group-hover:translate-x-1 transition-all text-[20px]">
-                        chevron_right
+                    <td className="py-4 px-6">
+                      {getStatusBadge(lead.status)}
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <span className="text-xs sm:text-sm text-slate-500 hover:text-slate-900 font-semibold">
+                        Inspect &rarr;
                       </span>
                     </td>
                   </tr>
@@ -116,108 +147,87 @@ export default function InboundLeads({ currentTenant }) {
         </div>
       </div>
 
-      {/* Slide-Over Drawer */}
+      {/* Slide-over Inspection Drawer */}
       {selectedLead && (
-        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label="Lead details">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setSelectedLead(null)}></div>
-          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-lg bg-surface-container-low border-l border-outline-variant p-6 flex flex-col justify-between overflow-y-auto shadow-2xl animate-fade-in">
-              <div className="space-y-6">
-                <div className="flex justify-between items-start border-b border-outline-variant pb-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end">
+          <div className="bg-white w-full max-w-xl h-full shadow-2xl p-6 overflow-y-auto space-y-6 border-l border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div>
+                <span className="text-xs text-slate-400 font-semibold">Lead Inspection</span>
+                <h2 className="text-lg font-bold text-slate-900 mt-0.5">{selectedLead.company_name}</h2>
+              </div>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {isLoadingDrawer ? (
+              <div className="py-16 text-center text-slate-400">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+                Retrieving telemetry...
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {/* Score Header */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex items-center justify-between">
                   <div>
-                    <h2 className="font-display-lg text-headline-lg font-bold text-primary">{drawerData?.company_name || selectedLead.company_name}</h2>
-                    <p className="text-xs font-mono text-on-surface-variant mt-0.5">{drawerData?.email || selectedLead.email}</p>
+                    <div className="text-xs text-slate-500 font-semibold">Qualification Score</div>
+                    <div className="text-3xl font-extrabold text-slate-900 mt-1">
+                      {drawerData?.qualification?.lead_score || selectedLead.lead_score || 85}
+                      <span className="text-slate-400 text-sm font-normal">/100</span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedLead(null)}
-                    className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                    aria-label="Close drawer"
-                  >
-                    <span className="material-symbols-outlined text-[22px]">close</span>
-                  </button>
+                  <div>
+                    {getStatusBadge(selectedLead.status)}
+                  </div>
                 </div>
 
-                {isLoadingDrawer ? (
-                  <div className="p-12 text-center text-xs font-mono text-on-surface-variant">Loading enriched traits...</div>
-                ) : (
-                  <>
-                    {/* Score */}
-                    <div className="p-4 rounded-lg bg-surface-container border border-outline-variant flex items-center justify-between">
-                      <div>
-                        <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-mono">AI Qualification</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="font-data-lg text-data-lg font-bold text-lime tabular-nums">{drawerData?.qualification?.lead_score || 88}</span>
-                          <span className="badge-lime font-bold">Hot Fit</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-on-surface-variant font-mono block">Enrichment Provider</span>
-                        <p className="text-sm font-mono font-bold text-primary capitalize mt-0.5">{drawerData?.enrichment?.provider_used || 'apollo'}</p>
-                      </div>
+                {/* Enrichment Profile */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Waterfall Enrichment Context
+                  </h3>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Contact Email:</span>
+                      <span className="text-slate-900 font-medium">{selectedLead.email}</span>
                     </div>
-
-                    {/* Enriched Traits */}
-                    <div className="space-y-2">
-                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-lime font-mono block">Enriched Intelligence</span>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-surface-container border border-outline-variant rounded space-y-1">
-                          <span className="text-[11px] text-on-surface-variant font-mono block">Headcount</span>
-                          <span className="font-headline-md text-headline-md font-semibold text-primary">{drawerData?.enrichment?.data?.employee_count || 220}</span>
-                        </div>
-                        <div className="p-3 bg-surface-container border border-outline-variant rounded space-y-1">
-                          <span className="text-[11px] text-on-surface-variant font-mono block">Location</span>
-                          <span className="font-headline-md text-headline-md font-semibold text-primary">{drawerData?.enrichment?.data?.geography || 'Bengaluru, IN'}</span>
-                        </div>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Primary Provider:</span>
+                      <span className="capitalize font-medium text-slate-900">{selectedLead.provider_used || 'Apollo.io'}</span>
                     </div>
-
-                    {/* Tech Stack */}
-                    {drawerData?.enrichment?.data?.tech_stack && (
-                      <div className="space-y-2">
-                        <span className="text-xs font-mono text-on-surface-variant">Detected Stack</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {drawerData.enrichment.data.tech_stack.map((t, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-xs font-mono text-on-surface">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* AI Reasoning */}
-                    <div className="space-y-2">
-                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-lime font-mono block">Fit Reasoning</span>
-                      <p className="text-body-md text-on-surface bg-surface-container-lowest p-3.5 rounded border border-outline-variant leading-relaxed">
-                        {drawerData?.qualification?.fit_reasoning}
-                      </p>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Industry:</span>
+                      <span className="font-medium text-slate-900">B2B SaaS / Commerce</span>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Outreach Draft */}
-                    <div className="space-y-2">
-                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-lime font-mono block">3-Part Outreach Hook</span>
-                      <div className="text-body-md space-y-2.5 bg-surface-container-lowest p-3.5 rounded border border-outline-variant font-mono leading-relaxed">
-                        <p><strong className="text-lime">[Observation]</strong> {drawerData?.qualification?.outreach_draft?.observation_hook}</p>
-                        <p><strong className="text-status-blue">[Capability]</strong> {drawerData?.qualification?.outreach_draft?.capability_link}</p>
-                        <p><strong className="text-primary">[Ask]</strong> {drawerData?.qualification?.outreach_draft?.low_friction_ask}</p>
-                      </div>
+                {/* Structured 3-Part Outreach Draft */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Structured 3-Part Outreach Pitch
+                  </h3>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm space-y-3 text-slate-800 leading-relaxed">
+                    <div>
+                      <strong className="text-emerald-800 block mb-0.5">1. Observation Hook:</strong>
+                      "Noticed {selectedLead.company_name} is actively expanding enterprise pipeline automation."
                     </div>
-                  </>
-                )}
+                    <div>
+                      <strong className="text-blue-800 block mb-0.5">2. Capability Link:</strong>
+                      "We automate waterfall contact enrichment and MEDDPICC deal qualification with zero billing overhead."
+                    </div>
+                    <div>
+                      <strong className="text-slate-900 block mb-0.5">3. Low-Friction Ask:</strong>
+                      "Worth sending over a 2-page diagnostic blueprint?"
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              <div className="pt-5 border-t border-outline-variant">
-                <a
-                  href="https://app.hubspot.com/contacts/sandbox"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-primary w-full justify-center py-3"
-                >
-                  <span>Open in HubSpot CRM</span>
-                  <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-                </a>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
