@@ -29,6 +29,21 @@ import {
   triggerMeetingPrep
 } from '../api';
 
+function getBuyingRoleDisplay(role) {
+  if (!role) return { label: 'Stakeholder', style: 'bg-slate-100 text-slate-700 border-slate-200' };
+  const lower = role.toLowerCase();
+  if (lower.includes('champion')) {
+    return { label: 'Champion', style: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+  }
+  if (lower.includes('economic') || lower.includes('buyer') || lower.includes('budget')) {
+    return { label: 'Budget Owner', style: 'bg-rose-50 text-rose-800 border-rose-200' };
+  }
+  if (lower.includes('security') || lower.includes('gatekeeper')) {
+    return { label: 'Security Review', style: 'bg-amber-50 text-amber-800 border-amber-200' };
+  }
+  return { label: role, style: 'bg-slate-100 text-slate-700 border-slate-200' };
+}
+
 export default function MeetingIntelligence({ currentTenant }) {
   const [meetings, setMeetings] = useState([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
@@ -334,15 +349,14 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                           <p className="text-xs text-slate-500 mt-0.5">{att.title}</p>
                           <p className="text-[11px] text-slate-400">{att.organization}</p>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                          psycho?.buying_role === 'Champion'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : psycho?.buying_role === 'Economic Buyer'
-                            ? 'bg-rose-50 text-rose-800 border-rose-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {psycho?.buying_role || 'Stakeholder'}
-                        </span>
+                        {(() => {
+                          const roleInfo = getBuyingRoleDisplay(psycho?.buying_role);
+                          return (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${roleInfo.style}`}>
+                              {roleInfo.label}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Focus Areas */}
