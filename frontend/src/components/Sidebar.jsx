@@ -22,8 +22,8 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
   ];
 
   const engineNav = [
-    { id: 'battlecards', label: 'Battlecards & Signals', icon: Swords },
-    { id: 'meeting-prep', label: 'Meeting Intel & Prep', icon: Calendar },
+    { id: 'battlecards', label: 'Competitor Playbooks', icon: Swords },
+    { id: 'meeting-prep', label: 'Call Prep & Meetings', icon: Calendar },
     { id: 'byok-settings', label: 'BYOK Key Vault', icon: KeyRound },
     { id: 'config', label: 'Logic & ICP Studio', icon: Sliders },
     { id: 'analytics', label: 'Pipeline Analytics', icon: BarChart3 },

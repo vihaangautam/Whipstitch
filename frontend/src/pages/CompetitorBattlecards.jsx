@@ -18,7 +18,8 @@ import {
   X,
   ExternalLink,
   Sliders,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import {
   fetchBattlecards,
@@ -97,10 +98,47 @@ export default function CompetitorBattlecards({ currentTenant }) {
       setCustomCompetitor('');
       setCustomBuyer('');
     } catch (err) {
-      alert('Failed to generate battlecard: ' + err.message);
+      alert('Failed to generate playbook: ' + err.message);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const formatStageTitle = (stageNum, rawName) => {
+    const friendlyNames = {
+      1: 'The Situation & Deal Context',
+      2: "The Buyer's Urgency & Pressure",
+      3: 'Why Whipstitch Wins (Our Edge)',
+      4: 'Hard Numbers & ROI Proof',
+      5: 'How to Pitch & Next Move',
+    };
+    return friendlyNames[stageNum] || rawName;
+  };
+
+  const friendlyParamKey = (key) => {
+    const keyMap = {
+      primary_rival: 'Competitor',
+      deal_risk: 'Main Deal Risk',
+      market_pressure: 'Market Pressure',
+      target_metric: 'Target Metric',
+      kill_shot_category: 'Our Key Edge',
+      payback_period_days: 'Payback Period',
+      annual_leakage_saved: 'Estimated Savings',
+      recommended_next_play: 'Recommended Pitch',
+      churn_risk: 'Churn Risk',
+      hours_saved_per_rep_week: 'Hours Saved / Rep / Wk',
+      threat: 'Main Threat',
+      target_evaluator: 'Key Decision Maker',
+      urgency: 'Deal Urgency',
+      differentiation: 'Core Differentiator',
+      cost_comparison: 'Cost Comparison',
+      action: 'Recommended Action',
+      competitor: 'Competitor',
+      pressure: 'Urgency Driver',
+      advantage: 'Our Advantage',
+      pitch: 'Sales Angle',
+    };
+    return keyMap[key] || key.replace(/_/g, ' ');
   };
 
   const getSignalBadge = (sigType) => {
@@ -108,15 +146,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
       case 'leadership_shift':
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">Leadership Move</span>;
       case 'capital_expansion':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">Capital / M&A</span>;
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">Funding / Expansion</span>;
       case 'tech_stack_migration':
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">Tech Stack Shift</span>;
       case 'compliance_infosec':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">InfoSec / SOC2</span>;
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">Security & Compliance</span>;
       case 'incumbent_churn':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">Incumbent Churn</span>;
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">Competitor Churn Risk</span>;
       default:
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">Velocity Surge</span>;
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">Traffic Surge</span>;
     }
   };
 
@@ -131,11 +169,11 @@ export default function CompetitorBattlecards({ currentTenant }) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Competitor Battlecards & 6-Signal Agent
+                Competitor Playbooks & Live Triggers
               </h1>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              5-stage blackboard reasoning, lethal trap counter-strikes & real-time revenue opportunity discovery.
+              Rep cheat sheets, objection handling scripts, and real-time triggers to win against rivals.
             </p>
           </div>
         </div>
@@ -145,15 +183,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
           className="btn-primary px-3.5 py-2 text-xs self-start lg:self-auto"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>New Competitor Battlecard</span>
+          <span>New Competitor Playbook</span>
         </button>
       </div>
 
       {/* ─── 2. COMPETITOR SELECTOR PILLS ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-card space-y-2">
         <div className="flex items-center justify-between text-xs px-1">
-          <span className="font-semibold text-slate-600">Select Competitive Alternative:</span>
-          <span className="text-slate-400 font-medium">5-Stage Blackboard Reasoned</span>
+          <span className="font-semibold text-slate-600">Choose Competitor or Alternative:</span>
+          <span className="text-slate-400 font-medium">AI-Generated Playbook</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -184,73 +222,75 @@ export default function CompetitorBattlecards({ currentTenant }) {
       </div>
 
       {/* ─── 3. WORKSPACE TABS ─── */}
-      <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="flex gap-2 text-sm font-semibold">
+      <div className="flex items-center justify-between border-b border-slate-200 overflow-x-auto">
+        <div className="flex gap-2 text-sm font-semibold pb-1">
           <button
             onClick={() => setActiveTab('killshots')}
-            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 ${
+            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'killshots'
                 ? 'border-emerald-600 text-slate-900'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             <Target className="w-4 h-4 text-emerald-600" />
-            <span>Lethal Kill-Shots ({battlecardDetail?.kill_shots?.length || 0})</span>
+            <span>Silver Bullets & Traps ({battlecardDetail?.kill_shots?.length || 0})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('blackboard')}
-            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 ${
+            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'blackboard'
                 ? 'border-emerald-600 text-slate-900'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             <Layers className="w-4 h-4 text-blue-600" />
-            <span>5-Stage Blackboard Intelligence</span>
+            <span>5-Step Deal Strategy</span>
           </button>
 
           <button
             onClick={() => setActiveTab('objections')}
-            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 ${
+            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'objections'
                 ? 'border-emerald-600 text-slate-900'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             <HelpCircle className="w-4 h-4 text-amber-600" />
-            <span>Objection Rebuttal Matrix</span>
+            <span>Objection Cheat Sheet ({battlecardDetail?.objection_matrix?.length || 0})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('signals')}
-            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 ${
+            className={`pb-3 px-3 transition border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'signals'
                 ? 'border-emerald-600 text-slate-900'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             <Zap className="w-4 h-4 text-purple-600" />
-            <span>6-Signal Live Radar ({signals.length})</span>
+            <span>Live Buying Triggers ({signals.length})</span>
           </button>
         </div>
       </div>
 
-      {/* ─── 4. TAB 1: LETHAL KILL-SHOTS & LANDMINES ─── */}
+      {/* ─── 4. TAB 1: SILVER BULLETS & TRAPS ─── */}
       {activeTab === 'killshots' && (
         <div className="space-y-6">
           {/* Verdict Callout */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Executive Verdict</span>
+            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">The Winning Angle (Executive Summary)</span>
             <h3 className="text-base font-bold text-slate-900">
               {battlecardDetail?.summary_verdict || 'Analyzing competitive displacement strategy...'}
             </h3>
-            <p className="text-xs text-rose-700 font-semibold pt-1">
-              Commercial Vulnerability: {battlecardDetail?.pricing_weakness}
-            </p>
+            {battlecardDetail?.pricing_weakness && (
+              <p className="text-xs text-rose-700 font-semibold pt-1">
+                Their Pricing Weakness: {battlecardDetail?.pricing_weakness}
+              </p>
+            )}
           </div>
 
-          {/* Kill-Shots Grid */}
+          {/* Silver Bullets Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {battlecardDetail?.kill_shots?.map((ks, idx) => (
               <div
@@ -266,44 +306,44 @@ export default function CompetitorBattlecards({ currentTenant }) {
                       <h4 className="font-bold text-sm text-slate-900">{ks.title}</h4>
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 uppercase">
-                      Lethal Landmine
+                      The Trap to Set
                     </span>
                   </div>
 
-                  {/* The Trap */}
+                  {/* What They Tell Buyers */}
                   <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-lg space-y-1 text-xs">
                     <span className="font-bold text-rose-900 block text-[11px] uppercase tracking-wider">
-                      The Competitor's Claim (The Trap):
+                      What They Tell Buyers:
                     </span>
                     <p className="italic text-slate-700">
                       "{ks.the_trap}"
                     </p>
                   </div>
 
-                  {/* The Vulnerability */}
+                  {/* The Flaw They Hide */}
                   <div className="space-y-1 text-xs text-slate-700">
                     <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">
-                      The Hidden Vulnerability:
+                      The Flaw They Hide:
                     </span>
                     <p className="leading-relaxed text-slate-600">
                       {ks.the_vulnerability}
                     </p>
                   </div>
 
-                  {/* The Counter-Strike Question */}
+                  {/* The Trap Question to Ask */}
                   <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg space-y-1 text-xs">
                     <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">
-                      The Counter-Strike Question (Ask the Buyer):
+                      The Trap Question to Ask (On Your Call):
                     </span>
                     <p className="font-semibold text-slate-900">
                       "{ks.the_counter_strike}"
                     </p>
                   </div>
 
-                  {/* Verbatim Soundbite */}
+                  {/* What to Say Word for Word */}
                   <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg space-y-1 text-xs">
                     <span className="font-bold text-emerald-900 block text-[11px] uppercase tracking-wider">
-                      Verbatim Rep Soundbite:
+                      What to Say (Word-for-Word):
                     </span>
                     <p className="text-slate-900 font-medium italic">
                       "{ks.verbatim_soundbite}"
@@ -314,14 +354,14 @@ export default function CompetitorBattlecards({ currentTenant }) {
                 {/* Bottom Proof & Copy */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-slate-500 font-medium truncate max-w-[280px]">
-                    Proof: {ks.evidence_proof || 'Verified across 50+ enterprise benchmarks.'}
+                    Proof & Data: {ks.evidence_proof || 'Verified across 50+ customer benchmarks.'}
                   </span>
                   <button
                     onClick={() => handleCopy(ks.verbatim_soundbite, idx)}
                     className="btn-secondary text-xs shrink-0"
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    <span>{copiedIndex === idx ? 'Copied!' : 'Copy Soundbite'}</span>
+                    <span>{copiedIndex === idx ? 'Copied!' : 'Copy Script'}</span>
                   </button>
                 </div>
               </div>
@@ -330,16 +370,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
         </div>
       )}
 
-      {/* ─── 5. TAB 2: 5-STAGE BLACKBOARD INTELLIGENCE ─── */}
+      {/* ─── 5. TAB 2: 5-STEP DEAL STRATEGY ─── */}
       {activeTab === 'blackboard' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-600" />
-              5-Stage Blackboard Reasoning Pipeline
+              5-Step Competitive Deal Strategy
             </h3>
             <p className="text-xs text-slate-500">
-              Each stage ingests upstream outputs and refines the competitive displacement angle.
+              How our AI breaks down the deal—from the prospect's pain to the exact pitch to close.
             </p>
           </div>
 
@@ -354,10 +394,12 @@ export default function CompetitorBattlecards({ currentTenant }) {
                     <span className="w-6 h-6 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
                       0{stage.stage_number}
                     </span>
-                    <h4 className="font-bold text-sm text-slate-900">{stage.stage_name}</h4>
+                    <h4 className="font-bold text-sm text-slate-900">
+                      {formatStageTitle(stage.stage_number, stage.stage_name)}
+                    </h4>
                   </div>
-                  <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700">
-                    Engine Output
+                  <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    Strategic Insight
                   </span>
                 </div>
 
@@ -365,13 +407,13 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   {stage.executive_summary}
                 </p>
 
-                {/* Structured JSON-like parameters */}
+                {/* Structured Key Deal Facts */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Extracted Stage Parameters</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Key Deal Facts</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     {Object.entries(stage.details || {}).map(([key, val]) => (
                       <div key={key} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
-                        <span className="capitalize">{key.replace(/_/g, ' ')}:</span>
+                        <span className="font-medium text-slate-500">{friendlyParamKey(key)}:</span>
                         <strong className="text-slate-900">{String(val)}</strong>
                       </div>
                     ))}
@@ -383,16 +425,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
         </div>
       )}
 
-      {/* ─── 6. TAB 3: OBJECTION REBUTTAL MATRIX ─── */}
+      {/* ─── 6. TAB 3: OBJECTION CHEAT SHEET ─── */}
       {activeTab === 'objections' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-amber-600" />
-              Objection Handling Matrix
+              Objection Cheat Sheet
             </h3>
             <p className="text-xs text-slate-500">
-              Proven rep talk-tracks addressing competitor FUD (Fear, Uncertainty, Doubt) with concrete proof.
+              Word-for-word responses to tough buyer questions and competitor claims, backed by verified data.
             </p>
           </div>
 
@@ -412,25 +454,25 @@ export default function CompetitorBattlecards({ currentTenant }) {
                     className="btn-secondary text-xs self-end sm:self-auto"
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    <span>{copiedIndex === `obj-${idx}` ? 'Copied!' : 'Copy Rebuttal'}</span>
+                    <span>{copiedIndex === `obj-${idx}` ? 'Copied!' : 'Copy Response'}</span>
                   </button>
                 </div>
 
                 <div className="space-y-2 text-xs">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Underlying Root Cause</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Why They're Asking This:</span>
                     <p className="text-slate-600 mt-0.5">{obj.root_cause}</p>
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-slate-800">
-                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Recommended Talk Track</span>
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">What to Say:</span>
                     <p className="italic text-xs sm:text-sm leading-relaxed font-medium">
                       "{obj.talk_track}"
                     </p>
                   </div>
 
                   <div className="pt-1 text-slate-500 flex items-center gap-2">
-                    <span className="font-semibold text-slate-700">Proof Metric:</span>
+                    <span className="font-semibold text-slate-700">Proof to Back It Up:</span>
                     <span>{obj.proof_point}</span>
                   </div>
                 </div>
@@ -440,21 +482,21 @@ export default function CompetitorBattlecards({ currentTenant }) {
         </div>
       )}
 
-      {/* ─── 7. TAB 4: 6-SIGNAL LIVE RADAR STREAM ─── */}
+      {/* ─── 7. TAB 4: LIVE BUYING TRIGGERS ─── */}
       {activeTab === 'signals' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-purple-600" />
-                6-Signal Autonomous Account Radar
+                Live Buying Signals & Triggers
               </h3>
               <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                Live Ingestion Active
+                Live Monitoring Active
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Autonomous agent categorizing Leadership Moves, Capital Expansions, Tech Stack Shifts, and Churn Triggers.
+              Real-time events (Leadership moves, M&A funding, tech stack shifts, churn risks) paired with instant outreach hooks.
             </p>
           </div>
 
@@ -474,14 +516,14 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                      +{sig.opportunity_viability_boost} Viability Boost
+                      +{sig.opportunity_viability_boost} Timing Advantage
                     </span>
                     <button
                       onClick={() => handleCopyHook(sig.pre_drafted_hook, idx)}
                       className="btn-primary text-xs"
                     >
                       <Copy className="w-3.5 h-3.5" />
-                      <span>{copiedHookIndex === idx ? 'Copied Hook!' : 'Copy Outreach Hook'}</span>
+                      <span>{copiedHookIndex === idx ? 'Copied Hook!' : 'Copy Message Hook'}</span>
                     </button>
                   </div>
                 </div>
@@ -491,12 +533,12 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   <p className="text-slate-600 leading-relaxed">{sig.snippet}</p>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Recommended Sales Play</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Why Reach Out Now:</span>
                     <p className="text-slate-800 font-semibold">{sig.recommended_sales_play}</p>
                   </div>
 
                   <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-lg space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider block">Pre-Drafted Outreach Hook</span>
+                    <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider block">Ready-to-Send Message Hook:</span>
                     <p className="italic text-slate-900">"{sig.pre_drafted_hook}"</p>
                   </div>
                 </div>
@@ -513,7 +555,7 @@ export default function CompetitorBattlecards({ currentTenant }) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Swords className="w-4 h-4 text-emerald-700" />
-                Generate Custom Battlecard
+                Generate Competitor Playbook
               </h3>
               <button onClick={() => setShowCustomModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
@@ -534,7 +576,7 @@ export default function CompetitorBattlecards({ currentTenant }) {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Prospect Company (Optional)</label>
+                <label className="block text-slate-700 font-semibold mb-1">Target Prospect (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. Apex Logistics Global"
@@ -557,7 +599,7 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   disabled={isGenerating}
                   className="btn-primary"
                 >
-                  {isGenerating ? 'Running 5 Stages...' : 'Run Blackboard Engine'}
+                  {isGenerating ? 'Analyzing Competitor...' : 'Generate Playbook'}
                 </button>
               </div>
             </form>
