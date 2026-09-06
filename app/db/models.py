@@ -251,5 +251,22 @@ class EvidenceQuote(Base):
     score_item = relationship("MEDPICCScore", back_populates="evidence_quotes")
 
 
+class BuyingCommitteeMember(Base):
+    __tablename__ = "buying_committee_members"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id"), nullable=False, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    role = Column(String(255), nullable=False)
+    tag = Column(String(64), nullable=False)  # 'Internal Champion', 'Budget Owner', 'Security Reviewer', 'Legal & Contracts'
+    status = Column(String(32), default="Engaged", nullable=False)  # 'Engaged', 'Pending', 'Missing', 'Uncontacted'
+    email = Column(String(255), nullable=True)
+    linkedin_url = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    deal = relationship("Deal", backref="committee_members")
+
+
 
 

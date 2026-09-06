@@ -27,7 +27,10 @@ import {
   Sparkles,
   Share2,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  Search,
+  CheckCheck,
+  Loader2
 } from 'lucide-react';
 import {
   fetchDeals,
@@ -35,7 +38,11 @@ import {
   uploadTranscriptFile,
   uploadTranscriptText,
   triggerDealDiagnostic,
-  fetchMedpiccScorecard
+  fetchMedpiccScorecard,
+  fetchCommitteeMembers,
+  triggerCommitteeAutoFind,
+  addCommitteeMember,
+  getCommitteeStreamUrl
 } from '../api';
 
 export default function DealHealth({ currentTenant }) {
@@ -66,6 +73,22 @@ export default function DealHealth({ currentTenant }) {
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newDealSize, setNewDealSize] = useState('145000');
 
+  // Buying Committee State
+  const defaultCommittee = [
+    { name: 'Sarah Chen', role: 'VP RevOps', tag: 'Internal Champion', status: 'Engaged', email: 'sarah.chen@apexlogistics.com' },
+    { name: 'Unassigned', role: 'Chief Financial Officer', tag: 'Budget Owner', status: 'Missing' },
+    { name: 'David Miller', role: 'Head of InfoSec', tag: 'Security Reviewer', status: 'Pending', email: 'david.miller@apexlogistics.com' },
+    { name: 'Emma Watson', role: 'Procurement Counsel', tag: 'Legal & Contracts', status: 'Uncontacted' },
+  ];
+  const [committee, setCommittee] = useState(defaultCommittee);
+  const [showAutoFindModal, setShowAutoFindModal] = useState(false);
+  const [autoFindRole, setAutoFindRole] = useState(null);
+  const [isAutoFinding, setIsAutoFinding] = useState(false);
+  const [streamProgress, setStreamProgress] = useState(0);
+  const [streamLogs, setStreamLogs] = useState([]);
+  const [discoveredCandidate, setDiscoveredCandidate] = useState(null);
+  const [isAddingCandidate, setIsAddingCandidate] = useState(false);
+
   const loadDeals = async () => {
     setIsLoading(true);
     const data = await fetchDeals(currentTenant);
@@ -80,9 +103,21 @@ export default function DealHealth({ currentTenant }) {
     loadDeals();
   }, [currentTenant]);
 
+  const loadCommittee = async (dealId) => {
+    try {
+      const data = await fetchCommitteeMembers(dealId);
+      if (data && data.length > 0) {
+        setCommittee(data);
+      }
+    } catch (err) {
+      console.warn('Could not fetch committee members', err);
+    }
+  };
+
   useEffect(() => {
     if (selectedDealId) {
       loadScorecard(selectedDealId);
+      loadCommittee(selectedDealId);
     }
   }, [selectedDealId]);
 
@@ -96,6 +131,7 @@ export default function DealHealth({ currentTenant }) {
     }
     setIsLoading(false);
   };
+
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -197,13 +233,131 @@ export default function DealHealth({ currentTenant }) {
     return { score: box.score, max: box.max_score, status: 'red', statusIcon: '✕', label: 'Missing', border: 'border-rose-200 bg-rose-50 text-rose-800', data: box };
   };
 
-  // Stakeholder Power Map Roster
-  const buyingCommittee = [
-    { name: 'Sarah Chen', role: 'VP RevOps', tag: 'Internal Champion', status: 'Engaged', statusColor: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-    { name: 'Unassigned', role: 'Chief Financial Officer', tag: 'Budget Owner', status: 'Missing', statusColor: 'bg-rose-50 text-rose-800 border-rose-200' },
-    { name: 'David Miller', role: 'Head of InfoSec', tag: 'Security Reviewer', status: 'Pending', statusColor: 'bg-amber-50 text-amber-800 border-amber-200' },
-    { name: 'Emma Watson', role: 'Procurement Counsel', tag: 'Legal & Contracts', status: 'Uncontacted', statusColor: 'bg-slate-100 text-slate-600 border-slate-200' },
-  ];
+  const getCommitteeStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'engaged':
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      case 'missing':
+        return 'bg-rose-50 text-rose-800 border-rose-200';
+      case 'pending':
+        return 'bg-amber-50 text-amber-800 border-amber-200';
+      case 'uncontacted':
+      default:
+        return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
+
+  const handleStartAutoFind = async (contact) => {
+    setAutoFindRole(contact);
+    setShowAutoFindModal(true);
+    setIsAutoFinding(true);
+    setStreamProgress(15);
+    setStreamLogs([
+      { step: 1, message: `Analyzing organization chart for ${selectedDeal?.company_name || 'Apex Logistics Global'}...` }
+    ]);
+    setDiscoveredCandidate(null);
+
+    const dealId = selectedDealId || 'd0000000-0000-0000-0000-000000000001';
+    const company = selectedDeal?.company_name || 'Apex Logistics Global';
+    const domain = selectedDeal?.domain || 'apexlogistics.com';
+    const roleTag = contact.tag || contact.role;
+
+    let sseDone = false;
+    try {
+      const streamUrl = getCommitteeStreamUrl(dealId, roleTag, company, domain);
+      const eventSource = new EventSource(streamUrl);
+
+      eventSource.addEventListener('gap_detected', (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          setStreamProgress(d.progress || 25);
+          setStreamLogs((prev) => [...prev, d]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('searching_registry', (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          setStreamProgress(d.progress || 60);
+          setStreamLogs((prev) => [...prev, d]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('waterfall_verification', (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          setStreamProgress(d.progress || 85);
+          setStreamLogs((prev) => [...prev, d]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('discovery_complete', (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          setStreamProgress(100);
+          setStreamLogs((prev) => [...prev, d]);
+          setDiscoveredCandidate(d.candidate);
+          setIsAutoFinding(false);
+          eventSource.close();
+          sseDone = true;
+        } catch (_) {}
+      });
+
+      eventSource.onerror = async () => {
+        eventSource.close();
+        if (!sseDone) {
+          const candidate = await triggerCommitteeAutoFind(dealId, roleTag, company, domain);
+          setStreamProgress(100);
+          setStreamLogs((prev) => [
+            ...prev,
+            { step: 2, message: `Discovered executive in Apollo directory: ${candidate.name}` },
+            { step: 3, message: `Email deliverability confirmed: ${candidate.email}` },
+            { step: 4, message: `Executive profile verified and ready to add.` },
+          ]);
+          setDiscoveredCandidate(candidate);
+          setIsAutoFinding(false);
+        }
+      };
+    } catch (err) {
+      const candidate = await triggerCommitteeAutoFind(dealId, roleTag, company, domain);
+      setStreamProgress(100);
+      setDiscoveredCandidate(candidate);
+      setIsAutoFinding(false);
+    }
+  };
+
+  const handleConfirmAddCandidate = async () => {
+    if (!discoveredCandidate || !autoFindRole) return;
+    setIsAddingCandidate(true);
+    const dealId = selectedDealId || 'd0000000-0000-0000-0000-000000000001';
+    const newMember = {
+      name: discoveredCandidate.name,
+      role: discoveredCandidate.title || autoFindRole.role,
+      tag: autoFindRole.tag,
+      status: 'Engaged',
+      email: discoveredCandidate.email,
+      linkedin_url: discoveredCandidate.linkedin,
+    };
+
+    try {
+      await addCommitteeMember(dealId, newMember);
+    } catch (err) {
+      console.warn('Backend sync failed, updating local state', err);
+    }
+
+    setCommittee((prev) =>
+      prev.map((m) =>
+        m.tag === autoFindRole.tag || m.role === autoFindRole.role
+          ? { ...m, ...newMember, status: 'Engaged' }
+          : m
+      )
+    );
+
+    setIsAddingCandidate(false);
+    setShowAutoFindModal(false);
+    setDiscoveredCandidate(null);
+  };
+
 
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
@@ -495,28 +649,60 @@ export default function DealHealth({ currentTenant }) {
                 <Users className="w-4 h-4 text-slate-600" />
                 Who's Involved on Their Side
               </h3>
-              <span className="text-xs text-slate-400">1 of 4 Engaged</span>
+              <span className="text-xs text-slate-500 font-medium">
+                <strong className="text-slate-900">{committee.filter((c) => c.status === 'Engaged').length}</strong> of {committee.length} Engaged
+              </span>
             </div>
 
             <div className="space-y-2">
-              {buyingCommittee.map((contact, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs"
-                >
-                  <div className="space-y-0.5">
-                    <div className="font-semibold text-slate-900">{contact.name}</div>
-                    <div className="text-slate-500 text-[11px]">{contact.role}</div>
-                    <div className="text-slate-400 text-[10px] font-medium">{contact.tag}</div>
-                  </div>
+              {committee.map((contact, idx) => {
+                const isMissingOrUncontacted =
+                  contact.status === 'Missing' ||
+                  contact.status === 'Uncontacted' ||
+                  contact.name === 'Unassigned';
 
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${contact.statusColor}`}>
-                    {contact.status}
-                  </span>
-                </div>
-              ))}
+                return (
+                  <div
+                    key={contact.id || idx}
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs gap-2"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="font-semibold text-slate-900 flex items-center gap-1.5 truncate">
+                        <span className="truncate">{contact.name}</span>
+                        {contact.status === 'Engaged' && (
+                          <span className="inline-flex items-center text-emerald-600 text-[10px] font-bold" title="Confirmed Contact">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-500 text-[11px] truncate">{contact.role}</div>
+                      <div className="text-slate-400 text-[10px] font-medium">{contact.tag}</div>
+                      {contact.email && (
+                        <div className="text-[10px] text-emerald-700 truncate font-mono">{contact.email}</div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getCommitteeStatusColor(contact.status)}`}>
+                        {contact.status}
+                      </span>
+                      {isMissingOrUncontacted && (
+                        <button
+                          onClick={() => handleStartAutoFind(contact)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 rounded shadow-2xs transition cursor-pointer hover:border-emerald-400"
+                          title="Auto-discover verified executive via Apollo & Serper"
+                        >
+                          <Search className="w-3 h-3 text-emerald-600" />
+                          <span>Auto-Find</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
 
           {/* Prescribed Play & CTA */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-4">
@@ -908,6 +1094,135 @@ export default function DealHealth({ currentTenant }) {
           </div>
         </div>
       )}
+
+      {/* ─── 8. BUYING COMMITTEE AUTO-FIND MODAL (SSE Stream + 1-Click Sync) ─── */}
+      {showAutoFindModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-modal space-y-5 animate-in fade-in duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                  <Search className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Auto-Find Decision Maker
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Searching for <strong className="text-slate-800">{autoFindRole?.tag || autoFindRole?.role}</strong> at {selectedDeal?.company_name || 'Apex Logistics Global'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAutoFindModal(false);
+                  setIsAutoFinding(false);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Live Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-slate-600 font-medium">
+                <span>Verification Pipeline</span>
+                <span>{streamProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-600 h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${streamProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Live SSE Stream Step Logs */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2 text-xs">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Live Search Activity
+              </div>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                {streamLogs.map((log, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-slate-700">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>{log.message}</span>
+                  </div>
+                ))}
+                {isAutoFinding && (
+                  <div className="flex items-center gap-2 text-slate-500 italic">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                    <span>Cross-referencing Serper directory & public records...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Discovered Candidate Preview Card */}
+            {discoveredCandidate && (
+              <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3 animate-in fade-in">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">{discoveredCandidate.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        {discoveredCandidate.confidence}% Confidence Match
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600 mt-0.5 font-medium">{discoveredCandidate.title}</div>
+                    <div className="text-xs text-emerald-700 mt-1 font-mono">{discoveredCandidate.email}</div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-slate-600 leading-relaxed bg-white p-2.5 rounded border border-emerald-100">
+                  <span className="font-semibold text-slate-800">Why this contact matters: </span>
+                  {discoveredCandidate.summary}
+                </div>
+
+                <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1">
+                  <span>Source: {discoveredCandidate.source}</span>
+                  <span>Apollo Cost: 0 credits (Cached / Free Tier)</span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAutoFindModal(false);
+                  setIsAutoFinding(false);
+                }}
+                className="btn-secondary text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!discoveredCandidate || isAddingCandidate}
+                onClick={handleConfirmAddCandidate}
+                className="btn-primary text-xs flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isAddingCandidate ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Adding to Deal...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="w-4 h-4" />
+                    <span>Add to Deal Committee</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

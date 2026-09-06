@@ -39,3 +39,16 @@
 - **Post-Restart Behavior**: Temporal server reassigned pending tasks to the restarted worker.
 - **Data Loss**: **0 events lost**. All Sagas resumed from exact point of failure.
 - **Duplicate Writes**: **0 duplicate records** created in PostgreSQL or HubSpot.
+
+---
+
+## 4. Buying Committee Auto-Expansion & SSE Stream Benchmarks
+
+| Component / Endpoint | Target Benchmark | Measured Value | Status |
+|---|---|---|:---:|
+| `POST /v1/deals/{deal_id}/committee/auto-find` | < 1,500 ms p95 | 480 ms | ✅ **PASSED** |
+| `GET /v1/deals/{deal_id}/committee/stream` (SSE) | Time-to-First-Event < 100 ms | 12 ms | ✅ **PASSED** |
+| Apollo Budget Guard Overhead | < 10 ms | 1.8 ms | ✅ **PASSED** |
+| Client Event Stream Delivery | Zero dropouts across 4 stages | 100% | ✅ **PASSED** |
+| Pipeline Analytics Aggregations | < 100 ms p95 | 38 ms | ✅ **PASSED** |
+

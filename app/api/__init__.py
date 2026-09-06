@@ -11,6 +11,7 @@ from app.api.v1.settings import router as settings_router
 from app.api.v1.meetings import router as meetings_router
 from app.api.v1.battlecards import router as battlecards_router
 from app.api.v1.signals import router as signals_router
+from app.api.v1.committee import router as committee_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["Health"])
@@ -19,6 +20,7 @@ api_router.include_router(tenant_router, tags=["Tenant Configuration"])
 api_router.include_router(leads_router, tags=["Inbound Leads"])
 api_router.include_router(outbound_router, tags=["Outbound Prospecting"])
 api_router.include_router(deals_router, tags=["Deal Intelligence & MEDDPICC"])
+api_router.include_router(committee_router, tags=["Buying Committee & Real-Time SSE"])
 api_router.include_router(meetings_router, tags=["Meeting Intelligence & Calendar Prep"])
 api_router.include_router(battlecards_router, tags=["Competitor Battlecards"])
 api_router.include_router(signals_router, tags=["6-Signal Autonomous Account Agent"])

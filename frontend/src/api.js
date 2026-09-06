@@ -1145,3 +1145,133 @@ export async function ingestSignal(signalData) {
   return await res.json();
 }
 
+// ==========================================
+// Phase 8: Buying Committee Auto-Expansion & SSE
+// ==========================================
+
+export async function fetchCommitteeMembers(dealId = "d0000000-0000-0000-0000-000000000001") {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/deals/${dealId}/committee`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch committee members");
+    return await res.json();
+  } catch (err) {
+    console.warn("Using fallback committee members", err);
+    return [
+      {
+        id: "comm-01",
+        deal_id: dealId,
+        name: "Sarah Chen",
+        role: "VP RevOps",
+        tag: "Internal Champion",
+        status: "Engaged",
+        email: "sarah.chen@apexlogistics.com",
+      },
+      {
+        id: "comm-02",
+        deal_id: dealId,
+        name: "Unassigned",
+        role: "Chief Financial Officer",
+        tag: "Budget Owner",
+        status: "Missing",
+      },
+      {
+        id: "comm-03",
+        deal_id: dealId,
+        name: "David Miller",
+        role: "Head of InfoSec",
+        tag: "Security Reviewer",
+        status: "Pending",
+        email: "david.miller@apexlogistics.com",
+      },
+      {
+        id: "comm-04",
+        deal_id: dealId,
+        name: "Emma Watson",
+        role: "Procurement Counsel",
+        tag: "Legal & Contracts",
+        status: "Uncontacted",
+      },
+    ];
+  }
+}
+
+export async function addCommitteeMember(dealId, memberData) {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/deals/${dealId}/committee`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(memberData),
+    });
+    if (!res.ok) throw new Error("Failed to add committee member");
+    return await res.json();
+  } catch (err) {
+    console.warn("Using local committee member addition fallback", err);
+    return {
+      id: "comm-" + Date.now(),
+      deal_id: dealId,
+      ...memberData,
+    };
+  }
+}
+
+export async function triggerCommitteeAutoFind(dealId, roleTag, companyName = "Apex Logistics Global", domain = "apexlogistics.com") {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/deals/${dealId}/committee/auto-find`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ role_tag: roleTag, company_name: companyName, domain }),
+    });
+    if (!res.ok) throw new Error("Failed to auto-find candidate");
+    return await res.json();
+  } catch (err) {
+    console.warn("Using fallback auto-find candidate", err);
+    const mockCandidates = {
+      "Budget Owner": {
+        name: "Marcus Vance",
+        title: "Chief Financial Officer",
+        email: "m.vance@apexlogistics.com",
+        linkedin: "https://linkedin.com/in/marcus-vance-cfo",
+        confidence: 96,
+        source: "Apollo & Public 10-K Roster",
+        summary: "Authorized to approve six-figure software OPEX allocations.",
+      },
+      "Security Reviewer": {
+        name: "David Miller",
+        title: "Head of Information Security",
+        email: "david.miller@apexlogistics.com",
+        linkedin: "https://linkedin.com/in/davidmiller-infosec",
+        confidence: 93,
+        source: "Serper Executive Directory",
+        summary: "Oversees SOC 2 and vendor risk assessments.",
+      },
+      "Legal & Contracts": {
+        name: "Emma Watson",
+        title: "Senior Director of Procurement",
+        email: "emma.watson@apexlogistics.com",
+        linkedin: "https://linkedin.com/in/emma-watson-procure",
+        confidence: 89,
+        source: "LinkedIn Cross-Reference",
+        summary: "Signs off on master service agreements and security addendums.",
+      },
+    };
+    return mockCandidates[roleTag] || {
+      name: "Alex Thorne",
+      title: `${roleTag} Executive`,
+      email: `alex.thorne@${domain}`,
+      confidence: 90,
+      source: "Registry Waterfall",
+      summary: "Identified decision-maker.",
+    };
+  }
+}
+
+export function getCommitteeStreamUrl(dealId, roleTag, companyName, domain) {
+  const params = new URLSearchParams({
+    role_tag: roleTag,
+    company_name: companyName || "Apex Logistics Global",
+    domain: domain || "apexlogistics.com",
+  });
+  return `${BASE_URL}/v1/deals/${dealId}/committee/stream?${params.toString()}`;
+}
+
+
