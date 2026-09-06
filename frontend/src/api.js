@@ -335,18 +335,18 @@ export async function fetchMedpiccScorecard(dealId) {
       deal_id: dealId,
       overall_score: 68,
       deal_category: "Rescue",
-      next_best_action: "Schedule 15-minute alignment with CFO to validate discretionary funds before infosec review.",
+      next_best_action: "Schedule a quick 15-minute check-in with the CFO to confirm budget approval before starting security review.",
       closure_if_addressed: {
         likelihood_range: "75-85%",
-        rationale: "Implicated pain and metrics are fully validated. Gaining direct CFO budget access unlocks Q3 contracting.",
+        rationale: "Customer problem and dollar savings are clearly proven. Getting direct CFO budget sign-off unlocks contract closing for Q3.",
       },
       closure_if_ignored: {
         likelihood_range: "15-25%",
-        rationale: "Without EB buy-in, the deal will stall in legal redlines or fall prey to status-quo inertia.",
+        rationale: "Without the budget owner's direct approval, the deal will stall in legal review or get postponed to next year.",
       },
       top_blocking_boxes: ["Economic Buyer", "Paper Process"],
       seller_summary: {
-        headline: "High-urgency opportunity with strong quantified pain, currently gatekept at the director level.",
+        headline: "High-urgency deal with clear financial return, but currently held up until we get access to executive leadership.",
         what_we_know: [
           "Manual routing errors wasting $140k/yr in executive time.",
           "Lead architect and RevOps lead strongly endorse the platform.",
@@ -385,7 +385,7 @@ export async function fetchMedpiccScorecard(dealId) {
           rating: "Moderate",
           evidence_basis: "inferred",
           hard_cap_applied: true,
-          notes: "RULE 6.2 Hard Cap: CFO identified as signer but no direct sponsor call confirmed.",
+          notes: "CFO is confirmed as the budget owner, but no direct meeting or written sign-off has happened yet.",
           coaching_questions: ["Can our champion broker a brief executive check-in with the CFO?"],
           evidence_quotes: []
         },
@@ -419,7 +419,7 @@ export async function fetchMedpiccScorecard(dealId) {
           max_score: 10,
           rating: "Weak",
           evidence_basis: "inferred",
-          notes: "Procurement contact unassigned; standard DPA timeline not yet scoped.",
+          notes: "Procurement contact not yet assigned; legal and security review usually takes ~4 weeks.",
           coaching_questions: ["Has legal already pre-approved third-party cloud data processors?"],
           evidence_quotes: []
         },

@@ -7,7 +7,7 @@ export default function Header({ currentView, setCurrentView, currentTenant, set
       case 'dashboard': return 'Dashboard';
       case 'inbound': return 'Inbound Pipeline';
       case 'outbound': return 'Outbound Queue';
-      case 'deal-health': return 'Deal Health & MEDDPICC';
+      case 'deal-health': return 'Deal Health & Risks';
       case 'battlecards': return 'Competitor Playbooks & Live Triggers';
       case 'meeting-prep': return 'Call Prep & Meeting Notes';
       case 'byok-settings': return 'BYOK Key Vault';

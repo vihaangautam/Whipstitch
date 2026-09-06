@@ -18,7 +18,7 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inbound', label: 'Inbound Pipeline', icon: Inbox },
     { id: 'outbound', label: 'Outbound Queue', icon: Rocket, badge: summaryData?.staged_awaiting_approval || 18 },
-    { id: 'deal-health', label: 'Deal Health (MEDDPICC)', icon: ShieldCheck },
+    { id: 'deal-health', label: 'Deal Health & Risks', icon: ShieldCheck },
   ];
 
   const engineNav = [

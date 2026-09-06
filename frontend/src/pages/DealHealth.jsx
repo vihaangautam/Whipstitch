@@ -170,16 +170,16 @@ export default function DealHealth({ currentTenant }) {
 
   const selectedDeal = deals.find((d) => d.id === selectedDealId);
 
-  // 8 MEDDPICC dimensions metadata
+  // 8 MEDDPICC dimensions metadata with intuitive sales subtitles
   const medpiccItems = [
-    { key: 'Metrics', letter: 'M', name: 'Metrics', max: 15 },
-    { key: 'Economic Buyer', letter: 'E', name: 'Economic Buyer', max: 15 },
-    { key: 'Decision Criteria', letter: 'D', name: 'Decision Criteria', max: 10 },
-    { key: 'Decision Process', letter: 'D', name: 'Decision Process', max: 10 },
-    { key: 'Paper Process', letter: 'P', name: 'Paper Process', max: 10 },
-    { key: 'Implicated Pain', letter: 'I', name: 'Implicated Pain', max: 15 },
-    { key: 'Champion', letter: 'C', name: 'Champion', max: 15 },
-    { key: 'Competition', letter: 'C', name: 'Competition', max: 10 },
+    { key: 'Metrics', letter: 'M', name: 'Metrics', sub: 'Dollar Impact & ROI', max: 15 },
+    { key: 'Economic Buyer', letter: 'E', name: 'Economic Buyer', sub: 'Budget Owner', max: 15 },
+    { key: 'Decision Criteria', letter: 'D', name: 'Decision Criteria', sub: 'Must-Haves', max: 10 },
+    { key: 'Decision Process', letter: 'D', name: 'Decision Process', sub: 'Approval Steps', max: 10 },
+    { key: 'Paper Process', letter: 'P', name: 'Paper Process', sub: 'Legal & Security', max: 10 },
+    { key: 'Implicated Pain', letter: 'I', name: 'Implicated Pain', sub: 'Problem & Urgency', max: 15 },
+    { key: 'Champion', letter: 'C', name: 'Champion', sub: 'Internal Sponsor', max: 15 },
+    { key: 'Competition', letter: 'C', name: 'Competition', sub: 'Rivals & Status Quo', max: 10 },
   ];
 
   const getBoxStatus = (boxName) => {
@@ -199,10 +199,10 @@ export default function DealHealth({ currentTenant }) {
 
   // Stakeholder Power Map Roster
   const buyingCommittee = [
-    { name: 'Sarah Chen', role: 'VP RevOps', tag: 'Champion', status: 'Engaged', statusColor: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-    { name: 'Unassigned', role: 'Chief Financial Officer', tag: 'Economic Buyer', status: 'Missing', statusColor: 'bg-rose-50 text-rose-800 border-rose-200' },
-    { name: 'David Miller', role: 'Head of InfoSec', tag: 'Security Gatekeeper', status: 'Pending', statusColor: 'bg-amber-50 text-amber-800 border-amber-200' },
-    { name: 'Emma Watson', role: 'Procurement Counsel', tag: 'Paper Process', status: 'Uncontacted', statusColor: 'bg-slate-100 text-slate-600 border-slate-200' },
+    { name: 'Sarah Chen', role: 'VP RevOps', tag: 'Internal Champion', status: 'Engaged', statusColor: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+    { name: 'Unassigned', role: 'Chief Financial Officer', tag: 'Budget Owner', status: 'Missing', statusColor: 'bg-rose-50 text-rose-800 border-rose-200' },
+    { name: 'David Miller', role: 'Head of InfoSec', tag: 'Security Reviewer', status: 'Pending', statusColor: 'bg-amber-50 text-amber-800 border-amber-200' },
+    { name: 'Emma Watson', role: 'Procurement Counsel', tag: 'Legal & Contracts', status: 'Uncontacted', statusColor: 'bg-slate-100 text-slate-600 border-slate-200' },
   ];
 
   return (
@@ -258,7 +258,7 @@ export default function DealHealth({ currentTenant }) {
             className="btn-secondary px-3.5 py-2 text-xs"
           >
             {isDiagnosing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>Re-Diagnose</span>
+            <span>Re-Analyze Deal</span>
           </button>
 
           <a
@@ -269,7 +269,7 @@ export default function DealHealth({ currentTenant }) {
             title="Download executive PDF report"
           >
             <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Export PDF</span>
+            <span>Download PDF</span>
           </a>
 
           <button
@@ -301,10 +301,10 @@ export default function DealHealth({ currentTenant }) {
             </div>
             <div className="h-10 border-r border-slate-200 hidden sm:block"></div>
             <div>
-              <span className="text-xs text-slate-400 font-semibold">Forecast Likelihood</span>
+              <span className="text-xs text-slate-400 font-semibold">Deal Win Likelihood</span>
               <div className="text-xs text-slate-700 font-medium mt-1 space-y-0.5">
-                <div><strong className="text-emerald-800">75%</strong> if critical gaps addressed</div>
-                <div><strong className="text-rose-800">20%</strong> if CFO meeting ignored</div>
+                <div><strong className="text-emerald-800">75%</strong> if critical gaps are closed</div>
+                <div><strong className="text-rose-800">20%</strong> if CFO sign-off is missed</div>
               </div>
             </div>
           </div>
@@ -314,10 +314,10 @@ export default function DealHealth({ currentTenant }) {
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-slate-700 flex items-center gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-                Stage 3 Won-Deal Trajectory Benchmark
+                How This Compares to Deals That Won
               </span>
               <span className="text-slate-500 font-medium">
-                Current Deal: <strong className="text-slate-900">68</strong> &bull; Stage 3 Target: <strong className="text-emerald-800">75</strong> (-7 pts)
+                Current Deal: <strong className="text-slate-900">68</strong> &bull; Winning Average at this Stage: <strong className="text-emerald-800">75</strong> (-7 pts)
               </span>
             </div>
 
@@ -336,21 +336,21 @@ export default function DealHealth({ currentTenant }) {
             </div>
 
             <div className="flex justify-between text-[11px] text-slate-400">
-              <span>0 (Qualification Start)</span>
-              <span className="text-emerald-800 font-semibold">75 Target Benchmark</span>
-              <span>100 (Contract Closed)</span>
+              <span>0 (First Call)</span>
+              <span className="text-emerald-800 font-semibold">75 Winning Benchmark</span>
+              <span>100 (Deal Signed)</span>
             </div>
           </div>
         </div>
 
-        {/* ─── 3. 8-PILL MEDDPICC STATUS STRIP (Interactive) ─── */}
+        {/* ─── 3. 8-PILL VITAL SIGNS STATUS STRIP (Interactive) ─── */}
         <div className="pt-3 border-t border-slate-100 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              <span>MEDDPICC Criteria</span>
-              <span className="text-slate-400 font-normal">&bull; Click any pill to audit evidence quotes or override score</span>
+              <span>The 8 Deal Vital Signs</span>
+              <span className="text-slate-400 font-normal">&bull; Click any card to see customer quotes or update the score</span>
             </span>
-            <span className="text-slate-400 text-[11px]">8 Dimensions Evaluated</span>
+            <span className="text-slate-400 text-[11px]">8 Vital Signs Checked</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
@@ -365,12 +365,13 @@ export default function DealHealth({ currentTenant }) {
                   }}
                   className={`flex items-center justify-between px-3 py-2 rounded-lg border text-left transition cursor-pointer hover:shadow-xs hover:border-slate-300 ${boxState.border}`}
                 >
-                  <div className="truncate">
+                  <div className="truncate pr-1">
                     <div className="font-bold text-xs flex items-center gap-1">
                       <span>{item.letter}</span>
                       <span className="text-[11px] font-semibold">{boxState.statusIcon}</span>
+                      <span className="truncate">{item.name}</span>
                     </div>
-                    <div className="text-[10px] truncate opacity-80">{item.name}</div>
+                    <div className="text-[10px] truncate opacity-75 font-medium">{item.sub}</div>
                   </div>
                   <div className="text-xs font-bold text-right shrink-0">
                     {boxState.score}/{item.max}
@@ -391,9 +392,9 @@ export default function DealHealth({ currentTenant }) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
-                Critical Deal Gaps (Top 2 Blockers)
+                What's Missing to Close This Deal (Top 2 Blockers)
               </h3>
-              <span className="text-xs text-slate-400 font-medium">Prioritized for Next Call</span>
+              <span className="text-xs text-slate-400 font-medium">Top Priorities for Your Next Call</span>
             </div>
 
             <div className="space-y-4">
@@ -402,15 +403,15 @@ export default function DealHealth({ currentTenant }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    <h4 className="font-bold text-sm text-slate-900">1. Unverified Economic Buyer Buy-in</h4>
+                    <h4 className="font-bold text-sm text-slate-900">1. Budget Owner Hasn't Signed Off Yet</h4>
                   </div>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                    High Risk of Stall
+                    High Risk of Deal Stalling
                   </span>
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                  Sarah Chen (VP RevOps) confirmed the CFO holds ultimate budget authority for purchases above $100k, but no direct meeting or correspondence with the CFO exists yet.
+                  Sarah Chen (VP RevOps) confirmed the CFO has final budget sign-off for deals above $100k, but you haven't spoken with the CFO yet.
                 </p>
 
                 {/* Evidence Quote Snippet */}
@@ -427,15 +428,15 @@ export default function DealHealth({ currentTenant }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <h4 className="font-bold text-sm text-slate-900">2. Paper Process & InfoSec Schedule Undefined</h4>
+                    <h4 className="font-bold text-sm text-slate-900">2. Legal & Security Review Not Scheduled</h4>
                   </div>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                    Timeline Gatekeeper
+                    Timeline Risk
                   </span>
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                  Legal review and SOC2 audit lead times are unpinned against the prospect’s target Q3 live date.
+                  Legal review and security audits take ~4 weeks. If you don't schedule them now, the deal will miss the prospect's Q3 target live date.
                 </p>
 
                 {/* Evidence Quote Snippet */}
@@ -450,7 +451,7 @@ export default function DealHealth({ currentTenant }) {
 
             {/* Button to open full audit drawer */}
             <div className="pt-2 flex justify-between items-center text-xs">
-              <span className="text-slate-500">Need the complete dimension evidence breakdown?</span>
+              <span className="text-slate-500">Want to see all customer quotes and evidence?</span>
               <button
                 onClick={() => {
                   const firstBox = scorecard?.boxes ? scorecard.boxes[0] : null;
@@ -458,7 +459,7 @@ export default function DealHealth({ currentTenant }) {
                 }}
                 className="text-emerald-800 hover:text-emerald-900 font-semibold hover:underline flex items-center gap-1"
               >
-                <span>Inspect All 8 MEDDPICC Evidence Logs</span>
+                <span>View All 8 Deal Checks & Evidence Logs</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -469,9 +470,9 @@ export default function DealHealth({ currentTenant }) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                 <Quote className="w-4 h-4 text-emerald-600" />
-                Quantified Pain Quote (Core Value Hook)
+                The #1 Customer Quote Driving This Deal
               </h3>
-              <span className="text-xs text-slate-400">Discovery Call &bull; Audio Verified</span>
+              <span className="text-xs text-slate-400">Verified from Discovery Call</span>
             </div>
 
             <div className="bg-emerald-50/60 p-4 rounded-xl border-l-4 border-emerald-600 space-y-2">
@@ -485,14 +486,14 @@ export default function DealHealth({ currentTenant }) {
           </div>
         </div>
 
-        {/* RIGHT COLUMN (35% / 4 cols): Buying Committee Power Map & Next Action */}
+        {/* RIGHT COLUMN (35% / 4 cols): Who's Involved & Next Action */}
         <div className="lg:col-span-4 space-y-5">
-          {/* Buying Committee Power Map */}
+          {/* Buying Committee Roster */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                 <Users className="w-4 h-4 text-slate-600" />
-                Buying Committee Power Map
+                Who's Involved on Their Side
               </h3>
               <span className="text-xs text-slate-400">1 of 4 Engaged</span>
             </div>
@@ -520,12 +521,12 @@ export default function DealHealth({ currentTenant }) {
           {/* Prescribed Play & CTA */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-4">
             <div>
-              <span className="text-xs text-slate-400 font-semibold">Recommended Next Play</span>
+              <span className="text-xs text-slate-400 font-semibold">What to Do Next</span>
               <h4 className="text-sm font-bold text-slate-900 mt-1">
-                Schedule 15-Minute CFO Alignment
+                Get 15 Minutes with the CFO
               </h4>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Send the follow-up email requesting Sarah Chen connect you with the finance team to validate discretionary tooling budget ahead of InfoSec review.
+                Send the pre-written follow-up email asking Sarah to introduce you to the CFO to confirm budget approval before security review starts.
               </p>
             </div>
 
@@ -546,16 +547,16 @@ export default function DealHealth({ currentTenant }) {
         </div>
       </div>
 
-      {/* ─── 5. EXECUTION CONSOLE (Below - Revealing Follow-Up Email & Discovery Playbook) ─── */}
+      {/* ─── 5. EXECUTION CONSOLE (Follow-Up Email & Next Call Script) ─── */}
       <div id="execution-console" className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-600" />
-              <h3 className="text-base font-bold text-slate-900">Execution Console &bull; Follow-Up Email & Discovery Playbook</h3>
+              <h3 className="text-base font-bold text-slate-900">Follow-Up Email & Next Call Script</h3>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Pre-configured with questions specifically targeting unverified Economic Buyer and Paper Process gaps.
+              Pre-written with questions that get you introduced to the budget owner and kick off security review.
             </p>
           </div>
 
@@ -606,21 +607,21 @@ export default function DealHealth({ currentTenant }) {
           <div className="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
               <HelpCircle className="w-4 h-4 text-blue-600" />
-              <span>Discovery Talk Track for Next Call</span>
+              <span>Questions to Ask on Your Next Call</span>
             </div>
 
             <div className="space-y-2.5 text-xs text-slate-700">
               <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                <span className="font-semibold text-slate-900 block">Question 1 (CFO Access):</span>
+                <span className="font-semibold text-slate-900 block">Question 1 (Meeting the Budget Owner):</span>
                 <p className="italic text-slate-600">
-                  "Sarah, to make sure we don't hit an RFP gatekeeper, could we share our 1-page financial impact summary with your CFO before next Tuesday?"
+                  "Sarah, to make sure we stay on track for your Q3 goal without hitting late roadblocks, could we share a 1-page financial summary with your CFO this week?"
                 </p>
               </div>
 
               <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                <span className="font-semibold text-slate-900 block">Question 2 (Security Lead Time):</span>
+                <span className="font-semibold text-slate-900 block">Question 2 (Starting Security Review):</span>
                 <p className="italic text-slate-600">
-                  "What is David Miller’s typical InfoSec backlog for reviewing cloud integrations like ours?"
+                  "How long does David's team usually need to review security documentation for cloud tools like ours?"
                 </p>
               </div>
             </div>
@@ -643,11 +644,11 @@ export default function DealHealth({ currentTenant }) {
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                 <div>
-                  <span className="text-xs font-semibold text-slate-400">MEDDPICC Dimension Audit</span>
+                  <span className="text-xs font-semibold text-slate-400">Deal Vital Sign Detail & Evidence</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <h2 className="text-xl font-bold text-slate-900">{activeBoxDrawer.box}</h2>
                     <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                      Weight: {activeBoxDrawer.score} / {activeBoxDrawer.max_score || 15} pts
+                      Score: {activeBoxDrawer.score} / {activeBoxDrawer.max_score || 15} pts
                     </span>
                   </div>
                 </div>
@@ -663,17 +664,17 @@ export default function DealHealth({ currentTenant }) {
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                  AI Logic & Deduction Reason
+                  Why the AI Scored This
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed">
-                  {activeBoxDrawer.notes || "Score was capped because key decision criteria remain directional rather than contractually verified."}
+                  {activeBoxDrawer.notes || "Score reflects that key requirements have been discussed but not yet formally confirmed."}
                 </p>
               </div>
 
               {/* Verbatim Evidence Log */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Verbatim Buyer Evidence Log
+                  Exact Words from the Customer
                 </div>
                 {activeBoxDrawer.evidence_quotes && activeBoxDrawer.evidence_quotes.length > 0 ? (
                   <div className="space-y-2">
@@ -691,7 +692,7 @@ export default function DealHealth({ currentTenant }) {
                   </div>
                 ) : (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">
-                    No direct verbatim buyer quote detected in the ingested recording.
+                    No direct customer quote found in the call recording yet.
                   </div>
                 )}
               </div>
@@ -699,22 +700,22 @@ export default function DealHealth({ currentTenant }) {
               {/* Discovery Talk Track */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Discovery Playbook for Next Call
+                  Questions to Ask to Validate This
                 </div>
                 <div className="space-y-2 text-xs text-slate-700">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    &bull; "To ensure no downstream budget roadblocks, who else sits on the commercial sign-off committee?"
+                    &bull; "To ensure no late budget roadblocks, who else needs to give commercial approval?"
                   </div>
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    &bull; "What is the consequence if this implementation slip past the Q3 deadline?"
+                    &bull; "What happens to your team's goals if this implementation slips past the Q3 deadline?"
                   </div>
                 </div>
               </div>
 
-              {/* Rep Verification / Manual Override (Crucial!) */}
+              {/* Rep Verification / Manual Override */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-slate-900">Rep Verification & Manual Override</div>
+                  <div className="text-xs font-bold text-slate-900">Rep Verification & Update Score</div>
                   <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
@@ -722,7 +723,7 @@ export default function DealHealth({ currentTenant }) {
                       onChange={(e) => setIsOverridden(e.target.checked)}
                       className="rounded border-slate-300 text-slate-900 focus:ring-0"
                     />
-                    <span>Disagree with AI Score</span>
+                    <span>Update or Override Score</span>
                   </label>
                 </div>
 
@@ -740,7 +741,7 @@ export default function DealHealth({ currentTenant }) {
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1">Paste Rep Override Evidence Notes:</label>
+                      <label className="block text-slate-600 mb-1">Your Evidence / Notes from the Call:</label>
                       <textarea
                         rows={3}
                         placeholder="Notes confirming direct sponsor alignment..."
@@ -760,7 +761,7 @@ export default function DealHealth({ currentTenant }) {
                         onClick={handleSaveOverride}
                         className="btn-primary text-xs ml-auto"
                       >
-                        Sync Override to HubSpot
+                        Save & Sync to HubSpot
                       </button>
                     </div>
                   </div>
@@ -774,7 +775,7 @@ export default function DealHealth({ currentTenant }) {
                 onClick={() => setActiveBoxDrawer(null)}
                 className="btn-secondary text-xs px-4"
               >
-                Close Dimension Audit
+                Close Details
               </button>
             </div>
           </div>
@@ -819,7 +820,7 @@ export default function DealHealth({ currentTenant }) {
                 rows={6}
                 value={transcriptInput}
                 onChange={(e) => setTranscriptInput(e.target.value)}
-                placeholder="Paste verbatim dialogue from discovery call..."
+                placeholder="Paste notes or dialogue from your sales call..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-800 focus:border-slate-400 focus:bg-white focus:outline-none transition"
               />
             </div>
@@ -836,7 +837,7 @@ export default function DealHealth({ currentTenant }) {
                 disabled={isDiagnosing}
                 className="btn-primary text-xs"
               >
-                {isDiagnosing ? 'Analyzing...' : 'Run MEDDPICC Diagnostic'}
+                {isDiagnosing ? 'Analyzing Call...' : 'Analyze Call & Update Deal'}
               </button>
             </div>
           </div>
