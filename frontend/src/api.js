@@ -237,12 +237,14 @@ export async function fetchDeals(tenantId = "trifid_media") {
       {
         id: "d0000000-0000-0000-0000-000000000001",
         tenant_id: tenantId,
-        deal_name: "Strategic RevOps Modernization",
-        company_name: "Apex Logistics Global",
-        domain: "apexlogistics.com",
-        deal_size: 145000,
-        currency: "USD",
-        current_stage: "Rescue (68/100)",
+        deal_name: "Festive Influencer & UGC Campaign",
+        company_name: "Nykaa E-Retail",
+        domain: "nykaa.com",
+        deal_size: 1500000,
+        currency: "INR",
+        buyer_tier: "Tier 1: Founder-Led SMB",
+        tenant_track: "Service / Retainer",
+        current_stage: "Stage 3: Solution Validation",
         latest_score: 68,
         latest_category: "Rescue",
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
@@ -250,25 +252,29 @@ export async function fetchDeals(tenantId = "trifid_media") {
       {
         id: "d0000000-0000-0000-0000-000000000002",
         tenant_id: tenantId,
-        deal_name: "AI Lead Routing Rollout",
-        company_name: "CloudScale Systems",
-        domain: "cloudscale.io",
-        deal_size: 85000,
-        currency: "USD",
-        current_stage: "Advance (86/100)",
-        latest_score: 86,
+        deal_name: "Quick-Commerce Performance Retainer",
+        company_name: "Zepto Quick-Commerce",
+        domain: "zeptonow.com",
+        deal_size: 2800000,
+        currency: "INR",
+        buyer_tier: "Tier 2: Growth Scale-up",
+        tenant_track: "Service / Retainer",
+        current_stage: "Stage 4: SOW & 50% Advance",
+        latest_score: 84,
         latest_category: "Advance",
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
       },
       {
         id: "d0000000-0000-0000-0000-000000000003",
         tenant_id: tenantId,
-        deal_name: "Enterprise Pipeline Automation",
-        company_name: "FinPulse Payments",
-        domain: "finpulse.io",
-        deal_size: 60000,
-        currency: "USD",
-        current_stage: "Discovery",
+        deal_name: "B2B Enterprise Content Retainer",
+        company_name: "Tata Digital",
+        domain: "tatadigital.com",
+        deal_size: 4500000,
+        currency: "INR",
+        buyer_tier: "Tier 3: Enterprise MNC",
+        tenant_track: "Service / Retainer",
+        current_stage: "Stage 1: Discovery & Needs",
         latest_score: null,
         latest_category: null,
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
@@ -331,132 +337,139 @@ export async function fetchMedpiccScorecard(dealId) {
   } catch (err) {
     console.warn("Using fallback MEDDPICC scorecard", err);
     return {
-      id: "diag-sample-1",
+      id: "diag-sample-nykaa-1",
       deal_id: dealId,
       overall_score: 68,
       deal_category: "Rescue",
-      next_best_action: "Schedule a quick 15-minute check-in with the CFO to confirm budget approval before starting security review.",
+      deal_health: "At Risk",
+      next_best_action: "Share 1-page SOW executive brief with Founder to lock 50% advance before Diwali launch deadline.",
+      outcome_trajectory: "At Risk: Founder Sign-Off Pending",
+      rubric_version: "track1-tier1-v1.0",
       closure_if_addressed: {
         likelihood_range: "75-85%",
-        rationale: "Customer problem and dollar savings are clearly proven. Getting direct CFO budget sign-off unlocks contract closing for Q3.",
+        rationale: "Diwali campaign budget of ₹15L is freeze and ROAS targets are agreed. Getting Founder sign-off on 50% advance locks kickoff before launch deadline.",
       },
       closure_if_ignored: {
         likelihood_range: "15-25%",
-        rationale: "Without the budget owner's direct approval, the deal will stall in legal review or get postponed to next year.",
+        rationale: "Without direct Founder approval and 50% advance payment release, accounts processing delay will cause campaign to miss the Diwali launch date.",
       },
       top_blocking_boxes: ["Economic Buyer", "Paper Process"],
       seller_summary: {
-        headline: "High-urgency deal with clear financial return, but currently held up until we get access to executive leadership.",
+        headline: "High-intent festive campaign with ₹15L allocated budget, held up pending Founder sign-off on 50% advance payment.",
         what_we_know: [
-          "Manual routing errors wasting $140k/yr in executive time.",
-          "Lead architect and RevOps lead strongly endorse the platform.",
-          "Security requirements (SOC2, sub-200ms) confirmed achievable.",
+          "Diwali creator campaign budget of ₹15 Lakhs confirmed by VP Marketing.",
+          "Target ROAS minimum 3.5x required by Founder before signing SOW.",
+          "Sneha Kapoor (VP Marketing) is actively championing the pitch internally.",
         ],
         deal_risks: [
-          "CFO / Budget owner has not attended any discovery calls.",
-          "Legal timeline unmapped — potential late-stage slippage.",
+          "Founder has final commercial authority but hasn't attended calls.",
+          "50% advance invoice release requires 7-10 days accounts processing.",
         ],
         next_best_actions: [
-          "Ask champion for intro to CFO.",
-          "Deliver Mutual Action Plan with procurement milestones.",
+          "Send 1-page SOW summary directly for Founder sign-off.",
+          "Align accounts on GST and advance payment release timeline.",
         ],
       },
       follow_up_email: {
-        subject: "Quantified ROI & Next Steps: Apex Logistics x Whipstitch",
-        body_content: "Hi Team,\n\nFollowing our review of the lead routing architecture, we've mapped the $140k annual leak in unrouted pipeline. To ensure we meet your Q3 launch goal, could we set up a brief 15-minute sync with the CFO to confirm the financial justification?\n\nBest regards,\nAccount Executive",
+        subject: "Next Steps Alignment: Nykaa Campaign Scope & 50% Advance",
+        body_content: "Hi Sneha,\n\nThanks for the great discussion today regarding Nykaa's upcoming Diwali creator campaign! To ensure we hit your 3.5x Meta ROAS target without any launch delays, I have drafted the SOW covering the ₹15 Lakhs influencer whitelisting scope.\n\nTo ensure your accounts team can release the 50% advance invoice on time for creator bookings, could we share this 1-page summary with your Founder / Managing Director this week for sign-off?\n\nBest regards,\nRohan Mehta",
       },
       boxes: [
         {
           box: "Metrics",
           score: 13,
-          max_score: 15,
+          max_score: 20,
           rating: "Strong",
           evidence_basis: "direct",
-          notes: "Quantified cost of inaction at $140,000 annually across 12 SDRs.",
-          coaching_questions: ["What is the downstream quota penalty if lead routing is delayed past Q3?"],
+          notes: "Quantified Diwali campaign budget at ₹15 Lakhs with 3.5x Meta ROAS target.",
+          coaching_questions: ["What is the revenue loss if the campaign misses the pre-Diwali live date?"],
           evidence_quotes: [
-            { person_name: "Sarah Chen (VP RevOps)", evidence_date: "Call 1", medium: "Call", quote: "We are leaking approximately $140k every year because leads sit unassigned for 48 hours." }
+            { person_name: "Sneha Kapoor (VP Marketing)", evidence_date: "Call 1", medium: "Call", quote: "Basically hamara Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai for influencer whitelisting and UGC ads." }
           ]
         },
         {
           box: "Economic Buyer",
-          score: 6,
-          max_score: 15,
+          score: 9,
+          max_score: 20,
           rating: "Moderate",
           evidence_basis: "inferred",
           hard_cap_applied: true,
-          notes: "CFO is confirmed as the budget owner, but no direct meeting or written sign-off has happened yet.",
-          coaching_questions: ["Can our champion broker a brief executive check-in with the CFO?"],
-          evidence_quotes: []
+          notes: "Founder has final commercial sign-off; Rule 6.2 Hard Cap applies until direct confirmation is logged.",
+          coaching_questions: ["Can Sneha share a 1-page brief with the Founder to confirm the ₹15L spend?"],
+          evidence_quotes: [
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Founder sir is directly looking at this, unko Meta ROAS 3.5x minimum chahiye before we sign the SOW." }
+          ]
         },
         {
           box: "Decision Criteria",
-          score: 8,
+          score: 7,
           max_score: 10,
           rating: "Strong",
           evidence_basis: "direct",
-          notes: "Technical requirements (sub-200ms latency, SOC2, HubSpot sync) clearly specified.",
-          coaching_questions: ["How will procurement weight security compliance versus pricing?"],
+          notes: "Deliverables agreed: 25 UGC creator videos + Meta whitelisting with 3.5x ROAS minimum.",
+          coaching_questions: ["How will creator revisions and whitelisting access be scheduled?"],
           evidence_quotes: [
-            { person_name: "Mark Davis (Architect)", evidence_date: "Call 1", medium: "Call", quote: "Must be SOC2 compliant with sub-200ms response time and bidirectional CRM syncing." }
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "We need 25 creator assets delivered with full usage rights and whitelisting access." }
           ]
         },
         {
           box: "Decision Process",
-          score: 7,
-          max_score: 10,
-          rating: "Moderate",
+          score: 4,
+          max_score: 5,
+          rating: "Strong",
           evidence_basis: "direct",
-          notes: "Security audit is next step, followed by executive sign-off.",
-          coaching_questions: ["What is the exact deadline for infosec sign-off?"],
+          notes: "Single-step Founder sign-off required once SOW deliverables and payment terms are locked.",
+          coaching_questions: ["What is the exact target date for countersigning the SOW?"],
           evidence_quotes: [
-            { person_name: "Sarah Chen", evidence_date: "Email", medium: "Email", quote: "After tech demo, our infosec team reviews for 2 weeks before CFO signature." }
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Once we agree on the deliverables sheet, sir will review and sign off within 2 days." }
           ]
         },
         {
           box: "Paper Process",
-          score: 4,
-          max_score: 10,
+          score: 7,
+          max_score: 15,
           rating: "Weak",
           evidence_basis: "inferred",
-          notes: "Procurement contact not yet assigned; legal and security review usually takes ~4 weeks.",
-          coaching_questions: ["Has legal already pre-approved third-party cloud data processors?"],
-          evidence_quotes: []
+          notes: "50% advance payment required before creator outreach; accounts team requires 7-10 days to process invoice.",
+          coaching_questions: ["Can we submit the pro-forma invoice now to avoid launch delays?"],
+          evidence_quotes: [
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Haan, approval toh mil gaya hai, but 50% advance invoice release hone me 1 week lagega." }
+          ]
         },
         {
           box: "Implicated Pain",
-          score: 14,
+          score: 12,
           max_score: 15,
           rating: "Strong",
           evidence_basis: "direct",
-          notes: "Executive pain: losing qualified pipeline to competitors due to slow response.",
-          coaching_questions: ["What happens to Q4 pipeline targets if manual routing continues?"],
+          notes: "Diwali festive window cannot slip; running in-house creator management has resulted in creator dropouts.",
+          coaching_questions: ["What happens to Q3 sales targets if UGC assets aren't live before Diwali?"],
           evidence_quotes: [
-            { person_name: "Sarah Chen", evidence_date: "Call 1", medium: "Call", quote: "Reps are complaining daily that leads go cold before they can even make the first dial." }
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Last year our in-house team tried managing creators and half of them didn't deliver on time." }
           ]
         },
         {
           box: "Champion",
-          score: 11,
-          max_score: 15,
+          score: 9,
+          max_score: 10,
           rating: "Strong",
           evidence_basis: "direct",
-          notes: "VP RevOps is an active internal seller sharing stakeholder context.",
-          coaching_questions: ["How does rolling this out advance Sarah's team performance metrics?"],
+          notes: "Sneha Kapoor (VP Marketing) is actively pitching to Founder and driving approval.",
+          coaching_questions: ["How can we empower Sneha with a crisp comparison against status quo?"],
           evidence_quotes: [
-            { person_name: "Sarah Chen", evidence_date: "Email", medium: "Email", quote: "I've already briefed our VP of Sales. Let's make sure this gets over the finish line." }
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "I will personally pitch this to the Founder on Thursday, just send me the SOW deck." }
           ]
         },
         {
           box: "Competition",
-          score: 5,
-          max_score: 10,
+          score: 4,
+          max_score: 5,
           rating: "Moderate",
           evidence_basis: "direct",
-          notes: "Internal Python script and status quo spreadsheet are primary alternatives.",
-          coaching_questions: ["What is the maintenance cost of an in-house tool when APIs change?"],
+          notes: "Client evaluated pitching freelance creator managers, but rejected due to lack of whitelisting capabilities.",
+          coaching_questions: ["Has client reached out to other performance creative agencies?"],
           evidence_quotes: [
-            { person_name: "Mark Davis", evidence_date: "Call 1", medium: "Call", quote: "We were thinking about writing an internal script, but engineering bandwidth is zero." }
+            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Freelancers are cheaper, but they don't have ad-account whitelisting expertise like you guys." }
           ]
         }
       ],
@@ -526,29 +539,61 @@ export async function fetchMeetings(tenantId = "trifid_media") {
     console.warn("Using fallback meetings list", err);
     return [
       {
-        id: "meet-apex-01",
+        id: "meet-zepto-01",
         tenant_id: tenantId,
-        deal_id: "deal-apex-01",
-        title: "Apex Logistics: Executive CFO & RevOps Review",
-        company_name: "Apex Logistics Global",
-        scheduled_time: "Today, 3:30 PM EST",
+        deal_id: "d0000000-0000-0000-0000-000000000002",
+        title: "Zepto Quick-Commerce: Organic Search & SEO Growth Retainer",
+        company_name: "Zepto Quick-Commerce",
+        tenant_track: "Service / Retainer",
+        buyer_tier: "Tier 2: Growth Scale-up",
+        deal_size: 2800000,
+        currency: "INR",
+        offering_summary: "Organic Search & Quick-Commerce SEO Retainer",
+        scheduled_time: "Today, 4:00 PM IST",
         attendees: [
-          { name: "Sarah Chen", title: "VP RevOps", email: "sarah.chen@apexlogistics.com", organization: "Apex Logistics Global" },
-          { name: "Marcus Vance", title: "Chief Financial Officer", email: "marcus.vance@apexlogistics.com", organization: "Apex Logistics Global" },
-          { name: "David Miller", title: "Head of InfoSec", email: "david.miller@apexlogistics.com", organization: "Apex Logistics Global" },
+          { name: "Amrit Pal", title: "Head of Growth", email: "amrit.pal@zepto.com", organization: "Zepto Quick-Commerce" },
+          { name: "Kaivalya Vohra", title: "Finance Controller / Co-Founder", email: "kaivalya@zepto.com", organization: "Zepto Quick-Commerce" },
+          { name: "Priya Raman", title: "Category Marketing Lead", email: "priya.raman@zepto.com", organization: "Zepto Quick-Commerce" },
         ],
         briefing_ready: true,
         champion_kit_ready: true,
       },
       {
-        id: "meet-cloudscale-02",
+        id: "meet-nykaa-02",
         tenant_id: tenantId,
-        deal_id: "deal-cloudscale-02",
-        title: "CloudScale Systems: Lead Routing Solution Demo",
-        company_name: "CloudScale Systems",
-        scheduled_time: "Tomorrow, 11:00 AM EST",
+        deal_id: "d0000000-0000-0000-0000-000000000001",
+        title: "Nykaa E-Retail: Festive Influencer Campaign & Founder Review",
+        company_name: "Nykaa E-Retail",
+        tenant_track: "Service / Retainer",
+        buyer_tier: "Tier 1: Founder-Led SMB",
+        deal_size: 1500000,
+        currency: "INR",
+        offering_summary: "Festive Influencer & UGC Content Campaign",
+        scheduled_time: "Tomorrow, 2:30 PM IST",
         attendees: [
-          { name: "Alex Thorne", title: "Director of Global Sales Ops", email: "alex@cloudscale.io", organization: "CloudScale Systems" },
+          { name: "Sneha Kapoor", title: "VP Marketing", email: "sneha.kapoor@nykaa.com", organization: "Nykaa E-Retail" },
+          { name: "Falguni Nayar", title: "Managing Director & Founder", email: "falguni@nykaa.com", organization: "Nykaa E-Retail" },
+          { name: "Rajesh Nair", title: "Head of Accounts & Finance", email: "rajesh.nair@nykaa.com", organization: "Nykaa E-Retail" },
+        ],
+        briefing_ready: true,
+        champion_kit_ready: true,
+      },
+      {
+        id: "meet-apex-03",
+        tenant_id: tenantId,
+        deal_id: "deal-apex-01",
+        title: "Apex Logistics Global: Executive CFO & RevOps Review",
+        company_name: "Apex Logistics Global",
+        tenant_track: "SaaS / Product",
+        buyer_tier: "Tier 3: Enterprise MNC",
+        deal_size: 120000,
+        currency: "USD",
+        offering_summary: "Enterprise Cloud Lead Routing Platform",
+        scheduled_time: "Thursday, 3:30 PM EST",
+        attendees: [
+          { name: "Sarah Chen", title: "VP RevOps", email: "sarah.chen@apexlogistics.com", organization: "Apex Logistics Global" },
+          { name: "Marcus Vance", title: "Chief Financial Officer", email: "marcus.vance@apexlogistics.com", organization: "Apex Logistics Global" },
+          { name: "David Miller", title: "Head of InfoSec", email: "david.miller@apexlogistics.com", organization: "Apex Logistics Global" },
         ],
         briefing_ready: true,
         champion_kit_ready: true,
@@ -574,12 +619,155 @@ export async function fetchPreCallBriefing(meetingId) {
     return await res.json();
   } catch (err) {
     console.warn("Using fallback pre-call briefing", err);
+    if (meetingId === "meet-nykaa-02") {
+      return {
+        meeting_id: meetingId,
+        deal_id: "d0000000-0000-0000-0000-000000000001",
+        meeting_title: "Nykaa E-Retail: Festive Influencer Campaign & Founder Review",
+        company_name: "Nykaa E-Retail",
+        tenant_track: "Service / Retainer",
+        buyer_tier: "Tier 1: Founder-Led SMB",
+        deal_size: 1500000,
+        currency: "INR",
+        offering_summary: "Festive Influencer & UGC Content Campaign",
+        scheduled_time: "Tomorrow, 2:30 PM IST",
+        executive_summary: "Commercial review with Nykaa for the Festive Influencer & UGC Campaign (₹15 Lakhs). The primary goal is confirming Founder sign-off, locking 50% advance payment terms, and scheduling sprint kickoff before Diwali peak demand.",
+        attendees: [
+          {
+            name: "Sneha Kapoor",
+            title: "VP Marketing",
+            organization: "Nykaa E-Retail",
+            psychographic: {
+              focus_areas: ["Festive Season ROAS & Customer Acquisition", "Influencer Whitelisting & Creative Velocity"],
+              hooks: ["You're launching the festive collection next month—how are you scaling UGC volume without creative fatigue?", "Our sprint model guarantees 40 verified creator deliverables ready to air within 2 weeks of kickoff."],
+              breaking_the_ice: "Saw Nykaa's recent Mumbai fashion showcase—exceptional creator integration across social channels.",
+              buying_role: "Champion",
+              seniority_level: "Executive",
+            },
+          },
+          {
+            name: "Falguni Nayar",
+            title: "Managing Director & Founder",
+            organization: "Nykaa E-Retail",
+            psychographic: {
+              focus_areas: ["Bottom-Line Cashflow & Unit Economics", "50% Advance with Deliverable-Backed Milestones"],
+              hooks: ["We structure this ₹15 Lakhs sprint around verified 3x ROAS payback on your festive product line.", "Every Rupee in our SOW is tied directly to agreed creator deliverables before milestone release."],
+              breaking_the_ice: "Deeply respect your discipline in building Nykaa's profitable D2C foundation—our campaign protects your unit economics.",
+              buying_role: "Economic Buyer",
+              seniority_level: "Executive",
+            },
+          },
+          {
+            name: "Rajesh Nair",
+            title: "Head of Accounts & Finance",
+            organization: "Nykaa E-Retail",
+            psychographic: {
+              focus_areas: ["SOW Scope Clarity & Deliverable Acceptance", "Standard GST-Compliant Milestone Invoicing"],
+              hooks: ["Our SOW clearly defines weekly creator delivery SLAs with zero hidden agency costs.", "We provide full GST invoices with milestone payment schedules."],
+              breaking_the_ice: "We prepared our draft SOW terms and deliverable schedule in advance for your finance review.",
+              buying_role: "Legal / Procurement",
+              seniority_level: "Management",
+            },
+          },
+        ],
+        company_signals: [
+          {
+            source: "Google Serper Radar",
+            headline: "Nykaa Announces Q3 Festive Season Campaign Rollout",
+            snippet: "Nykaa reveals aggressive festive marketing push across beauty, personal care, and fashion verticals targeting 35% growth.",
+            relevance_to_deal: "Confirms immediate urgency: locking the influencer retainer now captures peak festive shopping demand before launch deadlines.",
+          },
+        ],
+        top_medpicc_gaps_to_target: ["Economic Buyer: Founder confirmation on 50% advance invoice", "Paper Process: Scope sign-off on 40 creator deliverables"],
+        strategic_discovery_questions: [
+          "Since Falguni holds final authority on approving this ₹15 Lakhs campaign, what specific creator ROAS proof will give her total conviction today?",
+          "What is your target launch deadline for the festive collection, and what approval steps are needed on the SOW before our team can begin creator outreach?",
+          "If your team continues without dedicated influencer retainer support, what impact does that have on your festive sales targets and customer acquisition cost?",
+        ],
+      };
+    }
+
+    if (meetingId === "meet-zepto-01" || !meetingId.includes("apex")) {
+      return {
+        meeting_id: "meet-zepto-01",
+        deal_id: "d0000000-0000-0000-0000-000000000002",
+        meeting_title: "Zepto Quick-Commerce: Organic Search & SEO Growth Retainer",
+        company_name: "Zepto Quick-Commerce",
+        tenant_track: "Service / Retainer",
+        buyer_tier: "Tier 2: Growth Scale-up",
+        deal_size: 2800000,
+        currency: "INR",
+        offering_summary: "Organic Search & Quick-Commerce SEO Retainer",
+        scheduled_time: "Today, 4:00 PM IST",
+        executive_summary: "Strategic review with Zepto for the Organic Search & Quick-Commerce SEO Retainer (₹28 Lakhs). The primary goal is aligning on core organic traffic KPIs, proving blended CAC reduction, and getting Finance PO authorization.",
+        attendees: [
+          {
+            name: "Amrit Pal",
+            title: "Head of Growth",
+            organization: "Zepto Quick-Commerce",
+            psychographic: {
+              focus_areas: ["Acquisition Velocity & Lowering Customer Acquisition Cost (CAC)", "Organic Category Dominance in Metro Clusters"],
+              hooks: ["Zepto is expanding rapidly into 15 new dark store hubs—how are you scaling your organic app installs without burning more on Google/Meta ads?", "Investing ₹28 Lakhs in organic search lowers your blended CAC by 28% across 10-minute grocery categories."],
+              breaking_the_ice: "Saw Zepto's rapid rollout into North India hubs—remarkable operational velocity in quick-commerce.",
+              buying_role: "Champion",
+              seniority_level: "Executive",
+            },
+          },
+          {
+            name: "Kaivalya Vohra",
+            title: "Finance Controller / Co-Founder",
+            organization: "Zepto Quick-Commerce",
+            psychographic: {
+              focus_areas: ["Blended ROAS Optimization & Ad Spend Reduction", "Monthly Retainer PO Authorization"],
+              hooks: ["Spending on our specialized SEO sprint costs 60% less than building a 4-person in-house team, with zero hiring lag.", "We deliver full attribution reports directly to finance so you track exactly how organic rank increases store orders."],
+              breaking_the_ice: "Appreciate Zepto's sharp focus on unit economics and dark store profitability ahead of your next fiscal review.",
+              buying_role: "Economic Buyer",
+              seniority_level: "Executive",
+            },
+          },
+          {
+            name: "Priya Raman",
+            title: "Category Marketing Lead",
+            organization: "Zepto Quick-Commerce",
+            psychographic: {
+              focus_areas: ["Category Search Ranking & SKU Page Optimization", "Weekly Sprint Delivery & Zero Friction Handoff"],
+              hooks: ["Our SOW includes dedicated weekly ranking sprints and SKU content optimization so your team never bottlenecks.", "We operate on clear payment milestones with standardized GST invoicing."],
+              breaking_the_ice: "Excited to support Zepto's fresh produce and FMCG category search presence across top urban pin-codes.",
+              buying_role: "Legal / Procurement",
+              seniority_level: "Management",
+            },
+          },
+        ],
+        company_signals: [
+          {
+            source: "Google Serper Radar",
+            headline: "Zepto Expands Quick-Commerce Footprint to 15 New Dark Stores",
+            snippet: "Zepto ramps up operations across Tier-1 and Tier-2 clusters to satisfy high-velocity quick commerce demand.",
+            relevance_to_deal: "Huge growth signal: expanding footprint requires organic localized search dominance to acquire shoppers without burning margin on paid ads.",
+          },
+        ],
+        top_medpicc_gaps_to_target: ["Economic Buyer: Finance Controller PO release authorization", "Decision Criteria: Agreement on organic search ranking KPIs"],
+        strategic_discovery_questions: [
+          "Who besides the growth team sits on the commercial PO sign-off for this ₹28 Lakhs retainer?",
+          "What target ranking milestones does our team need to hit in month 1 to prove undeniable value to Kaivalya and leadership?",
+          "If unaddressed, how much more will Zepto burn in paid Meta/Google ad spend this quarter to make up for lagging organic search traffic?",
+        ],
+      };
+    }
+
+    // Default Apex Logistics (SaaS)
     return {
       meeting_id: meetingId,
-      meeting_title: "Apex Logistics: Executive CFO & RevOps Review",
+      deal_id: "deal-apex-01",
+      meeting_title: "Apex Logistics Global: Executive CFO & RevOps Review",
       company_name: "Apex Logistics Global",
-      scheduled_time: "Today, 3:30 PM EST",
-      executive_summary: "Key sales meeting with Apex Logistics to show how Whipstitch automates inbound lead routing. The main goal for this call is getting the CFO's sign-off process clear and locking in next steps before their Q3 budget freeze.",
+      tenant_track: "SaaS / Product",
+      buyer_tier: "Tier 3: Enterprise MNC",
+      deal_size: 120000,
+      currency: "USD",
+      offering_summary: "Enterprise Cloud Lead Routing Platform",
+      scheduled_time: "Thursday, 3:30 PM EST",
+      executive_summary: "Enterprise review with Apex Logistics Global for the Cloud Lead Routing Platform ($120k). The main goal is verifying the CFO sign-off process, reviewing the InfoSec compliance checklist, and locking next steps before the Q3 budget freeze.",
       attendees: [
         {
           name: "Sarah Chen",
@@ -625,12 +813,6 @@ export async function fetchPreCallBriefing(meetingId) {
           snippet: "Apex Logistics announces strategic investment into modernized pipeline automation and regional supply chain visibility.",
           relevance_to_deal: "Shows the company is investing in growth—great angle to pitch automated lead routing for their expanding sales team.",
         },
-        {
-          source: "Google Serper Radar",
-          headline: "Apex Logistics Appoints New Chief Financial Officer",
-          snippet: "Focusing on operational efficiency and vendor spend rationalization ahead of fiscal year close.",
-          relevance_to_deal: "New CFO is actively reviewing all software costs—lead with clear ROI and cost savings, not technical features.",
-        },
       ],
       top_medpicc_gaps_to_target: ["Budget Owner: Need CFO confirmation on budget approval", "Contract Steps: Need InfoSec security review checklist"],
       strategic_discovery_questions: [
@@ -649,11 +831,110 @@ export async function fetchChampionSellingKit(meetingId) {
     return await res.json();
   } catch (err) {
     console.warn("Using fallback champion kit", err);
+    if (meetingId === "meet-zepto-01" || !meetingId.includes("apex")) {
+      return {
+        meeting_id: "meet-zepto-01",
+        deal_id: "d0000000-0000-0000-0000-000000000002",
+        champion_name: "Amrit Pal",
+        champion_title: "Head of Growth",
+        company_name: "Zepto Quick-Commerce",
+        tenant_track: "Service / Retainer",
+        buyer_tier: "Tier 2: Growth Scale-up",
+        deal_size: 2800000,
+        currency: "INR",
+        offering_summary: "Organic Search & Quick-Commerce SEO Retainer",
+        last_updated: "Just Now",
+        filter_1_wiifm_career_narrative: {
+          title: "Champion Personal Win & Career Narrative",
+          talking_points: [
+            "Positions Amrit as the growth visionary who solved Zepto's organic quick-commerce acquisition without burning more paid marketing budget.",
+            "Delivers verified organic search traffic wins in high-density delivery hubs within the first 30 days of execution.",
+            "Frees internal growth managers from low-level execution so they can focus on high-impact strategic brand partnerships.",
+          ],
+          verbatim_soundbite: "By partnering with this specialized SEO team, we hit our aggressive customer acquisition targets without adding 4 expensive full-time salaries to payroll.",
+          anticipated_objection: "Why can't our in-house growth team just manage SEO internally?",
+          counter_narrative: "Our team is already at 100% bandwidth running daily campaigns. Hiring an external specialized partner gives us immediate execution with zero ramp-up delay.",
+        },
+        filter_2_cfo_business_case_roi: {
+          title: "CFO / Founder Business Case & ROI",
+          talking_points: [
+            "Investing ₹28 Lakhs in organic search pays for itself by reducing blended customer acquisition cost (CAC).",
+            "Saves an estimated ₹60 Lakhs in paid performance ad burn by building a permanent, compounding organic search funnel.",
+            "Transparent monthly retainer with deliverable-backed sprint milestones and zero hidden fees.",
+          ],
+          verbatim_soundbite: "The financial case is straightforward: spending ₹28 Lakhs to lower our blended CAC and capture high-intent grocery searchers delivers a 3x return compared to burning budget on paid ads.",
+          anticipated_objection: "Can we trim marketing spend and do this cheaper?",
+          counter_narrative: "Cheap freelance options produce low-quality spam and risk Google domain penalties. A specialized growth partner guarantees measurable organic traffic and brand integrity.",
+        },
+        filter_3_infosec_architecture: {
+          title: "Service Quality, IP Ownership & Delivery Assurance",
+          talking_points: [
+            "100% IP ownership: All created assets, content hubs, keyword architectures, and SKU optimization data belong entirely to Zepto.",
+            "Strict SLA delivery schedule with weekly sprints and transparent tracking dashboards.",
+            "Strict non-disclosure agreement (NDA) protecting confidential order growth metrics.",
+          ],
+          verbatim_soundbite: "All intellectual property and search assets remain 100% ours, with weekly sprint milestones ensuring zero deliverable drop.",
+          anticipated_objection: "What happens if deliverables fall behind schedule or don't meet standards?",
+          counter_narrative: "The SOW includes built-in milestone reviews. We approve weekly sprints before milestone invoice releases.",
+        },
+        filter_4_time_triggers_urgency: {
+          title: "Time Triggers & Planning Urgency",
+          talking_points: [
+            "Upcoming festive demand surge creates a critical 8-week organic acquisition window.",
+            "Organic search takes 4-6 weeks to compound—starting today ensures top Google rankings before peak seasonal shopping.",
+            "Rival quick-commerce apps (Blinkit, Swiggy Instamart) are aggressively expanding organic keyword footprints.",
+          ],
+          verbatim_soundbite: "If we delay kickoff by even one month, we miss the upcoming seasonal shopping window and surrender top search rankings to Blinkit and Swiggy.",
+          anticipated_objection: "Can we review this next quarter?",
+          counter_narrative: "Delaying kickoff means continuing to burn cash on expensive paid search clicks. Starting now builds compounding organic rank before competitors lock down top spots.",
+        },
+        filter_5_power_structure_dynamics: {
+          title: "Power Structure & Committee Alignment",
+          talking_points: [
+            "Finance Controller holds ultimate approval for signing off on the ₹28 Lakhs retainer SOW.",
+            "Amrit acts as the executive growth sponsor and day-to-day project owner.",
+            "Category Marketing Lead reviews weekly SKU content deliverables.",
+          ],
+          verbatim_soundbite: "I have already aligned our growth and category teams; we just need commercial sign-off on the ₹28 Lakhs SOW to initiate sprint 1.",
+          anticipated_objection: "Who else needs to approve this agency partnership?",
+          counter_narrative: "Our growth and marketing teams are 100% aligned. We only need commercial sign-off on the payment milestones to proceed.",
+        },
+        filter_6_vendor_disqualification: {
+          title: "Vendor Disqualification (Why Alternatives Fail)",
+          talking_points: [
+            "Hiring in-house requires 4-6 months of recruitment and over ₹45 Lakhs in annual salaries and benefits.",
+            "Generic freelance marketplaces produce shallow, AI-generated spam that risks domain penalties.",
+            "Traditional ad agencies charge bloated retainers without tying work to organic order acquisition.",
+          ],
+          verbatim_soundbite: "Building this in-house would take 6 months and cost ₹45 Lakhs in headcount. This partner gives us an experienced team starting next Monday.",
+          anticipated_objection: "Can't we just hire a junior specialist or intern?",
+          counter_narrative: "A junior hire lacks strategic depth and requires senior management time. This partner brings senior execution experience from day one.",
+        },
+        filter_7_shadow_influence_landmines: {
+          title: "Shadow Influence & Landmine Mitigation",
+          talking_points: [
+            "Internal marketing team might worry an external agency will disrupt their existing roadmap.",
+            "Mitigation: Position the partner as an execution multiplier that supports the internal team.",
+            "Set clear 30-day early wins to prove undeniable value to leadership.",
+          ],
+          verbatim_soundbite: "This partner takes the heavy lifting off our team's plate, giving us senior execution without disrupting our current roadmap.",
+          anticipated_objection: "Will this require too much management oversight from our team?",
+          counter_narrative: "No. They operate autonomously with a weekly 30-minute sync, saving our team time rather than demanding more oversight.",
+        },
+      };
+    }
+
+    // Default Apex Logistics (SaaS)
     return {
       meeting_id: meetingId,
       champion_name: "Sarah Chen",
       champion_title: "VP RevOps",
       company_name: "Apex Logistics Global",
+      tenant_track: "SaaS / Product",
+      buyer_tier: "Tier 3: Enterprise MNC",
+      deal_size: 120000,
+      currency: "USD",
+      offering_summary: "Enterprise Cloud Lead Routing Platform",
       last_updated: "Just Now",
       filter_1_wiifm_career_narrative: {
         title: "Why This Helps Your Champion Personally",
@@ -673,7 +954,7 @@ export async function fetchChampionSellingKit(meetingId) {
           "Pays for itself in under 90 days by closing just 2 additional enterprise deals.",
           "No hidden markups or per-user platform fees—transparent, predictable pricing.",
         ],
-        verbatim_soundbite: "The numbers are simple: spending $60k to recover $140k of inbound pipeline that we already paid marketing for gives us a 2.3x return in year one.",
+        verbatim_soundbite: "The numbers are simple: spending $120k to recover $140k of inbound pipeline that we already paid marketing for gives us a 2.5x return in year one.",
         anticipated_objection: "We're on a strict software spending freeze this quarter.",
         counter_narrative: "This isn't an extra luxury tool—it's an efficiency engine that directly recovers revenue currently slipping through our fingers, without needing to hire more reps.",
       },
@@ -714,7 +995,7 @@ export async function fetchChampionSellingKit(meetingId) {
         title: "Why Alternatives Won't Work",
         talking_points: [
           "Building this in-house would take 6 to 9 months of engineering time and over $150k in developer costs.",
-          "Old tools like ZoomInfo charge thousands per sales rep with rigid, multi-year contracts.",
+          "Old tools charge thousands per sales rep with rigid, multi-year contracts.",
           "Whipstitch handles lead enrichment, deal qualification, and meeting prep all in one unified place.",
         ],
         verbatim_soundbite: "Trying to build lead routing and enrichment in-house would pull our engineers away from product for 6 months and cost 3 times more than buying a ready solution.",
@@ -725,12 +1006,12 @@ export async function fetchChampionSellingKit(meetingId) {
         title: "Hidden Risks & How to Handle Them",
         talking_points: [
           "Sales managers might worry this replaces reps: reassure them it gives reps superpowers by handling the research, leaving reps in control.",
-          "Finance might worry about surprise bills: reassure them with strict monthly spending caps so there are zero surprise overages.",
-          "IT might worry about complex setup: reassure them that setup takes under 30 minutes with our pre-built CRM connectors.",
+          "The finance controller might ask about ongoing API credit costs: we use hard monthly credit limits to prevent surprises.",
+          "Team members might push back on adopting a new tool: reps love it because it writes their follow-up emails and meeting prep in seconds.",
         ],
-        verbatim_soundbite: "This gives our sales reps more time to actually sell by doing the heavy research upfront, while giving leadership clear visibility into every deal.",
-        anticipated_objection: "Will our sales reps actually use this, or will it just sit on the shelf?",
-        counter_narrative: "Reps love it because it builds their call prep sheets and follow-up emails in seconds, saving them hours of manual research and CRM data entry.",
+        verbatim_soundbite: "This gives our reps more selling time by doing the research upfront, without adding any complicated new software to manage.",
+        anticipated_objection: "Will our reps actually use this or will it sit unused?",
+        counter_narrative: "Reps use it because it directly saves them hours every week on manual research and follow-up emails.",
       },
     };
   }
@@ -1160,36 +1441,37 @@ export async function fetchCommitteeMembers(dealId = "d0000000-0000-0000-0000-00
       {
         id: "comm-01",
         deal_id: dealId,
-        name: "Sarah Chen",
-        role: "VP RevOps",
+        name: "Sneha Kapoor",
+        role: "VP Marketing",
         tag: "Internal Champion",
         status: "Engaged",
-        email: "sarah.chen@apexlogistics.com",
+        email: "sneha.kapoor@nykaa.com",
       },
       {
         id: "comm-02",
         deal_id: dealId,
         name: "Unassigned",
-        role: "Chief Financial Officer",
+        role: "Founder & Managing Director",
         tag: "Budget Owner",
         status: "Missing",
       },
       {
         id: "comm-03",
         deal_id: dealId,
-        name: "David Miller",
-        role: "Head of InfoSec",
-        tag: "Security Reviewer",
+        name: "Rajesh Nair",
+        role: "Head of Accounts & Finance",
+        tag: "Commercial Reviewer",
         status: "Pending",
-        email: "david.miller@apexlogistics.com",
+        email: "rajesh.nair@nykaa.com",
       },
       {
         id: "comm-04",
         deal_id: dealId,
-        name: "Emma Watson",
-        role: "Procurement Counsel",
-        tag: "Legal & Contracts",
-        status: "Uncontacted",
+        name: "Pooja Sharma",
+        role: "Brand Partnerships Lead",
+        tag: "Scope Reviewer",
+        status: "Engaged",
+        email: "pooja.s@nykaa.com",
       },
     ];
   }

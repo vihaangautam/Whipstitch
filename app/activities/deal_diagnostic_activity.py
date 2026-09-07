@@ -54,14 +54,18 @@ async def extract_medpicc_scores_activity(
     preferred_model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Activity 2: Executes Multi-LLM MEDDPICC evaluation and persists scorecard to Postgres."""
-    bind_correlation_id(deal_id)
-    logger.info("extract_medpicc_scores_started", deal_id=deal_id, company=company_name)
+    tenant_track = deal_context.get("tenant_track", "Service / Retainer")
+    deal_tier = deal_context.get("buyer_tier", "Tier 1: Founder-Led SMB")
+    deal_currency = deal_context.get("currency", "INR")
 
     user_prompt = build_medpicc_prompt(
         deal_name=deal_name,
         company_name=company_name,
         transcript_text=transcript_text,
         deal_context=deal_context,
+        tenant_track=tenant_track,
+        deal_tier=deal_tier,
+        deal_currency=deal_currency,
     )
 
     qualification, model_used = await llm_router.call_structured_llm(
@@ -72,6 +76,9 @@ async def extract_medpicc_scores_activity(
         feature="medpicc",
         preferred_model=preferred_model,
     )
+
+    tier_num = "1" if "tier 1" in deal_tier.lower() else ("2" if "tier 2" in deal_tier.lower() else "3")
+    qualification.rubric_version = f"track1-tier{tier_num}-v1.0"
 
     diagnostic_id = uuid.uuid4()
     async with AsyncSessionLocal() as session:

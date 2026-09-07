@@ -28,6 +28,7 @@ import {
   fetchLiveSignals,
   ingestSignal
 } from '../api';
+import InfoTooltip from '../components/InfoTooltip';
 
 export default function CompetitorBattlecards({ currentTenant }) {
   const [battlecards, setBattlecards] = useState([]);
@@ -137,12 +138,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
       pressure: 'Urgency Driver',
       advantage: 'Our Advantage',
       pitch: 'Sales Angle',
+      hours_unlocked_per_week: 'Billable Hours Unlocked / Wk',
+      calculation_basis: 'Calculation Basis',
     };
     return keyMap[key] || key.replace(/_/g, ' ');
   };
 
   const getSignalBadge = (sigType) => {
     switch (sigType) {
+      case 'seasonal_campaign_window':
+        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">Seasonal Campaign (Diwali / EOSS)</span>;
       case 'leadership_shift':
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">Leadership Move</span>;
       case 'capital_expansion':
@@ -171,6 +176,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 Competitor Playbooks & Live Triggers
               </h1>
+              <InfoTooltip
+                title="Competitor Playbooks"
+                content="Your field guide for when prospects mention rival products or alternative solutions (including hiring in-house). Gives you fair traps to set on calls, hard ROI math, and ready-to-use objection scripts."
+              />
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               Rep cheat sheets, objection handling scripts, and real-time triggers to win against rivals.
@@ -190,36 +199,52 @@ export default function CompetitorBattlecards({ currentTenant }) {
       {/* ─── 2. COMPETITOR SELECTOR PILLS ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-card space-y-2">
         <div className="flex items-center justify-between text-xs px-1">
-          <span className="font-semibold text-slate-600">Choose Competitor or Alternative:</span>
+          <div className="flex items-center gap-1">
+            <span className="font-semibold text-slate-600">Choose Competitor or Alternative:</span>
+            <InfoTooltip
+              title="Competitors & Alternatives"
+              content="Pick the rival or alternative you're facing. In B2B sales, your rival isn't always another software tool—it can be hiring an in-house team, an agency, or sticking to Excel."
+            />
+          </div>
           <span className="text-slate-400 font-medium">AI-Generated Playbook</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {battlecards.map((b) => {
-            const isSelected = b.id === selectedCompetitorId;
-            return (
-              <button
-                key={b.id}
-                onClick={() => setSelectedCompetitorId(b.id)}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer hover:shadow-xs ${
-                  isSelected
-                    ? 'border-emerald-600 bg-emerald-50/50 shadow-card'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-bold truncate ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
-                    {b.competitor_name}
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                  {b.competitor_category || 'Alternative'}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {battlecards.length === 0 ? (
+          <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center space-y-2">
+            <h4 className="text-sm font-bold text-slate-800">No Competitors Configured Yet</h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Add your top market rivals in Logic & ICP Studio to unlock custom battlecard playbooks and real-time competitor churn radar.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {battlecards.map((b) => {
+              const isSelected = b.id === selectedCompetitorId;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setSelectedCompetitorId(b.id)}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer hover:shadow-xs ${
+                    isSelected
+                      ? 'border-emerald-600 bg-emerald-50/50 shadow-card'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-bold truncate ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
+                      {b.competitor_name}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {b.competitor_category || 'Alternative'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
+
 
       {/* ─── 3. WORKSPACE TABS ─── */}
       <div className="flex items-center justify-between border-b border-slate-200 overflow-x-auto">
@@ -234,6 +259,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
           >
             <Target className="w-4 h-4 text-emerald-600" />
             <span>Silver Bullets & Traps ({battlecardDetail?.kill_shots?.length || 0})</span>
+            <InfoTooltip
+              title="Silver Bullets & Traps"
+              content="Sharp, fair counter-arguments. Instead of badmouthing the rival, you ask a simple question that makes their hidden weaknesses obvious to the buyer."
+            />
           </button>
 
           <button
@@ -246,6 +275,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
           >
             <Layers className="w-4 h-4 text-blue-600" />
             <span>5-Step Deal Strategy</span>
+            <InfoTooltip
+              title="5-Step Deal Strategy"
+              content="A step-by-step game plan showing the buyer's pain, why you win, concrete ROI numbers, and your recommended closing move."
+            />
           </button>
 
           <button
@@ -258,6 +291,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
           >
             <HelpCircle className="w-4 h-4 text-amber-600" />
             <span>Objection Cheat Sheet ({battlecardDetail?.objection_matrix?.length || 0})</span>
+            <InfoTooltip
+              title="Objection Cheat Sheet"
+              content="Direct answers to tough questions prospects throw at you during sales calls, backed by verified benchmarks."
+            />
           </button>
 
           <button
@@ -270,6 +307,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
           >
             <Zap className="w-4 h-4 text-purple-600" />
             <span>Live Buying Triggers ({signals.length})</span>
+            <InfoTooltip
+              title="Live Buying Triggers"
+              content="Fresh company news (like new executive hires or funding rounds) paired with ready-to-send messages so you can reach out at the perfect moment."
+            />
           </button>
         </div>
       </div>
@@ -279,14 +320,26 @@ export default function CompetitorBattlecards({ currentTenant }) {
         <div className="space-y-6">
           {/* Verdict Callout */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">The Winning Angle (Executive Summary)</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">The Winning Angle (Executive Summary)</span>
+              <InfoTooltip
+                title="Executive Verdict"
+                content="The core reason why buyers pick you over this rival. Memorize this 1-line wedge for all your prospect conversations."
+              />
+            </div>
             <h3 className="text-base font-bold text-slate-900">
               {battlecardDetail?.summary_verdict || 'Analyzing competitive displacement strategy...'}
             </h3>
             {battlecardDetail?.pricing_weakness && (
-              <p className="text-xs text-rose-700 font-semibold pt-1">
-                Their Pricing Weakness: {battlecardDetail?.pricing_weakness}
-              </p>
+              <div className="flex items-center gap-1.5 pt-1">
+                <p className="text-xs text-rose-700 font-semibold">
+                  Their Pricing Weakness: {battlecardDetail?.pricing_weakness}
+                </p>
+                <InfoTooltip
+                  title="Pricing Weakness"
+                  content="Hidden charges, platform fees, seat minimums, or rigid contracts that make the rival far more expensive than they appear on paper."
+                />
+              </div>
             )}
           </div>
 
@@ -305,16 +358,37 @@ export default function CompetitorBattlecards({ currentTenant }) {
                       </span>
                       <h4 className="font-bold text-sm text-slate-900">{ks.title}</h4>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 uppercase">
-                      The Trap to Set
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {ks.evidence_basis === 'tenant_verified_intel' ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Verified Tenant Intel
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                          Category Pattern
+                        </span>
+                      )}
+                      <InfoTooltip
+                        title="Intel Source"
+                        content="Verified Tenant Intel comes from your own closed-won deals and customer quotes. Category Pattern reflects broader market benchmarks and review data."
+                      />
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 uppercase">
+                        The Trap to Set
+                      </span>
+                    </div>
                   </div>
 
                   {/* What They Tell Buyers */}
                   <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-lg space-y-1 text-xs">
-                    <span className="font-bold text-rose-900 block text-[11px] uppercase tracking-wider">
-                      What They Tell Buyers:
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-rose-900 block text-[11px] uppercase tracking-wider">
+                        What They Tell Buyers:
+                      </span>
+                      <InfoTooltip
+                        title="Competitor Pitch"
+                        content="What the competitor promises the buyer in their demos. Knowing their pitch in advance lets you prepare the prospect before they hear it."
+                      />
+                    </div>
                     <p className="italic text-slate-700">
                       "{ks.the_trap}"
                     </p>
@@ -322,9 +396,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                   {/* The Flaw They Hide */}
                   <div className="space-y-1 text-xs text-slate-700">
-                    <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">
-                      The Flaw They Hide:
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">
+                        The Flaw They Hide:
+                      </span>
+                      <InfoTooltip
+                        title="The Hidden Flaw"
+                        content="The real headache customers face 3 months in—such as stale contact data, surprise add-on fees, or rigid contracts."
+                      />
+                    </div>
                     <p className="leading-relaxed text-slate-600">
                       {ks.the_vulnerability}
                     </p>
@@ -332,9 +412,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                   {/* The Trap Question to Ask */}
                   <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-lg space-y-1 text-xs">
-                    <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">
-                      The Trap Question to Ask (On Your Call):
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">
+                        The Trap Question to Ask (On Your Call):
+                      </span>
+                      <InfoTooltip
+                        title="The Trap Question"
+                        content="Ask this innocent question during your call. If the prospect asks the competitor this, the competitor will struggle to answer cleanly."
+                      />
+                    </div>
                     <p className="font-semibold text-slate-900">
                       "{ks.the_counter_strike}"
                     </p>
@@ -342,9 +428,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                   {/* What to Say Word for Word */}
                   <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg space-y-1 text-xs">
-                    <span className="font-bold text-emerald-900 block text-[11px] uppercase tracking-wider">
-                      What to Say (Word-for-Word):
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-emerald-900 block text-[11px] uppercase tracking-wider">
+                        What to Say (Word-for-Word):
+                      </span>
+                      <InfoTooltip
+                        title="Rep Talk Track"
+                        content="Say this exact phrase when the prospect brings up the competitor. It re-frames the conversation around your strengths without sounding defensive."
+                      />
+                    </div>
                     <p className="text-slate-900 font-medium italic">
                       "{ks.verbatim_soundbite}"
                     </p>
@@ -353,9 +445,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                 {/* Bottom Proof & Copy */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[280px]">
-                    Proof & Data: {ks.evidence_proof || 'Verified across 50+ customer benchmarks.'}
-                  </span>
+                  <div className="flex items-center gap-1 truncate max-w-[280px]">
+                    <span className="text-[11px] text-slate-500 font-medium truncate">
+                      Proof & Data: {ks.evidence_proof || 'Verified across 50+ customer benchmarks.'}
+                    </span>
+                    <InfoTooltip
+                      title="Proof Benchmark"
+                      content="Concrete numbers and benchmarks to validate your claim so you don't sound like you're just making sales claims."
+                    />
+                  </div>
                   <button
                     onClick={() => handleCopy(ks.verbatim_soundbite, idx)}
                     className="btn-secondary text-xs shrink-0"
@@ -374,10 +472,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
       {activeTab === 'blackboard' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600" />
-              5-Step Competitive Deal Strategy
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
+                5-Step Competitive Deal Strategy
+              </h3>
+              <InfoTooltip
+                title="5-Step Deal Strategy"
+                content="A step-by-step game plan showing the buyer's pain, why you win, concrete ROI numbers, and your recommended closing move."
+              />
+            </div>
             <p className="text-xs text-slate-500">
               How our AI breaks down the deal—from the prospect's pain to the exact pitch to close.
             </p>
@@ -398,9 +502,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
                       {formatStageTitle(stage.stage_number, stage.stage_name)}
                     </h4>
                   </div>
-                  <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                    Strategic Insight
-                  </span>
+                  <div className="flex items-center">
+                    <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      Strategic Insight
+                    </span>
+                    <InfoTooltip
+                      title="Strategic Insight"
+                      content="Core game plan for this stage: how to frame your value, eliminate buyer doubts, and outmaneuver the rival."
+                    />
+                  </div>
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
@@ -409,7 +519,13 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                 {/* Structured Key Deal Facts */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Key Deal Facts</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Key Deal Facts</span>
+                    <InfoTooltip
+                      title="Key Deal Facts"
+                      content="Verified numbers and benchmarks (such as payback period in days and estimated savings) to quote during your conversation."
+                    />
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     {Object.entries(stage.details || {}).map(([key, val]) => (
                       <div key={key} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
@@ -429,10 +545,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
       {activeTab === 'objections' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-amber-600" />
-              Objection Cheat Sheet
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-amber-600" />
+                Objection Cheat Sheet
+              </h3>
+              <InfoTooltip
+                title="Objection Handling"
+                content="Word-for-word responses to tough buyer questions and competitor claims, backed by verified benchmarks."
+              />
+            </div>
             <p className="text-xs text-slate-500">
               Word-for-word responses to tough buyer questions and competitor claims, backed by verified data.
             </p>
@@ -448,6 +570,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                     <h4 className="font-bold text-sm text-slate-900">"{obj.objection}"</h4>
+                    <InfoTooltip
+                      title="Common Objection"
+                      content="This objection usually surfaces when the buyer is either budget-conscious or afraid of the effort required to switch providers."
+                    />
                   </div>
                   <button
                     onClick={() => handleCopy(obj.talk_track, `obj-${idx}`)}
@@ -460,12 +586,24 @@ export default function CompetitorBattlecards({ currentTenant }) {
 
                 <div className="space-y-2 text-xs">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Why They're Asking This:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Why They're Asking This:</span>
+                      <InfoTooltip
+                        title="Underlying Concern"
+                        content="The real worry behind the question (e.g. implementation headache, wasted budget, or risk of looking bad to leadership)."
+                      />
+                    </div>
                     <p className="text-slate-600 mt-0.5">{obj.root_cause}</p>
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-slate-800">
-                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">What to Say:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">What to Say:</span>
+                      <InfoTooltip
+                        title="Talk Track"
+                        content="Read or say this naturally on your call. It acknowledges their concern with empathy and guides them toward your distinct edge."
+                      />
+                    </div>
                     <p className="italic text-xs sm:text-sm leading-relaxed font-medium">
                       "{obj.talk_track}"
                     </p>
@@ -474,6 +612,10 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   <div className="pt-1 text-slate-500 flex items-center gap-2">
                     <span className="font-semibold text-slate-700">Proof to Back It Up:</span>
                     <span>{obj.proof_point}</span>
+                    <InfoTooltip
+                      title="Proof Benchmark"
+                      content="A verified data point you can cite so the client knows you have delivered these results for similar companies."
+                    />
                   </div>
                 </div>
               </div>
@@ -487,10 +629,16 @@ export default function CompetitorBattlecards({ currentTenant }) {
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-purple-600" />
-                Live Buying Signals & Triggers
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-purple-600" />
+                  Live Buying Signals & Triggers
+                </h3>
+                <InfoTooltip
+                  title="Live Buying Signals"
+                  content="Real-world company events (like new VP hires, funding rounds, or software changes) that indicate a prospect is actively ready to buy right now."
+                />
+              </div>
               <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
                 Live Monitoring Active
               </span>
@@ -515,9 +663,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                      +{sig.opportunity_viability_boost} Timing Advantage
-                    </span>
+                    <div className="flex items-center">
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                        +{sig.opportunity_viability_boost} Timing Advantage
+                      </span>
+                      <InfoTooltip
+                        title="Timing Advantage"
+                        content="Reaching out within days of a trigger event results in 3x–5x higher response rates than cold outreach."
+                      />
+                    </div>
                     <button
                       onClick={() => handleCopyHook(sig.pre_drafted_hook, idx)}
                       className="btn-primary text-xs"
@@ -533,12 +687,24 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   <p className="text-slate-600 leading-relaxed">{sig.snippet}</p>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Why Reach Out Now:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Why Reach Out Now:</span>
+                      <InfoTooltip
+                        title="Urgency Reason"
+                        content="Why this event creates an immediate need for your solution right now, before the window closes."
+                      />
+                    </div>
                     <p className="text-slate-800 font-semibold">{sig.recommended_sales_play}</p>
                   </div>
 
                   <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-lg space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider block">Ready-to-Send Message Hook:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider block">Ready-to-Send Message Hook:</span>
+                      <InfoTooltip
+                        title="Pre-Drafted Message"
+                        content="A friendly, relevant opening message ready to copy-paste into LinkedIn InMail, email, or WhatsApp."
+                      />
+                    </div>
                     <p className="italic text-slate-900">"{sig.pre_drafted_hook}"</p>
                   </div>
                 </div>

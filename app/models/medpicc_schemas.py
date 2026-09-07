@@ -57,6 +57,8 @@ class QualificationModel(BaseModel):
     seller_summary: SellerSummary = Field(..., description="Executive briefing.")
     value_selling_boxes: List[ValueSellingBox] = Field(..., description="The 8 individual MEDDPICC scorecards.")
     evidence_coverage: int = Field(default=0, ge=0, le=8, description="Number of boxes with direct verbatim evidence.")
+    outcome_trajectory: Optional[str] = Field(default="On Track once primary gate is confirmed", description="Trajectory status reflecting gate completion.")
+    rubric_version: Optional[str] = Field(default="track1-tier1-v1.0", description="Granular track-tier version key.")
 
 
 # ==========================================
@@ -68,8 +70,12 @@ class CreateDealRequest(BaseModel):
     deal_name: str = Field(..., description="Name of the deal or project.")
     company_name: str = Field(..., description="Target buyer company.")
     domain: Optional[str] = Field(default=None)
-    deal_size: Optional[float] = Field(default=50000.0)
-    currency: str = Field(default="USD")
+    deal_size: Optional[float] = Field(default=1500000.0)
+    currency: str = Field(default="INR")
+    buyer_tier: Literal["Tier 1: Founder-Led SMB", "Tier 2: Growth Scale-up", "Tier 3: Enterprise MNC"] = Field(
+        default="Tier 1: Founder-Led SMB"
+    )
+    tenant_track: str = Field(default="Service / Retainer")
     current_stage: str = Field(default="Discovery")
 
 
@@ -81,9 +87,12 @@ class DealResponse(BaseModel):
     domain: Optional[str] = None
     deal_size: Optional[float] = None
     currency: str
+    buyer_tier: Optional[str] = "Tier 1: Founder-Led SMB"
+    tenant_track: Optional[str] = "Service / Retainer"
     current_stage: str
     latest_score: Optional[int] = None
     latest_category: Optional[str] = None
+    rubric_version: Optional[str] = None
     created_at: str
 
 
@@ -104,6 +113,8 @@ class DealDiagnosticResponse(BaseModel):
     overall_score: int
     deal_category: str
     next_best_action: str
+    outcome_trajectory: Optional[str] = None
+    rubric_version: Optional[str] = None
     closure_if_addressed: Dict[str, Any]
     closure_if_ignored: Dict[str, Any]
     top_blocking_boxes: List[str]

@@ -19,15 +19,31 @@ import {
   AlertTriangle,
   X,
   Target,
-  FileText
+  FileText,
+  BadgePercent,
+  Layers,
+  Sparkle
 } from 'lucide-react';
 import {
   fetchMeetings,
   createMeeting,
   fetchPreCallBriefing,
   fetchChampionSellingKit,
-  triggerMeetingPrep
+  triggerMeetingPrep,
+  fetchDeals
 } from '../api';
+import InfoTooltip from '../components/InfoTooltip';
+
+function formatCurrency(amount, currency = 'INR') {
+  if (!amount && amount !== 0) return currency === 'INR' ? '₹28 Lakhs' : '$60,000';
+  const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  if (currency === 'INR') {
+    if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(1)} Lakhs`;
+    return `₹${num.toLocaleString('en-IN')}`;
+  }
+  return `$${num.toLocaleString('en-US')}`;
+}
 
 function getBuyingRoleDisplay(role) {
   if (!role) return { label: 'Stakeholder', style: 'bg-slate-100 text-slate-700 border-slate-200' };
@@ -35,17 +51,24 @@ function getBuyingRoleDisplay(role) {
   if (lower.includes('champion')) {
     return { label: 'Champion', style: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
   }
-  if (lower.includes('economic') || lower.includes('buyer') || lower.includes('budget')) {
+  if (lower.includes('economic') || lower.includes('buyer') || lower.includes('budget') || lower.includes('founder') || lower.includes('owner')) {
     return { label: 'Budget Owner', style: 'bg-rose-50 text-rose-800 border-rose-200' };
   }
   if (lower.includes('security') || lower.includes('gatekeeper')) {
-    return { label: 'Security Review', style: 'bg-amber-50 text-amber-800 border-amber-200' };
+    return { label: 'Security Review', style: 'bg-blue-50 text-blue-800 border-blue-200' };
+  }
+  if (lower.includes('legal') || lower.includes('procurement') || lower.includes('scope') || lower.includes('commercial')) {
+    return { label: 'Scope & Commercial Review', style: 'bg-amber-50 text-amber-800 border-amber-200' };
+  }
+  if (lower.includes('tech') || lower.includes('evaluator') || lower.includes('architect')) {
+    return { label: 'Technical Evaluator', style: 'bg-indigo-50 text-indigo-800 border-indigo-200' };
   }
   return { label: role, style: 'bg-slate-100 text-slate-700 border-slate-200' };
 }
 
 export default function MeetingIntelligence({ currentTenant }) {
   const [meetings, setMeetings] = useState([]);
+  const [pipelineDeals, setPipelineDeals] = useState([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [briefing, setBriefing] = useState(null);
   const [championKit, setChampionKit] = useState(null);
@@ -59,21 +82,30 @@ export default function MeetingIntelligence({ currentTenant }) {
   // New Meeting Form
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
+  const [newOffering, setNewOffering] = useState('Organic Search & SEO Retainer');
+  const [newTrack, setNewTrack] = useState('Service / Retainer');
+  const [newTier, setNewTier] = useState('Tier 2: Growth Scale-up');
+  const [newDealSize, setNewDealSize] = useState('2800000');
+  const [newCurrency, setNewCurrency] = useState('INR');
   const [newTime, setNewTime] = useState('');
   const [newEmails, setNewEmails] = useState('');
 
-  const loadMeetingsData = async () => {
+  const loadInitialData = async () => {
     setIsLoading(true);
-    const data = await fetchMeetings(currentTenant);
-    setMeetings(data);
-    if (data.length > 0 && !selectedMeetingId) {
-      setSelectedMeetingId(data[0].id);
+    const [meetingsData, dealsData] = await Promise.all([
+      fetchMeetings(currentTenant),
+      fetchDeals(currentTenant),
+    ]);
+    setMeetings(meetingsData);
+    setPipelineDeals(dealsData);
+    if (meetingsData.length > 0 && !selectedMeetingId) {
+      setSelectedMeetingId(meetingsData[0].id);
     }
     setIsLoading(false);
   };
 
   useEffect(() => {
-    loadMeetingsData();
+    loadInitialData();
   }, [currentTenant]);
 
   useEffect(() => {
@@ -115,6 +147,11 @@ export default function MeetingIntelligence({ currentTenant }) {
         {
           title: newTitle,
           company_name: newCompany,
+          tenant_track: newTrack,
+          buyer_tier: newTier,
+          deal_size: parseFloat(newDealSize) || 2800000,
+          currency: newCurrency,
+          offering_summary: newOffering,
           scheduled_time: newTime || 'Upcoming Call',
           attendee_emails: emailList,
         },
@@ -125,7 +162,7 @@ export default function MeetingIntelligence({ currentTenant }) {
       setNewCompany('');
       setNewTime('');
       setNewEmails('');
-      await loadMeetingsData();
+      await loadInitialData();
       setSelectedMeetingId(created.id);
     } catch (err) {
       alert('Failed to add meeting: ' + err.message);
@@ -136,31 +173,36 @@ export default function MeetingIntelligence({ currentTenant }) {
     if (!championKit) return;
     const text = `
 INTERNAL SELLING CHEAT SHEET: ${championKit.company_name}
+Offering: ${championKit.offering_summary || 'Commercial Solution'} (${formatCurrency(championKit.deal_size, championKit.currency)})
 Champion: ${championKit.champion_name} (${championKit.champion_title})
 
 1. WHY THIS HELPS YOUR CHAMPION PERSONALLY:
 ${championKit.filter_1_wiifm_career_narrative.talking_points.join('\n- ')}
 Soundbite: "${championKit.filter_1_wiifm_career_narrative.verbatim_soundbite}"
 
-2. THE MONEY CASE (CFO-READY ROI):
+2. THE MONEY CASE (ROI & PAYBACK):
 ${championKit.filter_2_cfo_business_case_roi.talking_points.join('\n- ')}
 Soundbite: "${championKit.filter_2_cfo_business_case_roi.verbatim_soundbite}"
 
-3. SECURITY & PRIVACY ANSWERS:
+3. SERVICE QUALITY, IP OWNERSHIP & SECURITY:
 ${championKit.filter_3_infosec_architecture.talking_points.join('\n- ')}
 Soundbite: "${championKit.filter_3_infosec_architecture.verbatim_soundbite}"
 
 4. WHY ACT NOW (DEADLINES & TIMING):
 ${championKit.filter_4_time_triggers_urgency.talking_points.join('\n- ')}
+Soundbite: "${championKit.filter_4_time_triggers_urgency.verbatim_soundbite}"
 
 5. WHO MAKES THE DECISION:
 ${championKit.filter_5_power_structure_dynamics.talking_points.join('\n- ')}
+Soundbite: "${championKit.filter_5_power_structure_dynamics.verbatim_soundbite}"
 
-6. WHY ALTERNATIVES WON'T WORK:
+6. WHY ALTERNATIVES WON'T WORK (IN-HOUSE VS EXTERNAL):
 ${championKit.filter_6_vendor_disqualification.talking_points.join('\n- ')}
+Soundbite: "${championKit.filter_6_vendor_disqualification.verbatim_soundbite}"
 
 7. HIDDEN RISKS & HOW TO HANDLE THEM:
 ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
+Soundbite: "${championKit.filter_7_shadow_influence_landmines.verbatim_soundbite}"
     `.trim();
 
     navigator.clipboard.writeText(text);
@@ -191,8 +233,8 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
       {/* ─── 1. TOP HEADER & WORKSPACE TOOLBAR ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="p-2.5 rounded-xl bg-slate-900 text-white">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-2.5 rounded-xl bg-slate-900 text-white shrink-0 mt-1 sm:mt-0">
             <Calendar className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
@@ -200,7 +242,7 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
               <select
                 value={selectedMeetingId || ''}
                 onChange={(e) => setSelectedMeetingId(e.target.value)}
-                className="text-lg sm:text-xl font-bold text-slate-900 bg-transparent border-none p-0 pr-6 focus:ring-0 cursor-pointer"
+                className="text-base sm:text-xl font-bold text-slate-900 bg-transparent border-none p-0 pr-6 focus:ring-0 cursor-pointer"
               >
                 {meetings.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -208,14 +250,35 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                   </option>
                 ))}
               </select>
+              <InfoTooltip
+                title="Call Intelligence Briefing"
+                content="Tailored call prep connecting attendee backgrounds, deal gaps, and internal selling cheat sheets for your upcoming conversation."
+              />
             </div>
-            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-              <span className="font-semibold text-slate-800">{selectedMeeting?.company_name || 'Apex Logistics Global'}</span>
+            
+            {/* Context Pills: Company, Time, Offering, Size, Track & Tier */}
+            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-2">
+              <span className="font-semibold text-slate-800">{selectedMeeting?.company_name || 'Zepto Quick-Commerce'}</span>
               <span>&bull;</span>
-              <span>Scheduled: <strong className="text-slate-800">{selectedMeeting?.scheduled_time || 'Today, 3:30 PM EST'}</strong></span>
+              <span>Scheduled: <strong className="text-slate-800">{selectedMeeting?.scheduled_time || 'Today, 4:00 PM IST'}</strong></span>
               <span>&bull;</span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
                 Google Calendar Synced
+              </span>
+
+              {/* Deal Size Badge */}
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 font-bold border border-blue-200">
+                {formatCurrency(selectedMeeting?.deal_size, selectedMeeting?.currency)}
+              </span>
+
+              {/* Track Badge */}
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium border border-slate-200">
+                {selectedMeeting?.tenant_track || 'Service / Retainer'}
+              </span>
+
+              {/* Buyer Tier Badge */}
+              <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 font-semibold border border-purple-200">
+                {selectedMeeting?.buyer_tier || 'Tier 2: Growth Scale-up'}
               </span>
             </div>
           </div>
@@ -294,14 +357,23 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
       {/* ─── 3. TAB 1: CALL PREP & NOTES ─── */}
       {activeTab === 'briefing' && (
         <div className="space-y-6">
-          {/* Executive Meeting Context */}
+          {/* Executive Meeting Context & Deal Gaps */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-emerald-700" />
-                What This Call Is About
-              </h3>
-              <span className="text-xs text-slate-400">Key gaps still open on this deal</span>
+                <h3 className="text-sm font-bold text-slate-900">What This Call Is About</h3>
+                <InfoTooltip
+                  title="Call Context"
+                  content="Executive summary of the deal stage, what offering is on the table, and the exact MEDDPICC deal gaps to target on this call."
+                />
+                {selectedMeeting?.offering_summary && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded border border-emerald-200">
+                    Pitching: {selectedMeeting.offering_summary}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-slate-400">Deal Gaps & Verification Path</span>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
@@ -328,7 +400,11 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <Users className="w-4 h-4 text-slate-600" />
-                Who's on This Call & How to Connect
+                <span>Who's on This Call & How to Connect</span>
+                <InfoTooltip
+                  title="Attendee Dossiers"
+                  content="Psychographic profiles for each participant: what metrics they care about, hooks tailored to their role, and opening icebreakers."
+                />
               </h3>
               <span className="text-xs text-slate-500">{briefing?.attendees?.length || 0} People Attending</span>
             </div>
@@ -415,7 +491,11 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <HelpCircle className="w-4 h-4 text-blue-600" />
-                    3 Questions to Ask on This Call
+                    <span>3 Questions to Ask on This Call</span>
+                    <InfoTooltip
+                      title="Discovery Questions"
+                      content="Strategic discovery questions designed to uncover budget velocity, 50% advance approvals, and internal decision milestones."
+                    />
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">Designed to uncover what's blocking the deal.</p>
                 </div>
@@ -445,9 +525,13 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Search className="w-4 h-4 text-emerald-700" />
-                  Recent Company News
+                  <span>Recent Company News & Market Signals</span>
+                  <InfoTooltip
+                    title="Recent Signals"
+                    content="Fresh company news, funding announcements, or hiring trends to weave into your call conversation."
+                  />
                 </h3>
-                <span className="text-[11px] text-slate-400 font-semibold">Latest Updates</span>
+                <span className="text-[11px] text-slate-400 font-semibold">Live Signals</span>
               </div>
 
               <div className="space-y-3">
@@ -472,12 +556,18 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
           <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <span className="text-xs text-slate-400 font-semibold">Internal Selling Notes</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-semibold">Internal Champion Selling Kit</span>
+                  <InfoTooltip
+                    title="Champion Selling Kit"
+                    content="Equip your internal champion with 7 battle-tested angles to defend your proposal to the CFO, Founder, and InfoSec when you are not in the room."
+                  />
+                </div>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                  Talking Points for {championKit?.champion_name} to Sell Internally
+                  Talking Points for {championKit?.champion_name} to Sell {selectedMeeting?.company_name} Leadership
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Everything your champion needs to pitch this deal and handle tough questions in their internal meetings.
+                  Everything your champion needs to pitch this deal ({formatCurrency(championKit?.deal_size, championKit?.currency)}) and handle tough committee objections behind closed doors.
                 </p>
               </div>
 
@@ -574,17 +664,32 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                 }`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-sm text-slate-900">{m.title}</h4>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{m.title}</h4>
+                    {m.offering_summary && (
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
+                        Offering: {m.offering_summary}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
                     Prep Notes Ready
                   </span>
                 </div>
-                <div className="text-xs text-slate-500 flex items-center gap-2 mb-3">
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span>{m.company_name}</span>
+                <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mb-3">
+                  <span className="flex items-center gap-1 font-medium text-slate-700">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    {m.company_name}
+                  </span>
                   <span>&bull;</span>
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{m.scheduled_time || 'Upcoming'}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    {m.scheduled_time || 'Upcoming'}
+                  </span>
+                  <span>&bull;</span>
+                  <span className="font-bold text-blue-700">
+                    {formatCurrency(m.deal_size, m.currency)}
+                  </span>
                 </div>
 
                 <div className="text-xs text-slate-600 border-t border-slate-100 pt-3 flex justify-between items-center">
@@ -602,11 +707,11 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
       {/* ─── 6. NEW MEETING MODAL ─── */}
       {showNewMeetingModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-xl max-w-md w-full p-6 shadow-modal space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-modal space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-emerald-700" />
-                Add Upcoming Call
+                Add Upcoming Call & Generate Prep
               </h3>
               <button onClick={() => setShowNewMeetingModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
@@ -619,30 +724,93 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Apex Logistics: Executive CFO Review"
+                  placeholder="e.g. Zepto: SEO Growth Retainer Review"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Company Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Apex Logistics Global"
-                  value={newCompany}
-                  onChange={(e) => setNewCompany(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Company Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Zepto Quick-Commerce"
+                    value={newCompany}
+                    onChange={(e) => setNewCompany(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Offering Being Pitched</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SEO Growth Retainer / SaaS"
+                    value={newOffering}
+                    onChange={(e) => setNewOffering(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Business Model Track</label>
+                  <select
+                    value={newTrack}
+                    onChange={(e) => setNewTrack(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  >
+                    <option value="Service / Retainer">Service / Agency Retainer</option>
+                    <option value="SaaS / Product">B2B SaaS / Product</option>
+                    <option value="Physical Ops / Logistics">Physical Ops / Logistics</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Buyer Sophistication Tier</label>
+                  <select
+                    value={newTier}
+                    onChange={(e) => setNewTier(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  >
+                    <option value="Tier 1: Founder-Led SMB">Tier 1: Founder-Led SMB / D2C</option>
+                    <option value="Tier 2: Growth Scale-up">Tier 2: Growth Scale-up / Unicorn</option>
+                    <option value="Tier 3: Enterprise MNC">Tier 3: Enterprise / MNC</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Estimated Deal Size</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 2800000"
+                    value={newDealSize}
+                    onChange={(e) => setNewDealSize(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Currency</label>
+                  <select
+                    value={newCurrency}
+                    onChange={(e) => setNewCurrency(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  >
+                    <option value="INR">INR (₹ Lakhs / Cr)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Scheduled Date & Time</label>
                 <input
                   type="text"
-                  placeholder="e.g. Tomorrow, 2:00 PM EST"
+                  placeholder="e.g. Tomorrow, 4:00 PM IST"
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
@@ -653,7 +821,7 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                 <label className="block text-slate-700 font-semibold mb-1">Attendee Emails (comma separated)</label>
                 <input
                   type="text"
-                  placeholder="sarah.chen@apex.com, marcus.vance@apex.com"
+                  placeholder="amrit.pal@zepto.com, kaivalya@zepto.com"
                   value={newEmails}
                   onChange={(e) => setNewEmails(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
@@ -672,7 +840,7 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
                   type="submit"
                   className="btn-primary"
                 >
-                  Prep My Call
+                  Generate Prep Notes
                 </button>
               </div>
             </form>
@@ -682,3 +850,4 @@ ${championKit.filter_7_shadow_influence_landmines.talking_points.join('\n- ')}
     </div>
   );
 }
+

@@ -39,8 +39,14 @@ class CompanySignal(BaseModel):
 
 class PreCallBriefing(BaseModel):
     meeting_id: str = Field(..., description="Associated meeting ID.")
+    deal_id: Optional[str] = Field(default=None, description="Associated pipeline deal ID.")
     meeting_title: str = Field(..., description="Meeting calendar title.")
     company_name: str = Field(..., description="Prospect company name.")
+    tenant_track: Optional[str] = Field(default="Service / Retainer", description="Business model track.")
+    buyer_tier: Optional[str] = Field(default="Tier 1: Founder-Led SMB", description="Buyer sophistication tier.")
+    deal_size: Optional[float] = Field(default=None, description="Monetary deal size.")
+    currency: Optional[str] = Field(default="INR", description="Currency (INR or USD).")
+    offering_summary: Optional[str] = Field(default=None, description="What is being sold (e.g. SEO, Influencer, SaaS).")
     scheduled_time: Optional[str] = Field(default=None, description="Meeting time string.")
     executive_summary: str = Field(..., description="2-sentence briefing on the meeting context and stakes.")
     attendees: List[MeetingAttendee] = Field(default_factory=list, description="Attendees with psychographic dossiers.")
@@ -65,6 +71,11 @@ class ChampionSellingKit(BaseModel):
     champion_name: str = Field(..., description="Full name of the sales champion.")
     champion_title: str = Field(..., description="Title of the sales champion.")
     company_name: str = Field(..., description="Prospect company name.")
+    tenant_track: Optional[str] = Field(default="Service / Retainer", description="Business model track.")
+    buyer_tier: Optional[str] = Field(default="Tier 1: Founder-Led SMB", description="Buyer sophistication tier.")
+    deal_size: Optional[float] = Field(default=None, description="Monetary deal size.")
+    currency: Optional[str] = Field(default="INR", description="Currency (INR or USD).")
+    offering_summary: Optional[str] = Field(default=None, description="What is being sold.")
     last_updated: Optional[str] = Field(default=None, description="Timestamp of generation.")
     
     # The 7 Strategic Champion Filters
@@ -75,7 +86,7 @@ class ChampionSellingKit(BaseModel):
         ..., description="Filter 2: Quantified cost of inaction and payback justification for finance."
     )
     filter_3_infosec_architecture: ChampionFilterBlock = Field(
-        ..., description="Filter 3: Security, compliance, and cloud architecture validation."
+        ..., description="Filter 3: Security, compliance, or service delivery / quality validation."
     )
     filter_4_time_triggers_urgency: ChampionFilterBlock = Field(
         ..., description="Filter 4: Budget deadline, planning cycle, or fiscal year catalyst."
@@ -93,8 +104,13 @@ class ChampionSellingKit(BaseModel):
 
 class MeetingCreateRequest(BaseModel):
     deal_id: Optional[str] = Field(default=None, description="Optional deal ID to link this meeting to.")
-    title: str = Field(..., description="Meeting title (e.g. 'Apex Logistics Discovery & RevOps Alignment').")
+    title: str = Field(..., description="Meeting title (e.g. 'Zepto: SEO Growth Retainer Review').")
     company_name: str = Field(..., description="Target company name.")
+    tenant_track: Optional[str] = Field(default="Service / Retainer", description="Track: Service / Retainer, SaaS / Product, Physical Ops")
+    buyer_tier: Optional[str] = Field(default="Tier 1: Founder-Led SMB", description="Tier: Tier 1 Founder SMB, Tier 2 Growth Scale-up, Tier 3 Enterprise")
+    deal_size: Optional[float] = Field(default=None, description="Deal value in currency units.")
+    currency: Optional[str] = Field(default="INR", description="INR or USD.")
+    offering_summary: Optional[str] = Field(default=None, description="Service or product being sold (e.g. 'SEO Growth Retainer', 'Influencer Campaign').")
     scheduled_time: Optional[str] = Field(default=None, description="ISO timestamp or formatted date/time.")
     attendee_emails: List[str] = Field(default_factory=list, description="Attendee emails to resolve.")
     objective: Optional[str] = Field(default="Discovery & MEDDPICC Alignment", description="Meeting goal.")
@@ -106,6 +122,11 @@ class MeetingResponse(BaseModel):
     deal_id: Optional[str] = Field(default=None)
     title: str
     company_name: str
+    tenant_track: Optional[str] = Field(default="Service / Retainer")
+    buyer_tier: Optional[str] = Field(default="Tier 1: Founder-Led SMB")
+    deal_size: Optional[float] = Field(default=None)
+    currency: Optional[str] = Field(default="INR")
+    offering_summary: Optional[str] = Field(default=None)
     scheduled_time: Optional[str] = None
     attendees: List[MeetingAttendee] = Field(default_factory=list)
     briefing_ready: bool = Field(default=False)

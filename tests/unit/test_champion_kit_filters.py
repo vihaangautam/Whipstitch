@@ -66,3 +66,62 @@ def test_pre_call_briefing_discovery_questions():
     assert len(briefing.strategic_discovery_questions) == 3
     assert len(briefing.top_medpicc_gaps_to_target) >= 2
     assert len(briefing.executive_summary) > 20
+
+
+def test_zepto_service_retainer_champion_kit():
+    """Verifies that Track: Service / Retainer + Tier 2 adapts 7 angles to agency SEO context."""
+    engine = PsychographicEngine()
+    kit = engine.synthesize_7_filter_champion_kit(
+        meeting_id="meet-zepto-01",
+        deal_id="deal-zepto-01",
+        champion_name="Amrit Pal",
+        champion_title="Head of Growth",
+        company_name="Zepto Quick-Commerce",
+        tenant_track="Service / Retainer",
+        buyer_tier="Tier 2: Growth Scale-up",
+        deal_size=2800000,
+        currency="INR",
+        offering_summary="Organic Search & SEO Retainer",
+    )
+
+    assert kit.champion_name == "Amrit Pal"
+    assert kit.company_name == "Zepto Quick-Commerce"
+    assert kit.tenant_track == "Service / Retainer"
+    assert kit.buyer_tier == "Tier 2: Growth Scale-up"
+    assert "₹28" in kit.filter_2_cfo_business_case_roi.verbatim_soundbite
+    assert "CAC" in kit.filter_2_cfo_business_case_roi.verbatim_soundbite
+    assert "intellectual property" in kit.filter_3_infosec_architecture.verbatim_soundbite.lower()
+    assert kit.filter_6_vendor_disqualification.anticipated_objection is not None
+
+
+def test_nykaa_founder_tier1_discovery_questions():
+    """Verifies that Tier 1 Founder SMB generates founder-centric discovery questions and 50% advance gaps."""
+    engine = PsychographicEngine()
+    attendee = MeetingAttendee(
+        name="Sneha Kapoor",
+        title="VP Marketing",
+        organization="Nykaa E-Retail",
+        psychographic=engine.profile_attendee(
+            "Sneha Kapoor", "VP Marketing", "Nykaa E-Retail",
+            tenant_track="Service / Retainer", buyer_tier="Tier 1: Founder-Led SMB",
+            offering_summary="Festive Influencer Campaign", currency="INR", deal_size=1500000,
+        ),
+    )
+    briefing = engine.synthesize_pre_call_briefing(
+        meeting_id="meet-nykaa-02",
+        meeting_title="Nykaa E-Retail Founder Review",
+        company_name="Nykaa E-Retail",
+        scheduled_time="Tomorrow, 2:30 PM",
+        attendees=[attendee],
+        signals=[],
+        tenant_track="Service / Retainer",
+        buyer_tier="Tier 1: Founder-Led SMB",
+        deal_size=1500000,
+        currency="INR",
+        offering_summary="Festive Influencer Campaign",
+    )
+
+    assert briefing.company_name == "Nykaa E-Retail"
+    assert any("Founder" in q or "conviction" in q for q in briefing.strategic_discovery_questions)
+    assert any("Founder" in g or "advance" in g for g in briefing.top_medpicc_gaps_to_target)
+

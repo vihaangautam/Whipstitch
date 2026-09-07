@@ -38,5 +38,12 @@ async def generate_battlecard(payload: GenerateBattlecardRequest):
         competitor_name=payload.competitor_name,
         buyer_company=payload.buyer_company,
         deal_context=payload.deal_context,
+        seller_company=payload.seller_company,
+        tenant_offering=payload.tenant_offering,
+        tenant_value_props=payload.tenant_value_props,
+        buyer_tier=payload.buyer_tier or 1,
+        currency=payload.currency or "INR",
+        team_type=payload.team_type or "team",
     )
     return battlecard
+

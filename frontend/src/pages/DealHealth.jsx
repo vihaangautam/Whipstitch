@@ -30,7 +30,11 @@ import {
   ChevronDown,
   Search,
   CheckCheck,
-  Loader2
+  Loader2,
+  Activity,
+  Layers,
+  Send,
+  Info
 } from 'lucide-react';
 import {
   fetchDeals,
@@ -44,6 +48,7 @@ import {
   addCommitteeMember,
   getCommitteeStreamUrl
 } from '../api';
+import InfoTooltip from '../components/InfoTooltip';
 
 export default function DealHealth({ currentTenant }) {
   const [deals, setDeals] = useState([]);
@@ -52,14 +57,18 @@ export default function DealHealth({ currentTenant }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+
+  // Progressive Disclosure: 3-Tab State
+  const [activeTab, setActiveTab] = useState('vitals'); // 'vitals' | 'evidence' | 'actions'
   
   // Drawers & Modals
-  const [activeBoxDrawer, setActiveBoxDrawer] = useState(null); // Dedicated dimension audit & override drawer
+  const [activeBoxDrawer, setActiveBoxDrawer] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showNewDealModal, setShowNewDealModal] = useState(false);
   const [showExecutionConsole, setShowExecutionConsole] = useState(false);
   
-  // Override State inside Drawer
+  // Override & Evidence Source Picker State
+  const [evidenceSourceType, setEvidenceSourceType] = useState('call_transcript'); // 'call_transcript' | 'whatsapp' | 'manual_note'
   const [isOverridden, setIsOverridden] = useState(false);
   const [overrideContact, setOverrideContact] = useState('');
   const [overrideNotes, setOverrideNotes] = useState('');
@@ -71,14 +80,28 @@ export default function DealHealth({ currentTenant }) {
   const [emailSubject, setEmailSubject] = useState('');
   const [newDealName, setNewDealName] = useState('');
   const [newCompanyName, setNewCompanyName] = useState('');
-  const [newDealSize, setNewDealSize] = useState('145000');
+  const [newDealSize, setNewDealSize] = useState('1500000');
+  const [newDealCurrency, setNewDealCurrency] = useState('INR');
+  const [newDealTier, setNewDealTier] = useState('Tier 1: Founder-Led SMB');
+  const [currentTier, setCurrentTier] = useState('Tier 1: Founder-Led SMB');
 
-  // Buying Committee State
+  const formatCurrency = (amount, currency = 'INR') => {
+    if (!amount && amount !== 0) return currency === 'INR' ? '₹0' : '$0';
+    const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+    if (currency === 'INR') {
+      if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+      if (num >= 100000) return `₹${(num / 100000).toFixed(1)} Lakhs`;
+      return `₹${num.toLocaleString('en-IN')}`;
+    }
+    return `$${num.toLocaleString('en-US')}`;
+  };
+
+  // Realistic Tier 1/2 Buying Committee State
   const defaultCommittee = [
-    { name: 'Sarah Chen', role: 'VP RevOps', tag: 'Internal Champion', status: 'Engaged', email: 'sarah.chen@apexlogistics.com' },
-    { name: 'Unassigned', role: 'Chief Financial Officer', tag: 'Budget Owner', status: 'Missing' },
-    { name: 'David Miller', role: 'Head of InfoSec', tag: 'Security Reviewer', status: 'Pending', email: 'david.miller@apexlogistics.com' },
-    { name: 'Emma Watson', role: 'Procurement Counsel', tag: 'Legal & Contracts', status: 'Uncontacted' },
+    { name: 'Sneha Kapoor', role: 'VP Marketing', tag: 'Internal Champion', status: 'Engaged', email: 'sneha.kapoor@nykaa.com' },
+    { name: 'Unassigned', role: 'Founder & Managing Director', tag: 'Budget Owner', status: 'Missing' },
+    { name: 'Rajesh Nair', role: 'Head of Accounts & Finance', tag: 'Commercial Reviewer', status: 'Pending', email: 'rajesh.nair@nykaa.com' },
+    { name: 'Pooja Sharma', role: 'Brand Partnerships Lead', tag: 'Scope Reviewer', status: 'Engaged', email: 'pooja.s@nykaa.com' },
   ];
   const [committee, setCommittee] = useState(defaultCommittee);
   const [showAutoFindModal, setShowAutoFindModal] = useState(false);
@@ -118,20 +141,23 @@ export default function DealHealth({ currentTenant }) {
     if (selectedDealId) {
       loadScorecard(selectedDealId);
       loadCommittee(selectedDealId);
+      const deal = deals.find((d) => d.id === selectedDealId);
+      if (deal?.buyer_tier) {
+        setCurrentTier(deal.buyer_tier);
+      }
     }
-  }, [selectedDealId]);
+  }, [selectedDealId, deals]);
 
   const loadScorecard = async (dealId) => {
     setIsLoading(true);
     const data = await fetchMedpiccScorecard(dealId);
     setScorecard(data);
     if (data?.follow_up_email) {
-      setEmailSubject(data.follow_up_email.subject || 'Next Steps Alignment: Apex Logistics x Whipstitch');
+      setEmailSubject(data.follow_up_email.subject || 'Next Steps Alignment: Nykaa Campaign Scope');
       setEmailDraft(data.follow_up_email.body_content || '');
     }
     setIsLoading(false);
   };
-
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -156,7 +182,12 @@ export default function DealHealth({ currentTenant }) {
       }
       await triggerDealDiagnostic(selectedDealId, {
         tenant_id: currentTenant,
-        deal_context: { transcript_text: transcriptInput }
+        deal_context: {
+          transcript_text: transcriptInput,
+          buyer_tier: currentTier,
+          tenant_track: 'Service / Retainer',
+          currency: selectedDeal?.currency || 'INR'
+        }
       });
       setShowUploadModal(false);
       await loadScorecard(selectedDealId);
@@ -176,7 +207,10 @@ export default function DealHealth({ currentTenant }) {
         tenant_id: currentTenant,
         deal_name: newDealName,
         company_name: newCompanyName,
-        deal_size: parseFloat(newDealSize) || 145000,
+        deal_size: parseFloat(newDealSize) || 1500000,
+        currency: newDealCurrency,
+        buyer_tier: newDealTier,
+        tenant_track: 'Service / Retainer',
       });
       setShowNewDealModal(false);
       setNewDealName('');
@@ -206,31 +240,225 @@ export default function DealHealth({ currentTenant }) {
 
   const selectedDeal = deals.find((d) => d.id === selectedDealId);
 
-  // 8 MEDDPICC dimensions metadata with intuitive sales subtitles
-  const medpiccItems = [
-    { key: 'Metrics', letter: 'M', name: 'Metrics', sub: 'Dollar Impact & ROI', max: 15 },
-    { key: 'Economic Buyer', letter: 'E', name: 'Economic Buyer', sub: 'Budget Owner', max: 15 },
-    { key: 'Decision Criteria', letter: 'D', name: 'Decision Criteria', sub: 'Must-Haves', max: 10 },
-    { key: 'Decision Process', letter: 'D', name: 'Decision Process', sub: 'Approval Steps', max: 10 },
-    { key: 'Paper Process', letter: 'P', name: 'Paper Process', sub: 'Legal & Security', max: 10 },
-    { key: 'Implicated Pain', letter: 'I', name: 'Implicated Pain', sub: 'Problem & Urgency', max: 15 },
-    { key: 'Champion', letter: 'C', name: 'Champion', sub: 'Internal Sponsor', max: 15 },
-    { key: 'Competition', letter: 'C', name: 'Competition', sub: 'Rivals & Status Quo', max: 10 },
-  ];
+  // 8 MEDDPICC dimensions metadata with full, untruncated titles and plain sales descriptions
+  const getMedpiccItems = () => {
+    const isTier1 = currentTier.includes('Tier 1');
+    const isTier2 = currentTier.includes('Tier 2');
+    return [
+      {
+        key: 'Metrics',
+        letter: 'M',
+        name: 'Metrics',
+        sub: isTier1 ? 'Budget & Target Numbers' : 'Quantified ROI & Impact',
+        max: isTier1 ? 20 : 15,
+        tooltip: 'The Budget & Target Numbers: Did the client give you real, concrete numbers (e.g. ₹15L budget or 3.5x ROAS)? If they have not shared a specific number, you do not have a real budget yet.',
+        criteria: [
+          'Client confirmed a specific budget in Rupees or Dollars',
+          'Agreed on target business results (ROAS, leads, or revenue)',
+          'Current baseline verified so you can prove your ROI'
+        ]
+      },
+      {
+        key: 'Economic Buyer',
+        letter: 'E',
+        name: 'Economic Buyer',
+        sub: isTier1 ? 'Founder & Cheque Signer' : 'Function Head & Finance Signer',
+        max: 20,
+        tooltip: 'Who Signs the Cheque: The ONE person with final authority to release funds. In SMBs/D2C, it is the Founder. In larger brands, it is the VP + Finance head. If you have not spoken to them or got their direct thumbs-up, this deal is at high risk of stalling.',
+        criteria: [
+          'Cheque signer identified by name and job title',
+          'Direct verbal or WhatsApp confirmation from them',
+          'Warning: Score is capped at 9/20 until you talk directly to this person'
+        ]
+      },
+      {
+        key: 'Decision Criteria',
+        letter: 'D',
+        name: 'Decision Criteria',
+        sub: 'Deliverables & Scope',
+        max: 10,
+        tooltip: 'What They Expect Us to Deliver: What does the client need to see before saying "Yes"? Deliverables (e.g. 25 videos), revision limits, timeline, and pricing. Make sure both sides agree on paper so expectations do not shift later.',
+        criteria: [
+          'Exact deliverables and creative formats agreed in writing',
+          'Clear turnaround times, SLAs, and revision limits defined',
+          'Pricing structure and payment terms accepted'
+        ]
+      },
+      {
+        key: 'Decision Process',
+        letter: 'D',
+        name: 'Decision Process',
+        sub: isTier1 ? 'Single-Step Sign-Off' : 'Approval Sequence',
+        max: isTier1 ? 5 : 10,
+        tooltip: 'How They Approve Deals: The exact steps from your pitch to money in the bank. In smaller companies, it is just Founder approval. In larger brands, it is Marketing Head ➔ Finance ➔ Legal. Know who has to sign what, and by when.',
+        criteria: [
+          isTier1 ? 'Founder single-step approval path confirmed' : 'Multi-step review sequence mapped (Marketing ➔ Finance ➔ Legal)',
+          'Target dates agreed for contract signing and project kickoff'
+        ]
+      },
+      {
+        key: 'Paper Process',
+        letter: 'P',
+        name: 'Paper Process',
+        sub: isTier1 ? 'SOW & 50% Advance' : 'PO Release & Empanelment',
+        max: 15,
+        tooltip: 'Getting Paid (Advance Invoice): The paperwork and money trail. In service deals, this means: SOW signed, GST details verified, and 50% advance payment in your bank. Never start work without the advance—client accounts teams take 7–10 days to process invoices.',
+        criteria: [
+          'SOW deliverables and timeline agreed in writing',
+          '50% advance payment terms locked before kickoff',
+          'GST registration details and accounts billing contact verified'
+        ]
+      },
+      {
+        key: 'Implicated Pain',
+        letter: 'I',
+        name: 'Implicated Pain',
+        sub: 'Why Buy Now (Urgency)',
+        max: 15,
+        tooltip: 'Why They Must Buy Now: Why does the client need to hire you right now instead of waiting 3 months? Is there a hard deadline like Diwali? What happens to their business if they do nothing or keep struggling with in-house freelancers?',
+        criteria: [
+          'Hard calendar deadline tied to revenue season (e.g. Diwali launch)',
+          'Quantified cost or lost revenue if project launch is delayed',
+          'Client admits doing it in-house or doing nothing has already failed'
+        ]
+      },
+      {
+        key: 'Champion',
+        letter: 'C',
+        name: 'Champion',
+        sub: 'Your Internal Ally',
+        max: 10,
+        tooltip: 'Your Internal Ally: Your biggest advocate inside the client company (e.g. VP Marketing). They want you to win, give you insider tips, and actively pitch you to the Founder when you are not in the room.',
+        criteria: [
+          'Point of contact actively pitching you to leadership',
+          'Warns you early about internal objections, budgets, or delays',
+          'Warning: Capped at 5/10 points if your contact lacks direct Founder access'
+        ]
+      },
+      {
+        key: 'Competition',
+        letter: 'C',
+        name: 'Competition',
+        sub: 'Who Else They Pitch',
+        max: isTier1 ? 5 : 10,
+        tooltip: 'Who You Are Up Against: Who else is the client considering? Rival agencies, cheaper freelancers, or their own in-house team? Know what they are comparing you against so you can show why your speed and track record win.',
+        criteria: [
+          'Alternative agencies, freelancers, or internal DIY identified',
+          'Clear reason locked on why your agency wins (ROAS, speed, SLA)'
+        ]
+      },
+    ];
+  };
+
+  const medpiccItems = getMedpiccItems();
 
   const getBoxStatus = (boxName) => {
     const box = scorecard?.boxes?.find((b) => b.box.toLowerCase() === boxName.toLowerCase());
+    const itemMeta = medpiccItems.find((m) => m.key.toLowerCase() === boxName.toLowerCase()) || { max: 15 };
+    const maxScore = itemMeta.max;
     if (!box) {
-      return { score: 12, max: 15, status: 'green', statusIcon: '✓', label: 'Validated', border: 'border-emerald-200 bg-emerald-50 text-emerald-800' };
+      return { score: Math.round(maxScore * 0.7), max: maxScore, status: 'green', statusIcon: '✓', label: 'Validated', border: 'border-emerald-200 bg-emerald-50 text-emerald-800' };
     }
-    const pct = (box.score / (box.max_score || 15)) * 100;
+    const pct = (box.score / maxScore) * 100;
     if (pct >= 67) {
-      return { score: box.score, max: box.max_score, status: 'green', statusIcon: '✓', label: 'Validated', border: 'border-emerald-200 bg-emerald-50 text-emerald-800', data: box };
+      return { score: box.score, max: maxScore, status: 'green', statusIcon: '✓', label: 'Validated', border: 'border-emerald-200 bg-emerald-50 text-emerald-800', data: box };
     }
     if (pct >= 40) {
-      return { score: box.score, max: box.max_score, status: 'amber', statusIcon: '⚠', label: 'At Risk', border: 'border-amber-200 bg-amber-50 text-amber-800', data: box };
+      return { score: box.score, max: maxScore, status: 'amber', statusIcon: '⚠', label: 'At Risk', border: 'border-amber-200 bg-amber-50 text-amber-800', data: box };
     }
-    return { score: box.score, max: box.max_score, status: 'red', statusIcon: '✕', label: 'Missing', border: 'border-rose-200 bg-rose-50 text-rose-800', data: box };
+    return { score: box.score, max: maxScore, status: 'red', statusIcon: '✕', label: 'Missing', border: 'border-rose-200 bg-rose-50 text-rose-800', data: box };
+  };
+
+  const getBoxRubricBreakdown = (boxName) => {
+    const name = boxName?.toLowerCase() || '';
+    const isTier1 = currentTier.includes('Tier 1');
+    const isTier2 = currentTier.includes('Tier 2');
+
+    if (name.includes('metric')) {
+      return {
+        max: isTier1 ? 20 : 15,
+        items: [
+          { text: 'Target outcome quantified (ROAS / CPL / Revenue baseline)', points: '+7 pts', status: 'verified' },
+          { text: 'Total campaign budget stated in currency (₹15 Lakhs)', points: '+6 pts', status: 'verified' },
+          { text: 'Historical conversion baseline verified from past data', points: '0 pts (Pending)', status: 'pending' },
+        ],
+        hardCapNotice: null,
+      };
+    }
+    if (name.includes('economic')) {
+      return {
+        max: 20,
+        items: [
+          { text: isTier1 ? 'Founder / Managing Director identified as commercial signer' : 'Function Head & Finance Signer mapped', points: '+5 pts', status: 'verified' },
+          { text: isTier1 ? 'Direct commercial confirmation via call or WhatsApp' : 'Direct confirmation from Finance signer', points: '0 pts (Pending)', status: 'pending' },
+          { text: 'Discretionary spend authority verified for target deal size', points: '+4 pts', status: 'verified' },
+        ],
+        hardCapNotice: 'Rule 6.2 Hard Cap Active: Capped at max 9/20 points until Founder / Budget Owner direct confirmation is verified.',
+      };
+    }
+    if (name.includes('criteria')) {
+      return {
+        max: 10,
+        items: [
+          { text: 'Scope of deliverables & creative formats agreed in writing', points: '+4 pts', status: 'verified' },
+          { text: 'Target ROAS (3.5x) and revision limits clearly defined', points: '+3 pts', status: 'verified' },
+          { text: 'Selection criteria ranked against competing agencies', points: '0 pts (Pending)', status: 'pending' },
+        ],
+        hardCapNotice: null,
+      };
+    }
+    if (name.includes('process') && !name.includes('paper')) {
+      return {
+        max: isTier1 ? 5 : 10,
+        items: [
+          { text: isTier1 ? 'Single-step founder sign-off workflow mapped' : 'Multi-step commercial review sequence mapped', points: isTier1 ? '+3 pts' : '+5 pts', status: 'verified' },
+          { text: 'Target dates mapped for contract signing and kickoff', points: isTier1 ? '+1 pt' : '+2 pts', status: 'pending' },
+        ],
+        hardCapNotice: null,
+      };
+    }
+    if (name.includes('paper')) {
+      return {
+        max: 15,
+        items: [
+          { text: 'SOW deliverables and timeline agreed in writing', points: '+4 pts', status: 'verified' },
+          { text: '50% advance payment terms confirmed before kickoff', points: '0 pts (Pending)', status: 'pending' },
+          { text: 'GST registration details and accounts contact verified', points: '+3 pts', status: 'verified' },
+        ],
+        hardCapNotice: 'Commercial Gate Notice: Accounts team requires 7–10 days. SOW advance terms must be confirmed before production starts.',
+      };
+    }
+    if (name.includes('pain')) {
+      return {
+        max: 15,
+        items: [
+          { text: 'Hard calendar deadline tied to festive season launch', points: '+6 pts', status: 'verified' },
+          { text: 'Quantified revenue loss if campaign start date slips', points: '+4 pts', status: 'verified' },
+          { text: 'Direct admission that in-house creator management has failed', points: '+2 pts', status: 'verified' },
+        ],
+        hardCapNotice: null,
+      };
+    }
+    if (name.includes('champ')) {
+      return {
+        max: 10,
+        items: [
+          { text: 'Internal advocate actively pitching to leadership', points: '+5 pts', status: 'verified' },
+          { text: 'Helps navigate internal objections and accounts timelines', points: '+4 pts', status: 'verified' },
+          { text: 'Personal credibility with commercial decision-maker verified', points: '0 pts (Pending)', status: 'pending' },
+        ],
+        hardCapNotice: 'Rule 6.7 Notice: Capped at max 5/10 points if Champion lacks direct leadership access.',
+      };
+    }
+    // Competition
+    return {
+      max: isTier1 ? 5 : 10,
+      items: [
+        { text: 'Alternative agencies and freelance options identified', points: '+3 pts', status: 'verified' },
+        { text: 'Differentiation locked on ROAS, speed, and execution SLA', points: '+1 pt', status: 'verified' },
+      ],
+      hardCapNotice: null,
+    };
   };
 
   const getCommitteeStatusColor = (status) => {
@@ -253,13 +481,13 @@ export default function DealHealth({ currentTenant }) {
     setIsAutoFinding(true);
     setStreamProgress(15);
     setStreamLogs([
-      { step: 1, message: `Analyzing organization chart for ${selectedDeal?.company_name || 'Apex Logistics Global'}...` }
+      { step: 1, message: `Analyzing organization chart for ${selectedDeal?.company_name || 'Nykaa E-Retail'}...` }
     ]);
     setDiscoveredCandidate(null);
 
     const dealId = selectedDealId || 'd0000000-0000-0000-0000-000000000001';
-    const company = selectedDeal?.company_name || 'Apex Logistics Global';
-    const domain = selectedDeal?.domain || 'apexlogistics.com';
+    const company = selectedDeal?.company_name || 'Nykaa E-Retail';
+    const domain = selectedDeal?.domain || 'nykaa.com';
     const roleTag = contact.tag || contact.role;
 
     let sseDone = false;
@@ -358,6 +586,14 @@ export default function DealHealth({ currentTenant }) {
     setDiscoveredCandidate(null);
   };
 
+  // Pipeline Stepper metadata
+  const pipelineStages = [
+    { id: 1, name: 'Discovery & Needs', status: 'complete', exit: 'Business problem, brand goals, and estimated budget confirmed.' },
+    { id: 2, name: 'Scope & Pitch', status: 'complete', exit: 'Target deliverables, creator count, and ROAS expectations agreed.' },
+    { id: 3, name: 'Solution Validation', status: 'active', exit: 'Founder / Commercial decision-maker confirms proposal and locks SOW with 50% advance terms.' },
+    { id: 4, name: 'SOW & 50% Advance', status: 'upcoming', exit: 'SOW signed, GST verified, and 50% advance invoice released by client accounts.' },
+    { id: 5, name: 'Closed Won', status: 'upcoming', exit: 'Project onboarding kicked off and creative production started.' },
+  ];
 
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
@@ -383,48 +619,88 @@ export default function DealHealth({ currentTenant }) {
               </select>
             </div>
             <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-              <span className="font-semibold text-slate-800">{selectedDeal?.company_name || 'Apex Logistics Global'}</span>
+              <span className="font-semibold text-slate-800">{selectedDeal?.company_name || 'Nykaa E-Retail'}</span>
               <span>&bull;</span>
-              <span className="font-bold text-slate-900">${(selectedDeal?.deal_size || 145000).toLocaleString()}</span>
+              <span className="font-bold text-slate-900">
+                {formatCurrency(selectedDeal?.deal_size || 1500000, selectedDeal?.currency || 'INR')}
+              </span>
               <span>&bull;</span>
               <span>Target Close: <strong className="text-slate-700">Oct 31, 2026</strong></span>
               <span>&bull;</span>
-              <span>AE: <strong className="text-slate-700">Lauren Davis</strong></span>
+              <span>AE: <strong className="text-slate-700">Rohan Mehta</strong></span>
               <span>&bull;</span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">Stage 3 &bull; Solution Validation</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
+                <span className="text-emerald-700 font-semibold">Tier:</span>
+                <select
+                  value={currentTier}
+                  onChange={(e) => setCurrentTier(e.target.value)}
+                  className="bg-transparent border-none p-0 pr-4 text-xs font-bold text-emerald-900 focus:ring-0 cursor-pointer"
+                >
+                  <option value="Tier 1: Founder-Led SMB">Tier 1: Founder-Led SMB / D2C</option>
+                  <option value="Tier 2: Growth Scale-up">Tier 2: Growth Scale-up / Unicorn</option>
+                  <option value="Tier 3: Enterprise MNC">Tier 3: Enterprise MNC</option>
+                </select>
+                <InfoTooltip
+                  title="Buyer Sophistication Tier"
+                  content="How decisions actually get made at this client company. Selling to a small startup Founder is completely different from selling to Zepto or Tata. Changing this adapts your 8-point checklist so you only focus on what matters for this buyer."
+                  criteria={[
+                    "Tier 1 (Founder-Led SMB): Founder signs the cheque directly via WhatsApp or 1-page SOW + 50% advance.",
+                    "Tier 2 (Growth Scale-up): Department Head pitches, but Finance issues a formal PO (e.g. Zepto, Nykaa).",
+                    "Tier 3 (Enterprise MNC): Corporate procurement boards, formal vendor empanelment, and MSA (e.g. Tata, Unilever)."
+                  ]}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Action Buttons */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="btn-secondary px-3.5 py-2 text-xs"
-          >
-            <Upload className="w-3.5 h-3.5 text-slate-600" />
-            <span>Upload Call</span>
-          </button>
+          <div className="flex items-center">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="btn-secondary px-3.5 py-2 text-xs"
+            >
+              <Upload className="w-3.5 h-3.5 text-slate-600" />
+              <span>Upload Call</span>
+            </button>
+            <InfoTooltip
+              title="Upload Call Transcript"
+              content="Upload an audio recording or paste notes from Zoom/Google Meet. Whipstitch automatically transcribes the conversation and grades the deal."
+            />
+          </div>
 
-          <button
-            onClick={handleRunDiagnostic}
-            disabled={isDiagnosing || !selectedDealId}
-            className="btn-secondary px-3.5 py-2 text-xs"
-          >
-            {isDiagnosing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>Re-Analyze Deal</span>
-          </button>
+          <div className="flex items-center">
+            <button
+              onClick={handleRunDiagnostic}
+              disabled={isDiagnosing || !selectedDealId}
+              className="btn-secondary px-3.5 py-2 text-xs"
+            >
+              {isDiagnosing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              <span>Re-Analyze Deal</span>
+            </button>
+            <InfoTooltip
+              title="Re-Analyze Deal"
+              content="Re-scans all call transcripts and notes with the latest AI logic to refresh your 8 deal vital signs and action steps."
+            />
+          </div>
 
-          <a
-            href={`/v1/deals/${selectedDealId}/medpicc/pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-secondary px-3.5 py-2 text-xs"
-            title="Download executive PDF report"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Download PDF</span>
-          </a>
+          <div className="flex items-center">
+            <a
+              href={`/v1/deals/${selectedDealId}/medpicc/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary px-3.5 py-2 text-xs"
+              title="Download executive PDF report"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-600" />
+              <span>Download PDF</span>
+            </a>
+            <InfoTooltip
+              title="Executive Deal Summary PDF"
+              content="Download a clean, 1-page PDF deal health summary to share with your manager or review in pipeline meetings."
+            />
+          </div>
 
           <button
             onClick={() => setShowNewDealModal(true)}
@@ -436,395 +712,599 @@ export default function DealHealth({ currentTenant }) {
         </div>
       </div>
 
-      {/* ─── 2. DEAL HEALTH STRIP & BENCHMARK BAR ─── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-card space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          {/* Health Score & Tag (4 cols) */}
-          <div className="md:col-span-4 flex items-center gap-4">
-            <div>
-              <span className="text-xs font-semibold text-slate-400">Deal Health Score</span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-                  {scorecard?.overall_score ?? 68}
-                </span>
-                <span className="text-slate-400 font-semibold text-sm">/100</span>
-                <span className="ml-2 px-2.5 py-0.5 rounded-md text-xs font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200">
-                  {scorecard?.deal_category || 'Rescue'}
-                </span>
-              </div>
-            </div>
-            <div className="h-10 border-r border-slate-200 hidden sm:block"></div>
-            <div>
-              <span className="text-xs text-slate-400 font-semibold">Deal Win Likelihood</span>
-              <div className="text-xs text-slate-700 font-medium mt-1 space-y-0.5">
-                <div><strong className="text-emerald-800">75%</strong> if critical gaps are closed</div>
-                <div><strong className="text-rose-800">20%</strong> if CFO sign-off is missed</div>
-              </div>
-            </div>
+      {/* ─── 2. 5-STAGE PIPELINE STEPPER ─── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-card">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Pipeline Progression</span>
+            <InfoTooltip
+              title="Pipeline Stages (The 5 Steps to Close)"
+              content="The exact journey this deal takes from hello to payment. Never skip a stage or move ahead until the required gate is confirmed (e.g. don't start creative work until the advance is paid)."
+              criteria={[
+                "Stage 1 (Discovery): Client shares their goal and estimated budget",
+                "Stage 2 (Scope): Exact deliverables and formats agreed",
+                "Stage 3 (Validation): Founder confirms the proposal and agrees to advance terms",
+                "Stage 4 (Advance): SOW signed and 50% advance in the bank",
+                "Stage 5 (Won): Project onboarded and creative kickoff begins"
+              ]}
+            />
           </div>
-
-          {/* Historical Won-Deal Benchmark Comparison (8 cols) */}
-          <div className="md:col-span-8 bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-                How This Compares to Deals That Won
-              </span>
-              <span className="text-slate-500 font-medium">
-                Current Deal: <strong className="text-slate-900">68</strong> &bull; Winning Average at this Stage: <strong className="text-emerald-800">75</strong> (-7 pts)
-              </span>
-            </div>
-
-            {/* Benchmark Track */}
-            <div className="relative w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-slate-900 rounded-full transition-all duration-500"
-                style={{ width: '68%' }}
-              />
-              {/* Target Marker at 75% */}
-              <div
-                className="absolute top-0 bottom-0 w-1 bg-emerald-600"
-                style={{ left: '75%' }}
-                title="Historical Stage 3 Won-Deal Target (75)"
-              />
-            </div>
-
-            <div className="flex justify-between text-[11px] text-slate-400">
-              <span>0 (First Call)</span>
-              <span className="text-emerald-800 font-semibold">75 Winning Benchmark</span>
-              <span>100 (Deal Signed)</span>
-            </div>
-          </div>
+          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            Current: Stage 3 &bull; Solution Validation
+          </span>
         </div>
 
-        {/* ─── 3. 8-PILL VITAL SIGNS STATUS STRIP (Interactive) ─── */}
-        <div className="pt-3 border-t border-slate-100 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              <span>The 8 Deal Vital Signs</span>
-              <span className="text-slate-400 font-normal">&bull; Click any card to see customer quotes or update the score</span>
-            </span>
-            <span className="text-slate-400 text-[11px]">8 Vital Signs Checked</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-            {medpiccItems.map((item, idx) => {
-              const boxState = getBoxStatus(item.key);
-              return (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    const box = scorecard?.boxes?.find((b) => b.box.toLowerCase() === item.key.toLowerCase());
-                    setActiveBoxDrawer(box || { box: item.name, score: boxState.score, max_score: item.max });
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg border text-left transition cursor-pointer hover:shadow-xs hover:border-slate-300 ${boxState.border}`}
-                >
-                  <div className="truncate pr-1">
-                    <div className="font-bold text-xs flex items-center gap-1">
-                      <span>{item.letter}</span>
-                      <span className="text-[11px] font-semibold">{boxState.statusIcon}</span>
-                      <span className="truncate">{item.name}</span>
-                    </div>
-                    <div className="text-[10px] truncate opacity-75 font-medium">{item.sub}</div>
-                  </div>
-                  <div className="text-xs font-bold text-right shrink-0">
-                    {boxState.score}/{item.max}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Stepper Bar */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-3 items-center">
+          {pipelineStages.map((st) => (
+            <div
+              key={st.id}
+              className={`p-2.5 rounded-lg border text-left transition ${
+                st.status === 'active'
+                  ? 'bg-emerald-50 border-emerald-400 shadow-2xs'
+                  : st.status === 'complete'
+                  ? 'bg-slate-50 border-slate-200'
+                  : 'bg-slate-50/50 border-slate-100 opacity-60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className={st.status === 'active' ? 'text-emerald-900' : 'text-slate-700'}>
+                  {st.id}. {st.name}
+                </span>
+                {st.status === 'complete' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                {st.status === 'active' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1 line-clamp-1">
+                {st.exit}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* ─── 4. MAIN WORKSPACE (2-Column 65% / 35% Split) ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN (65% / 8 cols): Critical Gaps & Evidence */}
-        <div className="lg:col-span-8 space-y-5">
-          {/* Critical Deal Gaps Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-4">
+      {/* ─── 3. PROGRESSIVE DISCLOSURE TABS ─── */}
+      <div className="border-b border-slate-200 flex items-center justify-between gap-2 overflow-x-auto">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={() => setActiveTab('vitals')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
+              activeTab === 'vitals'
+                ? 'border-emerald-600 text-emerald-900 bg-emerald-50/60 shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-emerald-600" />
+            <span>1. Diagnosis & Vitals</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('evidence')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
+              activeTab === 'evidence'
+                ? 'border-emerald-600 text-emerald-900 bg-emerald-50/60 shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-amber-600" />
+            <span>2. Critical Gaps & Power Map</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">2 Gaps</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('actions')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
+              activeTab === 'actions'
+                ? 'border-emerald-600 text-emerald-900 bg-emerald-50/60 shadow-xs'
+                : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Mail className="w-4 h-4 text-blue-600" />
+            <span>3. Action Console</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ─── TAB 1: DEAL DIAGNOSIS & 2x4 VITALS ─── */}
+      {activeTab === 'vitals' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Health Score Strip & Historical Benchmark: 3 Dedicated Cards */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-card">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              {/* Card 1: Deal Health Score (lg:col-span-3) */}
+              <div className="lg:col-span-3 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-semibold text-slate-500">Deal Health Score</span>
+                    <InfoTooltip
+                      title="Deal Health Score (0–100)"
+                      content="Shows how close this deal is to closing based on proof from your calls. Higher score = lower risk of the client ghosting you."
+                      criteria={[
+                        "80–100 (Safe to Close): Cheque signer confirmed & advance terms locked",
+                        "65–79 (Needs Attention): Great opportunity, but missing Founder approval or advance agreement",
+                        "Under 65 (High Risk): Client will likely go silent unless you fix the blockers"
+                      ]}
+                    />
+                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200">
+                    {scorecard?.deal_category || 'Rescue'}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mt-1">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono">
+                    {scorecard?.overall_score ?? 68}
+                  </span>
+                  <span className="text-slate-400 font-semibold text-sm">/ 100</span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  Verified proof across all 8 deal checks
+                </div>
+              </div>
+
+              {/* Card 2: Outcome Trajectory (lg:col-span-4) - Fixed UI & No Cramping */}
+              <div className="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-semibold text-slate-500">Outcome Trajectory</span>
+                  <InfoTooltip
+                    title="Deal Roadblock (Outcome Trajectory)"
+                    content="Tells you the #1 thing holding back this deal right now. Deals stall when reps pitch the marketing team without getting direct approval from the Founder who signs the cheque."
+                  />
+                </div>
+                <div className="space-y-1.5 mt-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0 whitespace-nowrap shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      At Risk
+                    </span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {currentTier.includes("Tier 1") ? "Founder Sign-Off Pending" : "Budget Signer Pending"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 flex items-center gap-1.5 pt-0.5">
+                    <span className="text-slate-400 font-medium">Next Gate:</span>
+                    <strong className="text-slate-700 font-semibold">
+                      {currentTier.includes("Tier 1") ? "50% Advance & SOW Lock" : "PO Release & Finance Approval"}
+                    </strong>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  #1 blocker to unlock before this deal can close
+                </div>
+              </div>
+
+              {/* Card 3: Benchmark Reference Point (lg:col-span-5) */}
+              <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Win Benchmark</span>
+                    <InfoTooltip
+                      title="Win Benchmark (Average: 72)"
+                      content="Compares your deal against similar deals that actually won at this stage. Deals scoring 72+ close 3x more often. Once your team closes 5 deals, this automatically switches to your own company's real closing average."
+                    />
+                  </span>
+                  <span className="text-slate-500 font-medium text-[11px]">
+                    Current: <strong className="text-slate-900">{scorecard?.overall_score ?? 68}</strong> &bull; Target: <strong className="text-emerald-800">72</strong> (-4 pts)
+                  </span>
+                </div>
+
+                {/* Benchmark Track */}
+                <div className="relative w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-slate-900 rounded-full transition-all duration-500"
+                    style={{ width: '68%' }}
+                  />
+                  {/* Target Marker at 72% */}
+                  <div
+                    className="absolute top-0 bottom-0 w-1 bg-emerald-600"
+                    style={{ left: '72%' }}
+                    title="Target for winning deals (72)"
+                  />
+                </div>
+
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>0 (Early Stage)</span>
+                  <span className="text-emerald-800 font-semibold">72 Average for Winning Deals</span>
+                  <span>100 (Closed Won)</span>
+                </div>
+                <div className="text-[10px] text-slate-400 italic text-right pt-0.5">
+                  Baseline for {currentTier.split(':')[0]} Service Deals &bull; Calibrates to team average after 5 deals
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2x4 UNTRUNCATED MEDDPICC VITAL SIGNS GRID */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                What's Missing to Close This Deal (Top 2 Blockers)
-              </h3>
-              <span className="text-xs text-slate-400 font-medium">Top Priorities for Your Next Call</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">The 8 Deal Vital Signs (MEDDPICC)</span>
+                <InfoTooltip
+                  title="What is MEDDPICC? (The 8-Point Deal Checklist)"
+                  content="MEDDPICC is a simple 8-point checklist that separates real buyers from time-wasters. Every letter is a question you MUST answer before counting a deal as real: Metrics (Budget), Economic Buyer (Cheque Signer), Decision Criteria (What They Expect), Decision Process (Approval Steps), Paper Process (Getting Paid), Implicated Pain (Why Buy Now), Champion (Internal Ally), Competition (Who Else They Are Pitching). Click any card to inspect customer quotes or add evidence."
+                />
+              </div>
+              <span className="text-xs text-slate-400 font-medium">Click any card to inspect customer quotes & scoring checklist</span>
             </div>
 
-            <div className="space-y-4">
-              {/* Gap 1 */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    <h4 className="font-bold text-sm text-slate-900">1. Budget Owner Hasn't Signed Off Yet</h4>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                    High Risk of Deal Stalling
-                  </span>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {medpiccItems.map((item, idx) => {
+                const boxState = getBoxStatus(item.key);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      const box = scorecard?.boxes?.find((b) => b.box.toLowerCase() === item.key.toLowerCase());
+                      setActiveBoxDrawer(box || { box: item.name, score: boxState.score, max_score: item.max });
+                    }}
+                    className={`p-3.5 rounded-xl border text-left transition cursor-pointer hover:shadow-md hover:border-slate-300 flex flex-col justify-between space-y-2.5 ${boxState.border}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-extrabold text-sm">{item.letter}</span>
+                        <span className="text-xs font-bold px-1.5 py-0.2 rounded bg-white/80 border border-slate-200">
+                          {boxState.statusIcon} {boxState.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-extrabold font-mono">
+                          {boxState.score} / {item.max}
+                        </span>
+                        <InfoTooltip
+                          title={item.name}
+                          content={item.tooltip}
+                          criteria={item.criteria}
+                        />
+                      </div>
+                    </div>
 
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                  Sarah Chen (VP RevOps) confirmed the CFO has final budget sign-off for deals above $100k, but you haven't spoken with the CFO yet.
-                </p>
-
-                {/* Evidence Quote Snippet */}
-                <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-rose-500 text-xs text-slate-800 italic leading-relaxed">
-                  "Our CFO will need to sign off on anything above $100k before we issue an RFP."
-                  <span className="not-italic font-semibold text-slate-900 block mt-1">
-                    — Sarah Chen, VP RevOps (Discovery Call &bull; 14:22)
-                  </span>
-                </div>
-              </div>
-
-              {/* Gap 2 */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <h4 className="font-bold text-sm text-slate-900">2. Legal & Security Review Not Scheduled</h4>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                    Timeline Risk
-                  </span>
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                  Legal review and security audits take ~4 weeks. If you don't schedule them now, the deal will miss the prospect's Q3 target live date.
-                </p>
-
-                {/* Evidence Quote Snippet */}
-                <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-amber-500 text-xs text-slate-800 italic leading-relaxed">
-                  "Legal usually takes at least 4 weeks if we haven't scheduled them early."
-                  <span className="not-italic font-semibold text-slate-900 block mt-1">
-                    — Sarah Chen, VP RevOps (Discovery Call &bull; 22:15)
-                  </span>
-                </div>
-              </div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 tracking-tight">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        {item.sub}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Button to open full audit drawer */}
-            <div className="pt-2 flex justify-between items-center text-xs">
-              <span className="text-slate-500">Want to see all customer quotes and evidence?</span>
+            {/* Quick Tab Continuation Button */}
+            <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-xs text-slate-400">Diagnosis complete. Review critical gaps and missing decision-makers:</span>
               <button
-                onClick={() => {
-                  const firstBox = scorecard?.boxes ? scorecard.boxes[0] : null;
-                  setActiveBoxDrawer(firstBox || { box: 'Metrics', score: 13, max_score: 15 });
-                }}
-                className="text-emerald-800 hover:text-emerald-900 font-semibold hover:underline flex items-center gap-1"
+                onClick={() => setActiveTab('evidence')}
+                className="btn-primary text-xs flex items-center gap-1.5 py-2 px-4"
               >
-                <span>View All 8 Deal Checks & Evidence Logs</span>
+                <span>Continue to Critical Gaps & Power Map</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-
-          {/* Verbatim Quote Spotlight */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                <Quote className="w-4 h-4 text-emerald-600" />
-                The #1 Customer Quote Driving This Deal
-              </h3>
-              <span className="text-xs text-slate-400">Verified from Discovery Call</span>
-            </div>
-
-            <div className="bg-emerald-50/60 p-4 rounded-xl border-l-4 border-emerald-600 space-y-2">
-              <p className="text-xs sm:text-sm text-slate-800 italic leading-relaxed">
-                "We are leaking approximately $140k every year because inbound leads sit unassigned for 48 hours."
-              </p>
-              <div className="text-xs font-semibold text-emerald-900">
-                — Sarah Chen (VP RevOps &bull; Champion)
-              </div>
-            </div>
-          </div>
         </div>
+      )}
 
-        {/* RIGHT COLUMN (35% / 4 cols): Who's Involved & Next Action */}
-        <div className="lg:col-span-4 space-y-5">
-          {/* Buying Committee Roster */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3.5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-slate-600" />
-                Who's Involved on Their Side
-              </h3>
-              <span className="text-xs text-slate-500 font-medium">
-                <strong className="text-slate-900">{committee.filter((c) => c.status === 'Engaged').length}</strong> of {committee.length} Engaged
-              </span>
-            </div>
+      {/* ─── TAB 2: EVIDENCE & BUYING COMMITTEE POWER MAP ─── */}
+      {activeTab === 'evidence' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* LEFT COLUMN (65% / 8 cols): Critical Deal Gaps & Evidence */}
+            <div className="lg:col-span-8 space-y-5">
+              {/* Critical Gaps Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-sm font-bold text-slate-900">
+                      What's Missing to Close This Deal (Top 2 Blockers)
+                    </h3>
+                    <InfoTooltip
+                      title="Top 2 Deal Blockers"
+                      content="The two biggest reasons this deal might stall right now. In B2B sales, missing Founder sign-off and delayed advance payment agreements account for over 80% of lost deals. Fix these first before scheduling more team calls."
+                    />
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">Top Priorities for Your Next Action</span>
+                </div>
 
-            <div className="space-y-2">
-              {committee.map((contact, idx) => {
-                const isMissingOrUncontacted =
-                  contact.status === 'Missing' ||
-                  contact.status === 'Uncontacted' ||
-                  contact.name === 'Unassigned';
-
-                return (
-                  <div
-                    key={contact.id || idx}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs gap-2"
-                  >
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="font-semibold text-slate-900 flex items-center gap-1.5 truncate">
-                        <span className="truncate">{contact.name}</span>
-                        {contact.status === 'Engaged' && (
-                          <span className="inline-flex items-center text-emerald-600 text-[10px] font-bold" title="Confirmed Contact">
-                            ✓
-                          </span>
-                        )}
+                <div className="space-y-4">
+                  {/* Blocker 1: Founder Sign-off */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <h4 className="font-bold text-sm text-slate-900">1. Founder Sign-Off Pending</h4>
+                        <InfoTooltip
+                          title="Founder Sign-Off Pending"
+                          content="In Indian SMBs and D2C brands, the marketing or product lead can't sign contracts alone. If you haven't received direct confirmation or approval from the Founder, this deal will freeze when it's time to pay."
+                        />
                       </div>
-                      <div className="text-slate-500 text-[11px] truncate">{contact.role}</div>
-                      <div className="text-slate-400 text-[10px] font-medium">{contact.tag}</div>
-                      {contact.email && (
-                        <div className="text-[10px] text-emerald-700 truncate font-mono">{contact.email}</div>
-                      )}
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                        High Risk of Deal Stalling
+                      </span>
                     </div>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getCommitteeStatusColor(contact.status)}`}>
-                        {contact.status}
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
+                      Sneha Kapoor (VP Marketing) confirmed the Founder has final commercial approval for campaigns above ₹5 Lakhs, but you haven't spoken with the Founder yet.
+                    </p>
+
+                    <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-rose-500 text-xs text-slate-800 italic leading-relaxed">
+                      "Founder sir is directly looking at this, unko Meta ROAS 3.5x minimum chahiye before we sign the SOW."
+                      <span className="not-italic font-semibold text-slate-900 block mt-1">
+                        — Sneha Kapoor, VP Marketing (Discovery Call &bull; 04:20)
                       </span>
-                      {isMissingOrUncontacted && (
-                        <button
-                          onClick={() => handleStartAutoFind(contact)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 rounded shadow-2xs transition cursor-pointer hover:border-emerald-400"
-                          title="Auto-discover verified executive via Apollo & Serper"
-                        >
-                          <Search className="w-3 h-3 text-emerald-600" />
-                          <span>Auto-Find</span>
-                        </button>
-                      )}
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* Blocker 2: 50% Advance Invoice */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <h4 className="font-bold text-sm text-slate-900">2. 50% Advance Payment Terms Not Agreed</h4>
+                        <InfoTooltip
+                          title="50% Advance Milestone"
+                          content="Never start creative or engineering work without the 50% advance in the bank. Client finance teams typically take 7–10 days to process payments, so get this agreed in writing now."
+                        />
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                        Cashflow & Timeline Risk
+                      </span>
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
+                      Accounts team requires 7–10 days to process advance payments. If advance terms aren't locked in the SOW now, campaign kickoff will miss the Diwali festive launch date.
+                    </p>
+
+                    <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-amber-500 text-xs text-slate-800 italic leading-relaxed">
+                      "Haan, approval toh mil gaya hai, but 50% advance invoice release hone me 1 week lagega."
+                      <span className="not-italic font-semibold text-slate-900 block mt-1">
+                        — Discovery Call &bull; 08:05
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer link to drawer */}
+                <div className="pt-2 flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Want to inspect customer quotes and point criteria for all 8 pillars?</span>
+                  <button
+                    onClick={() => {
+                      const firstBox = scorecard?.boxes ? scorecard.boxes[0] : null;
+                      setActiveBoxDrawer(firstBox || { box: 'Metrics', score: 13, max_score: 20 });
+                    }}
+                    className="text-emerald-800 hover:text-emerald-900 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All 8 Deal Checks & Evidence Logs</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Verbatim Quote Spotlight */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                    <Quote className="w-4 h-4 text-emerald-600" />
+                    <span>The #1 Customer Quote Driving This Deal</span>
+                    <InfoTooltip
+                      title="Key Customer Quote"
+                      content="The exact phrase the client used to describe their problem or budget. Quote their exact words back in your proposal and emails to remind them why they came to you."
+                    />
+                  </h3>
+                  <span className="text-xs text-slate-400">Verified from Call Transcript</span>
+                </div>
+
+                <div className="bg-emerald-50/60 p-4 rounded-xl border-l-4 border-emerald-600 space-y-2">
+                  <p className="text-xs sm:text-sm text-slate-800 italic leading-relaxed">
+                    "Basically hamara Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai for influencer whitelisting and UGC ads."
+                  </p>
+                  <div className="text-xs font-semibold text-emerald-900">
+                    — Sneha Kapoor (VP Marketing &bull; Internal Champion)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN (35% / 4 cols): Buying Committee Power Map */}
+            <div className="lg:col-span-4 space-y-5">
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-slate-600" />
+                    <h3 className="text-xs font-bold text-slate-900">Who's Involved on Their Side</h3>
+                    <InfoTooltip
+                      title="Who's Involved on Their Side"
+                      content="The key decision-makers extracted from your calls. If an essential role is marked 'Missing' (like the Founder or Budget Owner), click 'Auto-Find' to discover their real name and verified email in 1 click."
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    <strong className="text-slate-900">{committee.filter((c) => c.status === 'Engaged').length}</strong> of {committee.length} Engaged
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {committee.map((contact, idx) => {
+                    const isMissingOrUncontacted =
+                      contact.status === 'Missing' ||
+                      contact.status === 'Uncontacted' ||
+                      contact.name === 'Unassigned';
+
+                    return (
+                      <div
+                        key={contact.id || idx}
+                        className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs gap-2"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-semibold text-slate-900 flex items-center gap-1.5 truncate">
+                            <span className="truncate">{contact.name}</span>
+                            {contact.status === 'Engaged' && (
+                              <span className="inline-flex items-center text-emerald-600 text-[10px] font-bold" title="Confirmed Contact">
+                                ✓
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-slate-500 text-[11px] truncate">{contact.role}</div>
+                          <div className="text-slate-400 text-[10px] font-medium">{contact.tag}</div>
+                          {contact.email && (
+                            <div className="text-[10px] text-emerald-700 truncate font-mono">{contact.email}</div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getCommitteeStatusColor(contact.status)}`}>
+                            {contact.status}
+                          </span>
+                          {isMissingOrUncontacted && (
+                            <button
+                              onClick={() => handleStartAutoFind(contact)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 rounded shadow-2xs transition cursor-pointer hover:border-emerald-400"
+                              title="Auto-discover verified executive via Apollo & Serper"
+                            >
+                              <Search className="w-3 h-3 text-emerald-600" />
+                              <span>Auto-Find</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Prescribed Next Play */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-4">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-400 font-semibold">Prescribed Next Play</span>
+                    <InfoTooltip
+                      title="Recommended Next Move"
+                      content="The single most effective next step to advance this deal right now, based on what is currently blocking it."
+                    />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 mt-1">
+                    Get Founder Sign-Off on SOW Advance
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Send the pre-written follow-up email asking Sneha to share the 1-page SOW summary with the Founder to lock the 50% advance before the Diwali deadline.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setActiveTab('actions')}
+                  className="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Proceed to Action Console</span>
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+      )}
 
-
-          {/* Prescribed Play & CTA */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-4">
+      {/* ─── TAB 3: ACTION CONSOLE & SCRIPTS ─── */}
+      {activeTab === 'actions' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-5 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <span className="text-xs text-slate-400 font-semibold">What to Do Next</span>
-              <h4 className="text-sm font-bold text-slate-900 mt-1">
-                Get 15 Minutes with the CFO
-              </h4>
-              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Send the pre-written follow-up email asking Sarah to introduce you to the CFO to confirm budget approval before security review starts.
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900">Follow-Up Email & Next Call Script</h3>
+                <InfoTooltip
+                  title="Deal-Closing Follow-Up"
+                  content="Pre-written email crafted to loop in the decision-maker and lock advance payment terms without sounding pushy."
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pre-written with questions that loop in the Founder and lock SOW advance payment terms.
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setShowExecutionConsole(true);
-                setTimeout(() => {
-                  const el = document.getElementById('execution-console');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
-              className="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              <span>Draft Follow-Up Email</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 5. EXECUTION CONSOLE (Follow-Up Email & Next Call Script) ─── */}
-      <div id="execution-console" className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-card space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" />
-              <h3 className="text-base font-bold text-slate-900">Follow-Up Email & Next Call Script</h3>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Pre-written with questions that get you introduced to the budget owner and kick off security review.
-            </p>
-          </div>
+              <button
+                onClick={handleOpenEmailClient}
+                className="btn-secondary px-3 py-1.5 text-xs"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                <span>Open in Mail Client</span>
+              </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleOpenEmailClient}
-              className="btn-secondary px-3 py-1.5 text-xs"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-              <span>Open in Mail Client</span>
-            </button>
-
-            <button
-              onClick={handleCopyEmail}
-              className="btn-primary px-3.5 py-1.5 text-xs"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copiedEmail ? 'Copied to Clipboard!' : 'Copy Email'}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Email Composer (8 cols) */}
-          <div className="lg:col-span-8 space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Line:</label>
-              <input
-                type="text"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Email Body:</label>
-              <textarea
-                rows={10}
-                value={emailDraft}
-                onChange={(e) => setEmailDraft(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm text-slate-800 leading-relaxed focus:border-slate-400 focus:bg-white focus:outline-none"
-              />
+              <button
+                onClick={handleCopyEmail}
+                className="btn-primary px-3.5 py-1.5 text-xs"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copiedEmail ? 'Copied to Clipboard!' : 'Copy Email'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Discovery Prompts for Next Call (4 cols) */}
-          <div className="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-              <HelpCircle className="w-4 h-4 text-blue-600" />
-              <span>Questions to Ask on Your Next Call</span>
-            </div>
-
-            <div className="space-y-2.5 text-xs text-slate-700">
-              <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                <span className="font-semibold text-slate-900 block">Question 1 (Meeting the Budget Owner):</span>
-                <p className="italic text-slate-600">
-                  "Sarah, to make sure we stay on track for your Q3 goal without hitting late roadblocks, could we share a 1-page financial summary with your CFO this week?"
-                </p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Email Composer (8 cols) */}
+            <div className="lg:col-span-8 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Line:</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                />
               </div>
 
-              <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                <span className="font-semibold text-slate-900 block">Question 2 (Starting Security Review):</span>
-                <p className="italic text-slate-600">
-                  "How long does David's team usually need to review security documentation for cloud tools like ours?"
-                </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Email Body:</label>
+                <textarea
+                  rows={10}
+                  value={emailDraft || `Hi Sneha,\n\nThanks for the great discussion today regarding Nykaa's upcoming Diwali creator campaign! To ensure we hit your 3.5x Meta ROAS target without any launch delays, I have drafted the SOW covering the 15 Lakhs influencer whitelisting scope.\n\nTo ensure your accounts team can release the 50% advance invoice on time for creator bookings, could we share this 1-page summary with your Founder / Managing Director this week for sign-off?\n\nBest regards,\nRohan Mehta`}
+                  onChange={(e) => setEmailDraft(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm text-slate-800 leading-relaxed focus:border-slate-400 focus:bg-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Tactical Discovery Prompts for Next Call (4 cols) */}
+            <div className="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                <HelpCircle className="w-4 h-4 text-blue-600" />
+                <span>Questions to Ask on Your Next Call</span>
+                <InfoTooltip
+                  title="Discovery Questions"
+                  content="Practical questions to ask on your next call to uncover payment approval timelines and verify Founder expectations."
+                />
+              </div>
+
+              <div className="space-y-2.5 text-xs text-slate-700">
+                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
+                  <span className="font-semibold text-slate-900 block">Question 1 (Founder Alignment):</span>
+                  <p className="italic text-slate-600">
+                    "Sneha, to make sure we stay on track for your Diwali live date without late roadblocks, could we share a 1-page commercial brief with the Founder this Thursday?"
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
+                  <span className="font-semibold text-slate-900 block">Question 2 (Advance Payment Timeline):</span>
+                  <p className="italic text-slate-600">
+                    "How long does Rajesh's finance team usually take to release vendor advance payments once the SOW is countersigned?"
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ─── 6. AUDIT & OVERRIDE SIDE DRAWER (Viewport-Anchored) ─── */}
+      {/* ─── AUDIT & OVERRIDE SIDE DRAWER (Viewport-Anchored) ─── */}
       {activeBoxDrawer && (
         <>
-          {/* Backdrop (z-[99]) */}
           <div
             onClick={() => setActiveBoxDrawer(null)}
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[99] transition-opacity"
           />
 
-          {/* Drawer Panel (z-[100]) */}
           <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-xl bg-white shadow-2xl overflow-y-auto p-6 space-y-6 border-l border-slate-200 flex flex-col justify-between">
             <div className="space-y-5">
               {/* Drawer Header */}
@@ -833,34 +1313,126 @@ export default function DealHealth({ currentTenant }) {
                   <span className="text-xs font-semibold text-slate-400">Deal Vital Sign Detail & Evidence</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <h2 className="text-xl font-bold text-slate-900">{activeBoxDrawer.box}</h2>
-                    <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                      Score: {activeBoxDrawer.score} / {activeBoxDrawer.max_score || 15} pts
+                    <span className="text-xs px-2.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-800 border border-slate-200 font-mono">
+                      Score: {activeBoxDrawer.score} / {activeBoxDrawer.max_score || 20} pts
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setActiveBoxDrawer(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
+              {/* Dimension Selector Tabs (All 8 MEDDPICC Boxes) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-100">
+                {medpiccItems.map((item, idx) => {
+                  const boxState = getBoxStatus(item.key);
+                  const isSelected =
+                    activeBoxDrawer.box?.toLowerCase() === item.key.toLowerCase() ||
+                    activeBoxDrawer.box?.toLowerCase() === item.name.toLowerCase();
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        const box = scorecard?.boxes?.find(
+                          (b) => b.box.toLowerCase() === item.key.toLowerCase()
+                        );
+                        setActiveBoxDrawer(
+                          box || { box: item.name, score: boxState.score, max_score: item.max }
+                        );
+                      }}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition flex items-center gap-1 shrink-0 cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{item.letter}</span>
+                      <span className="text-[10px] opacity-80 font-mono">
+                        {boxState.score}/{item.max}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ITEMIZE CRITERIA & TRANSPARENT POINT BREAKDOWN CHECKLIST */}
+              {(() => {
+                const rubric = getBoxRubricBreakdown(activeBoxDrawer.box);
+                return (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Scoring Rubric & Point Breakdown</span>
+                        <InfoTooltip
+                          title="Scoring Rubric"
+                          content="Points are awarded only when verified proof (quotes, numbers, or names) appears in your call transcripts. Items not discussed on the call remain at 0 points."
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-500">Max {activeBoxDrawer.max_score || rubric.max} pts</span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      {rubric.items.map((it, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center justify-between text-xs p-2 rounded-lg bg-white border border-slate-200 ${
+                            it.status === 'pending' ? 'opacity-75' : ''
+                          }`}
+                        >
+                          <span className={it.status === 'pending' ? 'text-slate-500' : 'text-slate-700'}>
+                            {it.text}
+                          </span>
+                          <span
+                            className={`font-bold font-mono shrink-0 ml-2 ${
+                              it.status === 'pending' ? 'text-rose-600' : 'text-emerald-700'
+                            }`}
+                          >
+                            {it.points}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {rubric.hardCapNotice && (
+                      <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>
+                          <strong>{rubric.hardCapNotice}</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* AI Confidence & Reasoning */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                  Why the AI Scored This
+                  <span>Why the AI Scored This</span>
+                  <InfoTooltip
+                    title="Scoring Rationale"
+                    content="A plain-English explanation of why points were granted or withheld based on what was heard in your call recordings."
+                  />
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed">
-                  {activeBoxDrawer.notes || "Score reflects that key requirements have been discussed but not yet formally confirmed."}
+                  {activeBoxDrawer.notes || "Score reflects that campaign budget and ROI goals were quantified, but formal advance payment release from the Founder is still pending."}
                 </p>
               </div>
 
               {/* Verbatim Evidence Log */}
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Exact Words from the Customer
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <span>Exact Words from the Customer</span>
+                  <InfoTooltip
+                    title="Customer Quotes"
+                    content="Spoken quotes with timestamps from the call transcript proving where this score came from."
+                  />
                 </div>
                 {activeBoxDrawer.evidence_quotes && activeBoxDrawer.evidence_quotes.length > 0 ? (
                   <div className="space-y-2">
@@ -870,8 +1442,8 @@ export default function DealHealth({ currentTenant }) {
                           "{q.quote}"
                         </p>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                          <span className="font-semibold text-emerald-900">{q.person_name || 'Sarah Chen'} ({q.role || 'VP RevOps'})</span>
-                          <span className="text-slate-400">{q.medium || 'Call Recording &bull; 14:22'}</span>
+                          <span className="font-semibold text-emerald-900">{q.person_name || 'Sneha Kapoor'} ({q.role || 'VP Marketing'})</span>
+                          <span className="text-slate-400">{q.medium || 'Call Recording &bull; 04:20'}</span>
                         </div>
                       </div>
                     ))}
@@ -883,54 +1455,47 @@ export default function DealHealth({ currentTenant }) {
                 )}
               </div>
 
-              {/* Discovery Talk Track */}
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Questions to Ask to Validate This
-                </div>
-                <div className="space-y-2 text-xs text-slate-700">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    &bull; "To ensure no late budget roadblocks, who else needs to give commercial approval?"
-                  </div>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    &bull; "What happens to your team's goals if this implementation slips past the Q3 deadline?"
-                  </div>
-                </div>
-              </div>
-
-              {/* Rep Verification / Manual Override */}
+              {/* Rep Verification & Evidence Source Picker */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-slate-900">Rep Verification & Update Score</div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                    <span>Rep Verification & Evidence Input</span>
+                    <InfoTooltip
+                      title="Add Offline Evidence"
+                      content="Did the client confirm details over WhatsApp or in person? Check this box to manually add evidence and adjust the deal score."
+                    />
+                  </div>
                   <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isOverridden}
                       onChange={(e) => setIsOverridden(e.target.checked)}
-                      className="rounded border-slate-300 text-slate-900 focus:ring-0"
+                      className="rounded border-slate-300 text-slate-900 focus:ring-0 cursor-pointer"
                     />
-                    <span>Update or Override Score</span>
+                    <span>Add Offline Evidence</span>
                   </label>
                 </div>
 
                 {isOverridden && (
                   <div className="space-y-2.5 pt-2 border-t border-slate-200 text-xs">
                     <div>
-                      <label className="block text-slate-600 mb-1">Link Verified Contact from CRM:</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. John Doe (CFO, Apex Logistics)"
-                        value={overrideContact}
-                        onChange={(e) => setOverrideContact(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:border-slate-400 focus:outline-none"
-                      />
+                      <label className="block text-slate-600 mb-1">Evidence Source Channel:</label>
+                      <select
+                        value={evidenceSourceType}
+                        onChange={(e) => setEvidenceSourceType(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:outline-none"
+                      >
+                        <option value="call_transcript">Call Transcript (Zoom / Meet recording)</option>
+                        <option value="whatsapp">WhatsApp Message / Screenshot Export</option>
+                        <option value="manual_note">In-Person Meeting / Phone Confirmation</option>
+                      </select>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1">Your Evidence / Notes from the Call:</label>
+                      <label className="block text-slate-600 mb-1">Evidence Notes / Verbatim Message:</label>
                       <textarea
                         rows={3}
-                        placeholder="Notes confirming direct sponsor alignment..."
+                        placeholder="e.g. Founder WhatsApp text: 'Proceed, releasing 50% advance today'..."
                         value={overrideNotes}
                         onChange={(e) => setOverrideNotes(e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:border-slate-400 focus:outline-none"
@@ -940,14 +1505,14 @@ export default function DealHealth({ currentTenant }) {
                     <div className="flex items-center justify-between pt-1">
                       {overrideSaved && (
                         <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                          <Check className="w-3.5 h-3.5" /> Changes synced to CRM!
+                          <Check className="w-3.5 h-3.5" /> Evidence synced & verified!
                         </span>
                       )}
                       <button
                         onClick={handleSaveOverride}
-                        className="btn-primary text-xs ml-auto"
+                        className="btn-primary text-xs ml-auto cursor-pointer"
                       >
-                        Save & Sync to HubSpot
+                        Verify & Sync Evidence
                       </button>
                     </div>
                   </div>
@@ -955,11 +1520,10 @@ export default function DealHealth({ currentTenant }) {
               </div>
             </div>
 
-            {/* Bottom drawer close */}
             <div className="pt-4 border-t border-slate-200 flex justify-end">
               <button
                 onClick={() => setActiveBoxDrawer(null)}
-                className="btn-secondary text-xs px-4"
+                className="btn-secondary text-xs px-4 cursor-pointer"
               >
                 Close Details
               </button>
@@ -968,7 +1532,7 @@ export default function DealHealth({ currentTenant }) {
         </>
       )}
 
-      {/* ─── 7. UPLOAD TRANSCRIPT MODAL ─── */}
+      {/* ─── UPLOAD TRANSCRIPT MODAL ─── */}
       {showUploadModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-modal space-y-4">
@@ -977,7 +1541,7 @@ export default function DealHealth({ currentTenant }) {
                 <Upload className="w-4 h-4 text-emerald-700" />
                 Upload Call Recording or Transcript
               </h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1000,13 +1564,13 @@ export default function DealHealth({ currentTenant }) {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Or Paste Meeting Notes / Dialogue:
+                Or Paste Meeting Dialogue / Notes (Hinglish Supported):
               </label>
               <textarea
                 rows={6}
                 value={transcriptInput}
                 onChange={(e) => setTranscriptInput(e.target.value)}
-                placeholder="Paste notes or dialogue from your sales call..."
+                placeholder="e.g. Rohan: Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-800 focus:border-slate-400 focus:bg-white focus:outline-none transition"
               />
             </div>
@@ -1014,14 +1578,14 @@ export default function DealHealth({ currentTenant }) {
             <div className="flex justify-end gap-2.5 pt-2">
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="btn-secondary text-xs"
+                className="btn-secondary text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRunDiagnostic}
                 disabled={isDiagnosing}
-                className="btn-primary text-xs"
+                className="btn-primary text-xs cursor-pointer"
               >
                 {isDiagnosing ? 'Analyzing Call...' : 'Analyze Call & Update Deal'}
               </button>
@@ -1030,14 +1594,19 @@ export default function DealHealth({ currentTenant }) {
         </div>
       )}
 
-      {/* ─── 8. NEW DEAL MODAL ─── */}
+      {/* ─── NEW DEAL MODAL ─── */}
       {showNewDealModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-xl max-w-md w-full p-6 shadow-modal space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-emerald-700" />
-              Create New Deal Track
-            </h3>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-emerald-700" />
+                Create New Deal Track
+              </h3>
+              <button onClick={() => setShowNewDealModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             <form onSubmit={handleCreateDeal} className="space-y-3">
               <div>
@@ -1045,7 +1614,7 @@ export default function DealHealth({ currentTenant }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Enterprise RevOps Platform"
+                  placeholder="e.g. Festive Influencer Campaign"
                   value={newDealName}
                   onChange={(e) => setNewDealName(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
@@ -1057,35 +1626,64 @@ export default function DealHealth({ currentTenant }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Apex Global Logistics"
+                  placeholder="e.g. Nykaa E-Retail"
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-700 font-semibold mb-1">Currency</label>
+                  <select
+                    value={newDealCurrency}
+                    onChange={(e) => setNewDealCurrency(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="INR">₹ INR (Indian Rupee)</option>
+                    <option value="USD">$ USD (US Dollar)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-700 font-semibold mb-1">
+                    Target Deal Size ({newDealCurrency === 'INR' ? '₹' : '$'})
+                  </label>
+                  <input
+                    type="number"
+                    placeholder={newDealCurrency === 'INR' ? '1500000' : '145000'}
+                    value={newDealSize}
+                    onChange={(e) => setNewDealSize(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs text-slate-700 font-semibold mb-1">Target Deal Size ($)</label>
-                <input
-                  type="number"
-                  placeholder="145000"
-                  value={newDealSize}
-                  onChange={(e) => setNewDealSize(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
-                />
+                <label className="block text-xs text-slate-700 font-semibold mb-1">Buyer Sophistication Tier</label>
+                <select
+                  value={newDealTier}
+                  onChange={(e) => setNewDealTier(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none cursor-pointer"
+                >
+                  <option value="Tier 1: Founder-Led SMB">Tier 1: Founder-Led SMB / D2C (WhatsApp Founder, SOW + 50% Advance)</option>
+                  <option value="Tier 2: Growth Scale-up">Tier 2: Growth Scale-up / Unicorn (Zepto Scale: Function Head + Finance PO)</option>
+                  <option value="Tier 3: Enterprise MNC">Tier 3: Enterprise MNC (Commercial Signer, Vendor Empanelment)</option>
+                </select>
               </div>
 
               <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowNewDealModal(false)}
-                  className="btn-secondary text-xs"
+                  className="btn-secondary text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary text-xs"
+                  className="btn-primary text-xs cursor-pointer"
                 >
                   Create Deal
                 </button>
@@ -1095,11 +1693,10 @@ export default function DealHealth({ currentTenant }) {
         </div>
       )}
 
-      {/* ─── 8. BUYING COMMITTEE AUTO-FIND MODAL (SSE Stream + 1-Click Sync) ─── */}
+      {/* ─── BUYING COMMITTEE AUTO-FIND MODAL (SSE Stream) ─── */}
       {showAutoFindModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-6 shadow-modal space-y-5 animate-in fade-in duration-150">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
@@ -1107,117 +1704,77 @@ export default function DealHealth({ currentTenant }) {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Auto-Find Decision Maker
+                    Auto-Discovering {autoFindRole?.tag || 'Budget Owner'}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Searching for <strong className="text-slate-800">{autoFindRole?.tag || autoFindRole?.role}</strong> at {selectedDeal?.company_name || 'Apex Logistics Global'}
+                    Live Waterfall & Registry Scan for {selectedDeal?.company_name || 'Nykaa E-Retail'}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => {
-                  setShowAutoFindModal(false);
-                  setIsAutoFinding(false);
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                onClick={() => setShowAutoFindModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Live Progress Bar */}
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs text-slate-600 font-medium">
-                <span>Verification Pipeline</span>
-                <span>{streamProgress}%</span>
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-700">Resolution Progress</span>
+                <span className="text-emerald-700 font-mono">{streamProgress}%</span>
               </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
                 <div
-                  className="bg-emerald-600 h-full rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-300"
                   style={{ width: `${streamProgress}%` }}
                 />
               </div>
             </div>
 
-            {/* Live SSE Stream Step Logs */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2 text-xs">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Live Search Activity
-              </div>
-              <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                {streamLogs.map((log, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-slate-700">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>{log.message}</span>
-                  </div>
-                ))}
-                {isAutoFinding && (
-                  <div className="flex items-center gap-2 text-slate-500 italic">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                    <span>Cross-referencing Serper directory & public records...</span>
-                  </div>
-                )}
-              </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-36 overflow-y-auto space-y-2 text-xs font-mono">
+              {streamLogs.map((log, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-slate-700">
+                  <span className="text-emerald-600 font-bold shrink-0">&gt;</span>
+                  <span>{log.message || JSON.stringify(log)}</span>
+                </div>
+              ))}
             </div>
 
-            {/* Discovered Candidate Preview Card */}
             {discoveredCandidate && (
-              <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3 animate-in fade-in">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{discoveredCandidate.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {discoveredCandidate.confidence}% Confidence Match
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-600 mt-0.5 font-medium">{discoveredCandidate.title}</div>
-                    <div className="text-xs text-emerald-700 mt-1 font-mono">{discoveredCandidate.email}</div>
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-emerald-900">Candidate Discovered & Verified</span>
                   </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-emerald-800 border border-emerald-300">
+                    96% Match
+                  </span>
                 </div>
-
-                <div className="text-xs text-slate-600 leading-relaxed bg-white p-2.5 rounded border border-emerald-100">
-                  <span className="font-semibold text-slate-800">Why this contact matters: </span>
-                  {discoveredCandidate.summary}
-                </div>
-
-                <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1">
-                  <span>Source: {discoveredCandidate.source}</span>
-                  <span>Apollo Cost: 0 credits (Cached / Free Tier)</span>
-                </div>
+                <div className="text-xs text-slate-900 font-semibold">{discoveredCandidate.name}</div>
+                <div className="text-[11px] text-slate-600">{discoveredCandidate.title}</div>
+                <div className="text-[11px] text-emerald-800 font-mono">{discoveredCandidate.email}</div>
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <div className="flex justify-end gap-2.5 pt-2">
               <button
-                type="button"
-                onClick={() => {
-                  setShowAutoFindModal(false);
-                  setIsAutoFinding(false);
-                }}
-                className="btn-secondary text-xs"
+                onClick={() => setShowAutoFindModal(false)}
+                className="btn-secondary text-xs cursor-pointer"
               >
-                Cancel
+                Close
               </button>
-              <button
-                type="button"
-                disabled={!discoveredCandidate || isAddingCandidate}
-                onClick={handleConfirmAddCandidate}
-                className="btn-primary text-xs flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {isAddingCandidate ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Adding to Deal...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCheck className="w-4 h-4" />
-                    <span>Add to Deal Committee</span>
-                  </>
-                )}
-              </button>
+              {discoveredCandidate && (
+                <button
+                  onClick={handleConfirmAddCandidate}
+                  disabled={isAddingCandidate}
+                  className="btn-primary text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{isAddingCandidate ? 'Adding...' : 'Add to Committee'}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1225,4 +1782,3 @@ export default function DealHealth({ currentTenant }) {
     </div>
   );
 }
-

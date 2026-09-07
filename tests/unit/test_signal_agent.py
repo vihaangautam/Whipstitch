@@ -55,3 +55,62 @@ def test_opportunity_score_calculation():
     agent = AutonomousSignalAgent()
     score = agent.calculate_account_opportunity_score("Apex Logistics Global")
     assert 50 <= score <= 100
+
+
+def test_pitching_false_positive_prevention():
+    """Verify that bare 'pitching' in normal business news does NOT trigger churn, while tight phrases do."""
+    agent = AutonomousSignalAgent()
+    
+    # 1. Normal business news with 'pitching' -> should NOT be incumbent_churn
+    sig_normal = agent.classify_signal(
+        account_name="VentureFlow",
+        headline="VentureFlow Founder Seen Pitching Top Silicon Valley Investors for Series A",
+        snippet="Management is currently pitching venture capitalists across Sand Hill Road.",
+    )
+    assert sig_normal.signal_type != "incumbent_churn"
+
+    # 2. Genuine churn news with tight phrase 'in a pitch process' -> SHOULD be incumbent_churn
+    sig_churn = agent.classify_signal(
+        account_name="BrandCorp",
+        headline="BrandCorp Confirms It Is In A Pitch Process For New Creative Partners",
+        snippet="Dissatisfied with current creative execution, CMO opens formal agency review.",
+    )
+    assert sig_churn.signal_type == "incumbent_churn"
+
+
+def test_configurable_seasonal_calendar():
+    """Verify that seasonal calendars are tenant and geography configurable."""
+    agent = AutonomousSignalAgent()
+
+    # 1. US Geography with Black Friday
+    sig_us = agent.classify_signal(
+        account_name="Nordic Retail US",
+        headline="Nordic Retail Prepares Supply Chain for Black Friday Rush",
+        snippet="E-commerce retailer ramps inventory for upcoming holiday campaign.",
+        geography="US",
+        buyer_tier=1,
+    )
+    assert sig_us.signal_type == "seasonal_campaign_window"
+    assert sig_us.opportunity_viability_boost == 30
+
+    # 2. India Geography with Diwali
+    sig_in = agent.classify_signal(
+        account_name="Delhi Brands",
+        headline="Delhi Brands Initiates Festive Season Diwali Video Production",
+        snippet="Locking agency deliverables for Q3 festival ramp.",
+        geography="India",
+        buyer_tier=1,
+    )
+    assert sig_in.signal_type == "seasonal_campaign_window"
+    assert sig_in.opportunity_viability_boost == 30
+
+    # 3. Custom tenant calendar
+    sig_custom = agent.classify_signal(
+        account_name="Brewery Co",
+        headline="Brewery Co Launches Summer Peak Beverage Campaign",
+        snippet="Aggressive outdoor promotional push across stadiums.",
+        seasonal_calendar=["summer peak", "octoberfest"],
+        buyer_tier=1,
+    )
+    assert sig_custom.signal_type == "seasonal_campaign_window"
+
