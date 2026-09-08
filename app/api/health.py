@@ -14,48 +14,40 @@ logger = get_logger(__name__)
 
 @router.get("/health", summary="Service Liveness and Health Check")
 async def health_check():
-    health_status = {
-        "status": "healthy",
-        "services": {
-            "postgres": "unknown",
-            "redis": "unknown",
-            "temporal": "unknown",
-        },
-    }
-    is_healthy = True
+    """Postgres (or its SQLite fallback) is required. Redis and Temporal are optional —
+    the app degrades to in-memory locks and inline workflow execution without them, so a
+    missing Redis/Temporal reports 'degraded' (200), not 'unhealthy' (503)."""
+    services = {"postgres": "unknown", "redis": "unknown", "temporal": "unknown"}
+    db_ok = True
 
-    # 1. Postgres Check
     try:
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
-        health_status["services"]["postgres"] = "ok"
+        services["postgres"] = "ok"
     except Exception as e:
         logger.error("health_check_postgres_failed", error=str(e))
-        health_status["services"]["postgres"] = f"failed: {str(e)}"
-        is_healthy = False
+        services["postgres"] = f"failed: {str(e)}"
+        db_ok = False
 
-    # 2. Redis Check
     try:
         redis_client = Redis.from_url(settings.REDIS_URL, socket_timeout=2.0)
         await redis_client.ping()
         await redis_client.aclose()
-        health_status["services"]["redis"] = "ok"
+        services["redis"] = "ok"
     except Exception as e:
-        logger.error("health_check_redis_failed", error=str(e))
-        health_status["services"]["redis"] = f"failed: {str(e)}"
-        is_healthy = False
+        logger.warning("health_check_redis_unavailable", error=str(e))
+        services["redis"] = "unavailable (using in-memory fallback)"
 
-    # 3. Temporal Check
     try:
-        client = await Client.connect(settings.TEMPORAL_HOST, namespace=settings.TEMPORAL_NAMESPACE)
-        health_status["services"]["temporal"] = "ok"
+        await Client.connect(settings.TEMPORAL_HOST, namespace=settings.TEMPORAL_NAMESPACE)
+        services["temporal"] = "ok"
     except Exception as e:
-        logger.error("health_check_temporal_failed", error=str(e))
-        health_status["services"]["temporal"] = f"failed: {str(e)}"
-        is_healthy = False
+        logger.warning("health_check_temporal_unavailable", error=str(e))
+        services["temporal"] = "unavailable (running workflows inline)"
 
-    if not is_healthy:
-        health_status["status"] = "unhealthy"
-        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health_status)
+    if not db_ok:
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            content={"status": "unhealthy", "services": services})
 
-    return health_status
+    degraded = any(v != "ok" for v in services.values())
+    return {"status": "degraded" if degraded else "healthy", "services": services}

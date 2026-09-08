@@ -6,6 +6,7 @@ from app.services.profiling.serper_service import (
     SerperService,
     _IN_MEMORY_CACHE,
     _ats_company_slug,
+    _clean_person_name,
     _company_from_title,
 )
 from app.services.profiling.psychographic_engine import PsychographicEngine
@@ -13,12 +14,25 @@ from app.services.profiling.psychographic_engine import PsychographicEngine
 
 def test_ats_slug_and_company_name_parsing():
     assert _ats_company_slug("https://boards.greenhouse.io/acmecorp/jobs/123") == "acmecorp"
+    assert _ats_company_slug("https://job-boards.greenhouse.io/acmecorp/jobs/123") == "acmecorp"
     assert _ats_company_slug("https://jobs.lever.co/brightwheel/abc-def") == "brightwheel"
     assert _ats_company_slug("https://boards.greenhouse.io/careers") is None
+    assert _ats_company_slug("https://www.indeed.com/q-seo-jobs.html") is None  # not an ATS host
     assert _ats_company_slug("not-a-url") is None
 
     assert _company_from_title("Job Application for SEO Specialist at Acme Corp", "acmecorp") == "Acme Corp"
+    assert _company_from_title("Senior Marketing Manager - Webflow", "webflow") == "Webflow"
+    assert _company_from_title("Senior Marketing Manager", "webflow") == "Webflow"  # title only -> slug
+    assert _company_from_title("Kalshi - Greenhouse", "kalshi") == "Kalshi"
     assert _company_from_title("", "bright-wheel") == "Bright Wheel"
+
+
+def test_clean_person_name_strips_junk_and_rejects_titles():
+    assert _clean_person_name("Darren Chait \U0001f41d") == "Darren Chait"
+    assert _clean_person_name("Priya S. Kumar") == "Priya S. Kumar"
+    assert _clean_person_name("Senior Marketing Manager") is None
+    assert _clean_person_name("Head of Growth") is None
+    assert _clean_person_name("X") is None
 
 
 @pytest.mark.asyncio
@@ -56,7 +70,7 @@ async def test_serper_cache_and_mock_fallback():
     assert signals[0]["source"] == "Google Serper Radar"
 
     # Verify second call is served from cache
-    cache_key = service._generate_cache_key('"Acme Corp" enterprise revenue operations OR hiring OR software')
+    cache_key = service._generate_cache_key("Acme Corp news funding hiring expansion product launch")
     assert cache_key in _IN_MEMORY_CACHE
 
 

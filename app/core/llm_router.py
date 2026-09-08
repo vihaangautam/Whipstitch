@@ -47,6 +47,34 @@ def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     return round(cost, 6)
 
 
+_WRAPPER_KEYS = {"result", "output", "data", "response", "json", "value"}
+
+
+def _coerce_to_model(model: Type[T], raw_text: str) -> T:
+    """Parse LLM text into `model`, tolerating markdown fences and a single wrapper key
+    like {"QualificationModel": {...}} or {"result": {...}}."""
+    txt = (raw_text or "").strip()
+    if txt.startswith("```"):
+        inner = txt.split("```")
+        txt = inner[1] if len(inner) > 1 else txt
+        if txt.lstrip().lower().startswith("json"):
+            txt = txt.lstrip()[4:]
+        txt = txt.strip().strip("`").strip()
+    data = json.loads(txt)
+    if isinstance(data, dict) and len(data) == 1:
+        key, val = next(iter(data.items()))
+        if isinstance(val, dict) and key.lower() in (model.__name__.lower(), *_WRAPPER_KEYS):
+            data = val
+    return model.model_validate(data)
+
+
+def _with_schema_hint(user_prompt: str, model: Type[T]) -> str:
+    return (
+        f"{user_prompt}\n\nReturn ONLY one JSON object — no markdown fences, no wrapper key — "
+        f"that validates against this JSON Schema:\n{json.dumps(model.model_json_schema())}"
+    )
+
+
 def generate_mock_medpicc(deal_name: str, company_name: str) -> QualificationModel:
     """Deterministic fallback qualification model for offline/test environments."""
     boxes = [
@@ -286,6 +314,7 @@ class MultiLLMRouter:
         Returns: (parsed_pydantic_object, model_used)
         """
         start_time = time.time()
+        user_prompt = _with_schema_hint(user_prompt, response_model)
 
         # Step 1: Attempt Gemini 2.0 Flash / 1.5 Flash (BYOK or Platform)
         gemini_key, is_byok_gemini = await self._resolve_api_key(tenant_id, "gemini")
@@ -306,7 +335,7 @@ class MultiLLMRouter:
                     if resp.status_code == 200:
                         data = resp.json()
                         raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-                        parsed = response_model.model_validate_json(raw_text)
+                        parsed = _coerce_to_model(response_model, raw_text)
                         latency = round(time.time() - start_time, 3)
                         await self._log_usage(
                             tenant_id=tenant_id,
@@ -345,7 +374,7 @@ class MultiLLMRouter:
                         logger.warning("groq_non_200", status=resp.status_code, body=resp.text[:300])
                     if resp.status_code == 200:
                         raw_text = resp.json()["choices"][0]["message"]["content"]
-                        parsed = response_model.model_validate_json(raw_text)
+                        parsed = _coerce_to_model(response_model, raw_text)
                         latency = round(time.time() - start_time, 3)
                         await self._log_usage(
                             tenant_id=tenant_id,
@@ -382,7 +411,7 @@ class MultiLLMRouter:
                     )
                     if resp.status_code == 200:
                         raw_text = resp.json()["choices"][0]["message"]["content"]
-                        parsed = response_model.model_validate_json(raw_text)
+                        parsed = _coerce_to_model(response_model, raw_text)
                         latency = round(time.time() - start_time, 3)
                         await self._log_usage(
                             tenant_id=tenant_id,

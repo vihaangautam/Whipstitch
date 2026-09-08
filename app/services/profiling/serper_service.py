@@ -8,6 +8,8 @@ import re
 from typing import Any, Dict, List, Optional
 import httpx
 
+from app.core.config import settings
+
 logger = logging.getLogger("whipstitch.serper")
 
 # In-memory rate-limit and cache fallbacks if Redis is not configured
@@ -16,9 +18,10 @@ _DAILY_QUERY_COUNT: int = 0
 _DAILY_QUERY_LIMIT: int = 100
 
 # ATS job-board hosts whose URLs carry a parseable company slug in the first path segment.
-_ATS_SITE_FILTER = " OR ".join(
-    f"site:{h}" for h in ("boards.greenhouse.io", "jobs.lever.co", "jobs.ashbyhq.com")
-)
+# Serper's free tier rejects the `site:` operator entirely, so these are used as plain
+# keywords in the query and the ATS URLs are picked out of the organic results instead.
+_ATS_HOST_KEYWORDS = ("greenhouse.io", "lever.co", "ashbyhq.com")
+_ATS_URL_MARKERS = ("greenhouse.io/", "jobs.lever.co/", "ashbyhq.com/")
 _ATS_GENERIC_SEGMENTS = {
     "careers", "jobs", "j", "search", "companies", "about", "o", "embed", "postings",
 }
@@ -26,7 +29,10 @@ _DOMAIN_TLDS = ("com", "io", "co", "ai", "in")
 
 
 def _ats_company_slug(link: str) -> Optional[str]:
-    """boards.greenhouse.io/acme/jobs/123 -> 'acme'. Returns None for generic pages."""
+    """boards.greenhouse.io/acme/jobs/123 -> 'acme'. Returns None for non-ATS or generic pages."""
+    low = link.lower()
+    if not any(m in low for m in _ATS_URL_MARKERS):
+        return None
     try:
         path = link.split("//", 1)[1].split("/", 1)[1]
     except IndexError:
@@ -37,12 +43,43 @@ def _ats_company_slug(link: str) -> Optional[str]:
     return seg
 
 
+_ATS_TITLE_NOISE = re.compile(
+    r"\s*[-|–—]\s*(greenhouse|lever|ashby|ashbyhq|job\s*board|careers?|jobs?)\b.*$", re.I
+)
+_NAME_JUNK = re.compile(r"[^\w .'\-]", re.UNICODE)  # drop emoji / symbols from a person name
+_TITLEISH = re.compile(
+    r"\b(manager|director|lead|head|specialist|officer|vp|chief|engineer|analyst|coordinator|executive)\b",
+    re.I,
+)
+
+
+def _clean_person_name(raw: str) -> Optional[str]:
+    name = _NAME_JUNK.sub("", (raw or "")).strip(" .-'")
+    name = re.sub(r"\s{2,}", " ", name)
+    parts = name.split()
+    if not (2 <= len(parts) <= 4):
+        return None
+    if _TITLEISH.search(name):  # it's a job title, not a person
+        return None
+    return name
+
+
+def _pretty_slug(slug: str) -> str:
+    return slug.replace("-", " ").replace("_", " ").title()
+
+
 def _company_from_title(title: str, slug: str) -> str:
     """Extracts the employer name from an ATS result title, else prettifies the slug."""
-    t = (title or "").strip()
-    if " at " in t:
-        return t.rsplit(" at ", 1)[-1].strip(" .|-") or slug
-    return slug.replace("-", " ").replace("_", " ").title()
+    t = _ATS_TITLE_NOISE.sub("", (title or "").strip()).strip(" .|-–—")
+    for sep in (" at ", " — ", " – ", " - ", " | ", ", "):
+        if sep in t and _TITLEISH.search(t.split(sep, 1)[0]):
+            t = t.split(sep, 1)[1].strip()
+            break
+    t = t.strip(" .|-–—")
+    # If what's left still reads like a job title (or is empty), fall back to the slug.
+    if not t or (_TITLEISH.search(t) and len(t.split()) <= 4):
+        return _pretty_slug(slug)
+    return t
 
 
 async def _resolve_company_domain(slug: str) -> str:
@@ -73,7 +110,7 @@ class SerperService:
     """Async client for Google Serper search and scrape with credit safety guarantees."""
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("SERPER_API_KEY", "")
+        self.api_key = api_key or settings.SERPER_API_KEY or os.getenv("SERPER_API_KEY", "")
         self.base_url = "https://google.serper.dev/search"
 
     def _generate_cache_key(self, query: str) -> str:
@@ -103,27 +140,39 @@ class SerperService:
         cached = _IN_MEMORY_CACHE.get(cache_key)
         if cached is not None:
             return cached.get("organic", [])
-        try:
-            headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(self.base_url, headers=headers, json={"q": query, "num": num})
-            self.record_usage()
-            if resp.status_code != 200:
+        headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
+        body = {"q": query, "num": num}
+        # The free tier reports burst throttling as 400/429 (misleadingly, as
+        # "Query pattern not allowed") — retry once after a short backoff.
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(self.base_url, headers=headers, json=body)
+                self.record_usage()
+                if resp.status_code == 200:
+                    organic = resp.json().get("organic", []) or []
+                    _IN_MEMORY_CACHE[cache_key] = {"organic": organic}
+                    return organic
+                if resp.status_code in (400, 429) and attempt == 0:
+                    logger.warning("Serper %d (retrying): %s", resp.status_code, resp.text[:120])
+                    await asyncio.sleep(1.5)
+                    continue
                 logger.error("Serper API error %d: %s", resp.status_code, resp.text[:200])
                 return []
-            organic = resp.json().get("organic", []) or []
-            _IN_MEMORY_CACHE[cache_key] = {"organic": organic}
-            return organic
-        except Exception as e:
-            logger.error("Serper request failed: %s", str(e))
-            return []
+            except Exception as e:
+                logger.error("Serper request failed: %s", str(e))
+                if attempt == 0:
+                    await asyncio.sleep(1.0)
+                    continue
+                return []
+        return []
 
     async def discover_via_hiring_signals(
         self,
         trigger_roles: List[str],
         geographies: List[str],
         limit: int = 8,
-        max_queries: int = 6,
+        max_queries: int = 9,
     ) -> List[Dict[str, Any]]:
         """Free discovery: find companies actively hiring for a `trigger_role` (a role whose
         posting implies budget + unmet need in the tenant's category) via ATS job boards.
@@ -132,46 +181,56 @@ class SerperService:
         expects from Apollo, plus a hiring_signal payload for the prospect card.
         """
         roles = [r.strip() for r in (trigger_roles or []) if r and r.strip()][:4]
-        geos = [g.strip() for g in (geographies or []) if g and g.strip()] or [""]
+        geos = [g.strip() for g in (geographies or []) if g and g.strip()]
         if not roles:
             return []
 
+        # Job-board postings rarely contain a country name verbatim ("Bengaluru", not "India"),
+        # so geo is used as a soft ranking hint, not a hard query filter.
+        geo_terms = {g.lower() for g in geos}
         seen: set = set()
         out: List[Dict[str, Any]] = []
         used = 0
-        for role in roles:
-            for geo in geos:
-                if used >= max_queries or len(out) >= limit:
-                    break
-                query = f'({_ATS_SITE_FILTER}) "{role}"'
-                if geo:
-                    query += f' "{geo}"'
-                results = await self._organic(query, num=10)
-                used += 1
-                for item in results:
-                    slug = _ats_company_slug(item.get("link", ""))
-                    if not slug or slug in seen:
-                        continue
-                    seen.add(slug)
-                    domain = await _resolve_company_domain(slug)
-                    if domain in seen:
-                        continue
-                    seen.add(domain)
-                    out.append(
-                        {
-                            "name": _company_from_title(item.get("title", ""), slug),
-                            "domain": domain,
-                            "industry": None,
-                            "hiring_signal": {
-                                "label": f"Hiring {role}" + (f" · {geo}" if geo else ""),
-                                "evidence_url": item.get("link", ""),
-                            },
-                        }
-                    )
-                    if len(out) >= limit:
-                        break
+
+        # (role, host) pairs, role-major so we get diversity within the query budget.
+        # Serper free tier blocks the site: operator, so the ATS host is a plain keyword and
+        # the ATS URLs are filtered out of the organic results.
+        queries = [f"{role} job {kw}" for role in roles for kw in _ATS_HOST_KEYWORDS]
+        for query in queries:
             if used >= max_queries or len(out) >= limit:
                 break
+            role = query.split(" job ")[0]
+            results = await self._organic(query, num=15)
+            used += 1
+
+            def geo_rank(it):
+                blob = (it.get("title", "") + " " + it.get("snippet", "")).lower()
+                return 0 if any(g in blob for g in geo_terms) else 1
+
+            for item in sorted(results, key=geo_rank):
+                slug = _ats_company_slug(item.get("link", ""))
+                if not slug or slug in seen:
+                    continue
+                seen.add(slug)
+                domain = await _resolve_company_domain(slug)
+                if domain in seen:
+                    continue
+                seen.add(domain)
+                blob = (item.get("title", "") + " " + item.get("snippet", "")).lower()
+                geo_hit = next((g for g in geos if g.lower() in blob), None)
+                out.append(
+                    {
+                        "name": _company_from_title(item.get("title", ""), slug),
+                        "domain": domain,
+                        "industry": None,
+                        "hiring_signal": {
+                            "label": f"Hiring {role}" + (f" · {geo_hit}" if geo_hit else ""),
+                            "evidence_url": item.get("link", ""),
+                        },
+                    }
+                )
+                if len(out) >= limit:
+                    break
 
         logger.info(
             "serper_hiring_discovery roles=%d queries=%d found=%d", len(roles), used, len(out)
@@ -183,29 +242,29 @@ class SerperService:
     ) -> Dict[str, Optional[str]]:
         """Resolves a named executive + LinkedIn URL (no verified email) via Serper."""
         role = (roles or ["Head of Marketing"])[0]
-        results = await self._organic(
-            f'"{company_name}" {role} site:linkedin.com/in', num=5
-        )
+        results = await self._organic(f"{company_name} {role} linkedin profile", num=8)
         for item in results:
             link = item.get("link", "")
-            if "linkedin.com/in/" not in link:
+            if "linkedin.com/in/" not in link.lower():
                 continue
-            title = item.get("title", "")
-            name = title.split(" - ")[0].split(" | ")[0].strip()
-            parsed_title = None
-            parts = [p.strip() for p in title.replace(" | LinkedIn", "").split(" - ")]
-            if len(parts) >= 2:
-                parsed_title = parts[1]
+            title = item.get("title", "").replace(" | LinkedIn", "").replace(" - LinkedIn", "")
+            parts = [p.strip() for p in title.split(" - ")]
+            name = _clean_person_name(parts[0].split(" | ")[0])
+            if not name:
+                continue
+            parsed_title = parts[1] if len(parts) >= 2 else ""
+            if not parsed_title or len(parsed_title.split()) > 7 or " at " in parsed_title.lower():
+                parsed_title = role
             return {
-                "full_name": name or None,
-                "exact_title": parsed_title or role,
+                "full_name": name,
+                "exact_title": parsed_title,
                 "linkedin_url": link,
             }
         return {"full_name": None, "exact_title": role, "linkedin_url": None}
 
     async def search_company_signals(self, company_name: str) -> List[Dict[str, str]]:
         """Searches Google Serper for recent company news, hiring trends, and initiatives."""
-        query = f'"{company_name}" enterprise revenue operations OR hiring OR software'
+        query = f"{company_name} news funding hiring expansion product launch"
         cache_key = self._generate_cache_key(query)
 
         # 1. Check Cache
