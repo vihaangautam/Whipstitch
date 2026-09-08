@@ -14,21 +14,17 @@ import BYOKSettings from './pages/BYOKSettings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import AuthModal from './components/AuthModal';
+import OnboardingWizard from './components/OnboardingWizard';
 import { fetchAnalyticsSummary, triggerOutboundBatch, fetchCurrentUser, clearAuthToken, fetchAuditLogs } from './api';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
-  const [currentTenant, setCurrentTenant] = useState('trifid_media');
+  const [currentTenant, setCurrentTenant] = useState(null);
   const [summaryData, setSummaryData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState({
-    id: 'rep-alex-morgan',
-    full_name: 'Alex Morgan',
-    email: 'rep@trifidmedia.in',
-    role: 'sales_representative',
-    tenant_id: 'trifid_media',
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
 
   const loadSummary = async () => {
@@ -50,13 +46,18 @@ export default function App() {
     }
   };
 
-  useEffect(() => { loadSummary(); }, [currentTenant]);
+  useEffect(() => { if (currentTenant) loadSummary(); }, [currentTenant]);
 
   useEffect(() => {
     async function checkAuth() {
-      const user = await fetchCurrentUser();
-      if (user) {
-        setCurrentUser(user);
+      try {
+        const user = await fetchCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          setCurrentTenant(user.tenant_id || null);
+        }
+      } finally {
+        setAuthChecked(true);
       }
     }
     checkAuth();
@@ -78,7 +79,67 @@ export default function App() {
   const handleSignOut = () => {
     clearAuthToken();
     setCurrentUser(null);
+    setCurrentTenant(null);
+    setSummaryData(null);
+    setCurrentView('dashboard');
+    setIsAuthModalOpen(false);
   };
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setCurrentTenant(user?.tenant_id || null);
+    setIsAuthModalOpen(false);
+    setCurrentView('dashboard');
+    loadSummary();
+  };
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] text-slate-400 text-sm font-sans">
+        Loading workspace…
+      </div>
+    );
+  }
+
+  // Unauthenticated: landing page only. Any attempt to enter the app opens the auth modal.
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-hidden">
+        <Header
+          currentView="landing"
+          setCurrentView={(v) => { if (v && v !== 'landing') setIsAuthModalOpen(true); }}
+          currentUser={null}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onSignOut={handleSignOut}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+        <LandingPage
+          setCurrentView={(v) => { if (v && v !== 'landing') setIsAuthModalOpen(true); }}
+          onSimulateEvent={handleSimulateEvent}
+        />
+      </div>
+    );
+  }
+
+  // Authenticated but workspace setup not finished → force the wizard.
+  if (!currentUser.onboarded) {
+    return (
+      <OnboardingWizard
+        user={currentUser}
+        onSignOut={handleSignOut}
+        onComplete={(updatedUser) => {
+          setCurrentUser(updatedUser);
+          setCurrentTenant(updatedUser?.tenant_id || currentTenant);
+          setCurrentView('dashboard');
+          loadSummary();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-hidden selection:bg-emerald-600 selection:text-white">
@@ -98,13 +159,7 @@ export default function App() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={(user) => {
-          setCurrentUser(user);
-          if (user.tenant_id) {
-            setCurrentTenant(user.tenant_id);
-          }
-          loadSummary();
-        }}
+        onAuthSuccess={handleAuthSuccess}
       />
 
       {currentView === 'landing' ? (

@@ -96,14 +96,8 @@ export default function DealHealth({ currentTenant }) {
     return `$${num.toLocaleString('en-US')}`;
   };
 
-  // Realistic Tier 1/2 Buying Committee State
-  const defaultCommittee = [
-    { name: 'Sneha Kapoor', role: 'VP Marketing', tag: 'Internal Champion', status: 'Engaged', email: 'sneha.kapoor@nykaa.com' },
-    { name: 'Unassigned', role: 'Founder & Managing Director', tag: 'Budget Owner', status: 'Missing' },
-    { name: 'Rajesh Nair', role: 'Head of Accounts & Finance', tag: 'Commercial Reviewer', status: 'Pending', email: 'rajesh.nair@nykaa.com' },
-    { name: 'Pooja Sharma', role: 'Brand Partnerships Lead', tag: 'Scope Reviewer', status: 'Engaged', email: 'pooja.s@nykaa.com' },
-  ];
-  const [committee, setCommittee] = useState(defaultCommittee);
+  // Buying committee is populated from the API per deal; no fabricated defaults.
+  const [committee, setCommittee] = useState([]);
   const [showAutoFindModal, setShowAutoFindModal] = useState(false);
   const [autoFindRole, setAutoFindRole] = useState(null);
   const [isAutoFinding, setIsAutoFinding] = useState(false);
@@ -153,7 +147,7 @@ export default function DealHealth({ currentTenant }) {
     const data = await fetchMedpiccScorecard(dealId);
     setScorecard(data);
     if (data?.follow_up_email) {
-      setEmailSubject(data.follow_up_email.subject || 'Next Steps Alignment: Nykaa Campaign Scope');
+      setEmailSubject(data.follow_up_email.subject || 'Next Steps & Alignment');
       setEmailDraft(data.follow_up_email.body_content || '');
     }
     setIsLoading(false);
@@ -357,7 +351,7 @@ export default function DealHealth({ currentTenant }) {
     const itemMeta = medpiccItems.find((m) => m.key.toLowerCase() === boxName.toLowerCase()) || { max: 15 };
     const maxScore = itemMeta.max;
     if (!box) {
-      return { score: Math.round(maxScore * 0.7), max: maxScore, status: 'green', statusIcon: '✓', label: 'Validated', border: 'border-emerald-200 bg-emerald-50 text-emerald-800' };
+      return { score: 0, max: maxScore, status: 'none', statusIcon: '—', label: 'No data', border: 'border-slate-200 bg-slate-50 text-slate-500' };
     }
     const pct = (box.score / maxScore) * 100;
     if (pct >= 67) {
@@ -481,13 +475,13 @@ export default function DealHealth({ currentTenant }) {
     setIsAutoFinding(true);
     setStreamProgress(15);
     setStreamLogs([
-      { step: 1, message: `Analyzing organization chart for ${selectedDeal?.company_name || 'Nykaa E-Retail'}...` }
+      { step: 1, message: `Analyzing organization chart for ${selectedDeal?.company_name || 'this account'}...` }
     ]);
     setDiscoveredCandidate(null);
 
-    const dealId = selectedDealId || 'd0000000-0000-0000-0000-000000000001';
-    const company = selectedDeal?.company_name || 'Nykaa E-Retail';
-    const domain = selectedDeal?.domain || 'nykaa.com';
+    const dealId = selectedDealId;
+    const company = selectedDeal?.company_name || '';
+    const domain = selectedDeal?.domain || '';
     const roleTag = contact.tag || contact.role;
 
     let sseDone = false;
@@ -557,7 +551,7 @@ export default function DealHealth({ currentTenant }) {
   const handleConfirmAddCandidate = async () => {
     if (!discoveredCandidate || !autoFindRole) return;
     setIsAddingCandidate(true);
-    const dealId = selectedDealId || 'd0000000-0000-0000-0000-000000000001';
+    const dealId = selectedDealId;
     const newMember = {
       name: discoveredCandidate.name,
       role: discoveredCandidate.title || autoFindRole.role,
@@ -595,8 +589,26 @@ export default function DealHealth({ currentTenant }) {
     { id: 5, name: 'Closed Won', status: 'upcoming', exit: 'Project onboarding kicked off and creative production started.' },
   ];
 
+  const hasDeals = deals.length > 0;
+
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
+      {!hasDeals && !isLoading ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 shadow-card flex flex-col items-center text-center gap-3">
+          <div className="p-3 rounded-xl bg-slate-900 text-white">
+            <Building2 className="w-6 h-6 text-emerald-400" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">No deals in this workspace yet</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Create a deal, then upload a call transcript to generate its MEDDPICC health diagnostic.
+          </p>
+          <button onClick={() => setShowNewDealModal(true)} className="btn-primary px-4 py-2 text-xs mt-1">
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Deal</span>
+          </button>
+        </div>
+      ) : (
+      <>
       {/* ─── 1. TOP HEADER & DEAL CONTEXT ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Left: Deal Switcher & Quick Metadata */}
@@ -619,15 +631,11 @@ export default function DealHealth({ currentTenant }) {
               </select>
             </div>
             <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-              <span className="font-semibold text-slate-800">{selectedDeal?.company_name || 'Nykaa E-Retail'}</span>
+              <span className="font-semibold text-slate-800">{selectedDeal?.company_name || '—'}</span>
               <span>&bull;</span>
               <span className="font-bold text-slate-900">
-                {formatCurrency(selectedDeal?.deal_size || 1500000, selectedDeal?.currency || 'INR')}
+                {formatCurrency(selectedDeal?.deal_size, selectedDeal?.currency || 'USD')}
               </span>
-              <span>&bull;</span>
-              <span>Target Close: <strong className="text-slate-700">Oct 31, 2026</strong></span>
-              <span>&bull;</span>
-              <span>AE: <strong className="text-slate-700">Rohan Mehta</strong></span>
               <span>&bull;</span>
               <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
                 <span className="text-emerald-700 font-semibold">Tier:</span>
@@ -645,7 +653,7 @@ export default function DealHealth({ currentTenant }) {
                   content="How decisions actually get made at this client company. Selling to a small startup Founder is completely different from selling to Zepto or Tata. Changing this adapts your 8-point checklist so you only focus on what matters for this buyer."
                   criteria={[
                     "Tier 1 (Founder-Led SMB): Founder signs the cheque directly via WhatsApp or 1-page SOW + 50% advance.",
-                    "Tier 2 (Growth Scale-up): Department Head pitches, but Finance issues a formal PO (e.g. Zepto, Nykaa).",
+                    "Tier 2 (Growth Scale-up): Department Head pitches, but Finance issues a formal PO.",
                     "Tier 3 (Enterprise MNC): Corporate procurement boards, formal vendor empanelment, and MSA (e.g. Tata, Unilever)."
                   ]}
                 />
@@ -1010,61 +1018,42 @@ export default function DealHealth({ currentTenant }) {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Blocker 1: Founder Sign-off */}
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                        <h4 className="font-bold text-sm text-slate-900">1. Founder Sign-Off Pending</h4>
-                        <InfoTooltip
-                          title="Founder Sign-Off Pending"
-                          content="In Indian SMBs and D2C brands, the marketing or product lead can't sign contracts alone. If you haven't received direct confirmation or approval from the Founder, this deal will freeze when it's time to pay."
-                        />
-                      </div>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                        High Risk of Deal Stalling
-                      </span>
+                  {scorecard?.top_blocking_boxes?.length ? (
+                    scorecard.top_blocking_boxes.slice(0, 3).map((boxName, i) => {
+                      const box = scorecard.boxes?.find(
+                        (b) => (b.box || '').toLowerCase() === boxName.toLowerCase()
+                      );
+                      const q = box?.evidence_quotes?.[0];
+                      return (
+                        <div key={boxName} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                              <h4 className="font-bold text-sm text-slate-900">{i + 1}. {boxName}</h4>
+                            </div>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                              Blocking closure
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
+                            {box?.missing_evidence || box?.notes || `${boxName} is under-evidenced — confirm it on your next call.`}
+                          </p>
+                          {q?.quote && (
+                            <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-rose-500 text-xs text-slate-800 italic leading-relaxed">
+                              "{q.quote}"
+                              <span className="not-italic font-semibold text-slate-900 block mt-1">
+                                — {q.person_name || 'Prospect'}{q.medium ? ` (${q.medium})` : ''}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-xl">
+                      Run the deal diagnostic (upload a call transcript) to surface what's blocking this deal.
                     </div>
-
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                      Sneha Kapoor (VP Marketing) confirmed the Founder has final commercial approval for campaigns above ₹5 Lakhs, but you haven't spoken with the Founder yet.
-                    </p>
-
-                    <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-rose-500 text-xs text-slate-800 italic leading-relaxed">
-                      "Founder sir is directly looking at this, unko Meta ROAS 3.5x minimum chahiye before we sign the SOW."
-                      <span className="not-italic font-semibold text-slate-900 block mt-1">
-                        — Sneha Kapoor, VP Marketing (Discovery Call &bull; 04:20)
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Blocker 2: 50% Advance Invoice */}
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                        <h4 className="font-bold text-sm text-slate-900">2. 50% Advance Payment Terms Not Agreed</h4>
-                        <InfoTooltip
-                          title="50% Advance Milestone"
-                          content="Never start creative or engineering work without the 50% advance in the bank. Client finance teams typically take 7–10 days to process payments, so get this agreed in writing now."
-                        />
-                      </div>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                        Cashflow & Timeline Risk
-                      </span>
-                    </div>
-
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-4">
-                      Accounts team requires 7–10 days to process advance payments. If advance terms aren't locked in the SOW now, campaign kickoff will miss the Diwali festive launch date.
-                    </p>
-
-                    <div className="ml-4 bg-white p-3 rounded-lg border-l-3 border-amber-500 text-xs text-slate-800 italic leading-relaxed">
-                      "Haan, approval toh mil gaya hai, but 50% advance invoice release hone me 1 week lagega."
-                      <span className="not-italic font-semibold text-slate-900 block mt-1">
-                        — Discovery Call &bull; 08:05
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Footer link to drawer */}
@@ -1083,29 +1072,29 @@ export default function DealHealth({ currentTenant }) {
                 </div>
               </div>
 
-              {/* Verbatim Quote Spotlight */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                    <Quote className="w-4 h-4 text-emerald-600" />
-                    <span>The #1 Customer Quote Driving This Deal</span>
-                    <InfoTooltip
-                      title="Key Customer Quote"
-                      content="The exact phrase the client used to describe their problem or budget. Quote their exact words back in your proposal and emails to remind them why they came to you."
-                    />
-                  </h3>
-                  <span className="text-xs text-slate-400">Verified from Call Transcript</span>
-                </div>
-
-                <div className="bg-emerald-50/60 p-4 rounded-xl border-l-4 border-emerald-600 space-y-2">
-                  <p className="text-xs sm:text-sm text-slate-800 italic leading-relaxed">
-                    "Basically hamara Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai for influencer whitelisting and UGC ads."
-                  </p>
-                  <div className="text-xs font-semibold text-emerald-900">
-                    — Sneha Kapoor (VP Marketing &bull; Internal Champion)
+              {/* Verbatim Quote Spotlight — first evidence quote from the diagnostic */}
+              {(() => {
+                const allQuotes = (scorecard?.boxes || []).flatMap((b) => b.evidence_quotes || []);
+                const q = allQuotes[0];
+                if (!q?.quote) return null;
+                return (
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                        <Quote className="w-4 h-4 text-emerald-600" />
+                        <span>Key Customer Quote From This Deal</span>
+                      </h3>
+                      <span className="text-xs text-slate-400">Extracted from transcript</span>
+                    </div>
+                    <div className="bg-emerald-50/60 p-4 rounded-xl border-l-4 border-emerald-600 space-y-2">
+                      <p className="text-xs sm:text-sm text-slate-800 italic leading-relaxed">"{q.quote}"</p>
+                      <div className="text-xs font-semibold text-emerald-900">
+                        — {q.person_name || 'Prospect'}{q.medium ? ` (${q.medium})` : ''}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             {/* RIGHT COLUMN (35% / 4 cols): Buying Committee Power Map */}
@@ -1185,11 +1174,15 @@ export default function DealHealth({ currentTenant }) {
                     />
                   </div>
                   <h4 className="text-sm font-bold text-slate-900 mt-1">
-                    Get Founder Sign-Off on SOW Advance
+                    {scorecard?.next_best_action || 'Run the deal diagnostic to get a recommended next move'}
                   </h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Send the pre-written follow-up email asking Sneha to share the 1-page SOW summary with the Founder to lock the 50% advance before the Diwali deadline.
-                  </p>
+                  {scorecard?.seller_summary?.next_best_actions?.length > 0 && (
+                    <ul className="text-xs text-slate-600 mt-1 leading-relaxed list-disc pl-4 space-y-0.5">
+                      {scorecard.seller_summary.next_best_actions.slice(0, 3).map((a, i) => (
+                        <li key={i}>{a}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 <button
@@ -1259,7 +1252,8 @@ export default function DealHealth({ currentTenant }) {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Email Body:</label>
                 <textarea
                   rows={10}
-                  value={emailDraft || `Hi Sneha,\n\nThanks for the great discussion today regarding Nykaa's upcoming Diwali creator campaign! To ensure we hit your 3.5x Meta ROAS target without any launch delays, I have drafted the SOW covering the 15 Lakhs influencer whitelisting scope.\n\nTo ensure your accounts team can release the 50% advance invoice on time for creator bookings, could we share this 1-page summary with your Founder / Managing Director this week for sign-off?\n\nBest regards,\nRohan Mehta`}
+                  value={emailDraft}
+                  placeholder="Run the deal diagnostic to auto-draft a follow-up email targeting the weakest MEDDPICC box."
                   onChange={(e) => setEmailDraft(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm text-slate-800 leading-relaxed focus:border-slate-400 focus:bg-white focus:outline-none"
                 />
@@ -1278,23 +1272,30 @@ export default function DealHealth({ currentTenant }) {
               </div>
 
               <div className="space-y-2.5 text-xs text-slate-700">
-                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                  <span className="font-semibold text-slate-900 block">Question 1 (Founder Alignment):</span>
-                  <p className="italic text-slate-600">
-                    "Sneha, to make sure we stay on track for your Diwali live date without late roadblocks, could we share a 1-page commercial brief with the Founder this Thursday?"
-                  </p>
-                </div>
-
-                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
-                  <span className="font-semibold text-slate-900 block">Question 2 (Advance Payment Timeline):</span>
-                  <p className="italic text-slate-600">
-                    "How long does Rajesh's finance team usually take to release vendor advance payments once the SOW is countersigned?"
-                  </p>
-                </div>
+                {(() => {
+                  const qs = (scorecard?.boxes || [])
+                    .flatMap((b) => (b.coaching_questions || []).map((q) => ({ box: b.box, q })))
+                    .slice(0, 4);
+                  if (!qs.length) {
+                    return (
+                      <p className="text-slate-400 italic">
+                        Run the diagnostic to generate coaching questions targeting this deal's gaps.
+                      </p>
+                    );
+                  }
+                  return qs.map(({ box, q }, i) => (
+                    <div key={i} className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
+                      <span className="font-semibold text-slate-900 block">Question {i + 1} ({box}):</span>
+                      <p className="italic text-slate-600">"{q}"</p>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* ─── AUDIT & OVERRIDE SIDE DRAWER (Viewport-Anchored) ─── */}
@@ -1442,7 +1443,7 @@ export default function DealHealth({ currentTenant }) {
                           "{q.quote}"
                         </p>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                          <span className="font-semibold text-emerald-900">{q.person_name || 'Sneha Kapoor'} ({q.role || 'VP Marketing'})</span>
+                          <span className="font-semibold text-emerald-900">{q.person_name || 'Prospect'}{q.role ? ` (${q.role})` : ''}</span>
                           <span className="text-slate-400">{q.medium || 'Call Recording &bull; 04:20'}</span>
                         </div>
                       </div>
@@ -1570,7 +1571,7 @@ export default function DealHealth({ currentTenant }) {
                 rows={6}
                 value={transcriptInput}
                 onChange={(e) => setTranscriptInput(e.target.value)}
-                placeholder="e.g. Rohan: Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai..."
+                placeholder="Paste the call transcript or key notes here..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-800 focus:border-slate-400 focus:bg-white focus:outline-none transition"
               />
             </div>
@@ -1626,7 +1627,7 @@ export default function DealHealth({ currentTenant }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Nykaa E-Retail"
+                  placeholder="e.g. Acme Corp"
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"
@@ -1668,7 +1669,7 @@ export default function DealHealth({ currentTenant }) {
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none cursor-pointer"
                 >
                   <option value="Tier 1: Founder-Led SMB">Tier 1: Founder-Led SMB / D2C (WhatsApp Founder, SOW + 50% Advance)</option>
-                  <option value="Tier 2: Growth Scale-up">Tier 2: Growth Scale-up / Unicorn (Zepto Scale: Function Head + Finance PO)</option>
+                  <option value="Tier 2: Growth Scale-up">Tier 2: Growth Scale-up / Unicorn (Function Head + Finance PO)</option>
                   <option value="Tier 3: Enterprise MNC">Tier 3: Enterprise MNC (Commercial Signer, Vendor Empanelment)</option>
                 </select>
               </div>
@@ -1707,7 +1708,7 @@ export default function DealHealth({ currentTenant }) {
                     Auto-Discovering {autoFindRole?.tag || 'Budget Owner'}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Live Waterfall & Registry Scan for {selectedDeal?.company_name || 'Nykaa E-Retail'}
+                    Live Waterfall & Registry Scan for {selectedDeal?.company_name || 'this account'}
                   </p>
                 </div>
               </div>

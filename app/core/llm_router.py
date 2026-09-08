@@ -25,11 +25,16 @@ from app.models.medpicc_schemas import (
 logger = get_logger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
+# Current model ids (aliases that track the latest stable release).
+GEMINI_MODEL = "gemini-flash-latest"
+GROQ_MODEL = "openai/gpt-oss-20b"
+
 # Per-1K token pricing table in USD
 MODEL_PRICING = {
-    "gemini-2.0-flash": {"input": 0.0001, "output": 0.0004},
-    "gemini-1.5-flash": {"input": 0.000075, "output": 0.0003},
-    "llama-3.3-70b-versatile": {"input": 0.00059, "output": 0.00079},
+    "gemini-flash-latest": {"input": 0.0001, "output": 0.0004},
+    "gemini-2.5-flash": {"input": 0.0001, "output": 0.0004},
+    "openai/gpt-oss-20b": {"input": 0.0001, "output": 0.0004},
+    "openai/gpt-oss-120b": {"input": 0.00015, "output": 0.0006},
     "gpt-4o": {"input": 0.0025, "output": 0.0100},
     "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
     "claude-3-5-sonnet": {"input": 0.003, "output": 0.015},
@@ -227,6 +232,7 @@ class MultiLLMRouter:
 
     async def _resolve_api_key(self, tenant_id: str, provider: str) -> Tuple[Optional[str], bool]:
         """Resolves API key: checks BYOK first, then platform defaults. Returns (key, is_byok)."""
+        byok_entry = None
         try:
             async with AsyncSessionLocal() as session:
                 t_uuid = None
@@ -285,7 +291,7 @@ class MultiLLMRouter:
         gemini_key, is_byok_gemini = await self._resolve_api_key(tenant_id, "gemini")
         if gemini_key:
             try:
-                model_name = preferred_model if preferred_model and "gemini" in preferred_model else "gemini-2.0-flash"
+                model_name = preferred_model if preferred_model and "gemini" in preferred_model else GEMINI_MODEL
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
                     payload = {
@@ -295,6 +301,8 @@ class MultiLLMRouter:
                         "generationConfig": {"response_mime_type": "application/json"},
                     }
                     resp = await client.post(url, json=payload)
+                    if resp.status_code != 200:
+                        logger.warning("gemini_non_200", status=resp.status_code, body=resp.text[:300])
                     if resp.status_code == 200:
                         data = resp.json()
                         raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -319,7 +327,7 @@ class MultiLLMRouter:
         groq_key, is_byok_groq = await self._resolve_api_key(tenant_id, "groq")
         if groq_key:
             try:
-                model_name = "llama-3.3-70b-versatile"
+                model_name = GROQ_MODEL
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     resp = await client.post(
                         "https://api.groq.com/openai/v1/chat/completions",
@@ -333,6 +341,8 @@ class MultiLLMRouter:
                             "response_format": {"type": "json_object"},
                         },
                     )
+                    if resp.status_code != 200:
+                        logger.warning("groq_non_200", status=resp.status_code, body=resp.text[:300])
                     if resp.status_code == 200:
                         raw_text = resp.json()["choices"][0]["message"]["content"]
                         parsed = response_model.model_validate_json(raw_text)

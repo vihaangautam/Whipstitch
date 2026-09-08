@@ -25,14 +25,16 @@ import {
   fetchBattlecards,
   fetchBattlecardDetail,
   generateCustomBattlecard,
+  autoGenerateBattlecards,
   fetchLiveSignals,
   ingestSignal
 } from '../api';
 import InfoTooltip from '../components/InfoTooltip';
 
 export default function CompetitorBattlecards({ currentTenant }) {
+  const companyLabel = (currentTenant || 'your company').replace(/_/g, ' ');
   const [battlecards, setBattlecards] = useState([]);
-  const [selectedCompetitorId, setSelectedCompetitorId] = useState('zoominfo');
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState(null);
   const [battlecardDetail, setBattlecardDetail] = useState(null);
   const [signals, setSignals] = useState([]);
   const [activeTab, setActiveTab] = useState('killshots'); // 'killshots' | 'blackboard' | 'objections' | 'signals'
@@ -43,19 +45,20 @@ export default function CompetitorBattlecards({ currentTenant }) {
   const [customCompetitor, setCustomCompetitor] = useState('');
   const [customBuyer, setCustomBuyer] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [genError, setGenError] = useState(null);
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
       const [bList, sigs] = await Promise.all([
-        fetchBattlecards(),
+        fetchBattlecards(currentTenant),
         fetchLiveSignals(),
       ]);
       setBattlecards(bList);
       setSignals(sigs);
-      if (bList.length > 0) {
-        setSelectedCompetitorId(bList[0].id);
-      }
+      setSelectedCompetitorId(bList.length > 0 ? bList[0].id : null);
+      setBattlecardDetail(bList.length > 0 ? bList[0] : null);
       setIsLoading(false);
     })();
   }, [currentTenant]);
@@ -64,12 +67,29 @@ export default function CompetitorBattlecards({ currentTenant }) {
     if (selectedCompetitorId) {
       (async () => {
         setIsLoading(true);
-        const detail = await fetchBattlecardDetail(selectedCompetitorId);
+        const detail = await fetchBattlecardDetail(selectedCompetitorId, currentTenant);
         setBattlecardDetail(detail);
         setIsLoading(false);
       })();
     }
-  }, [selectedCompetitorId]);
+  }, [selectedCompetitorId, currentTenant]);
+
+  const handleAutoGenerate = async () => {
+    setIsAutoGenerating(true);
+    setGenError(null);
+    try {
+      const cards = await autoGenerateBattlecards(currentTenant);
+      setBattlecards(cards);
+      if (cards.length > 0) {
+        setSelectedCompetitorId(cards[0].id);
+        setBattlecardDetail(cards[0]);
+      }
+    } catch (err) {
+      setGenError(err.message || 'Could not generate battlecards.');
+    } finally {
+      setIsAutoGenerating(false);
+    }
+  };
 
   const handleCopy = (text, index) => {
     navigator.clipboard.writeText(text);
@@ -90,7 +110,8 @@ export default function CompetitorBattlecards({ currentTenant }) {
       setIsGenerating(true);
       const generated = await generateCustomBattlecard({
         competitor_name: customCompetitor,
-        buyer_company: customBuyer || 'Enterprise Prospect',
+        tenant_id: currentTenant,
+        buyer_company: customBuyer || undefined,
       });
       setBattlecards((prev) => [generated, ...prev]);
       setSelectedCompetitorId(generated.id);
@@ -209,12 +230,30 @@ export default function CompetitorBattlecards({ currentTenant }) {
           <span className="text-slate-400 font-medium">AI-Generated Playbook</span>
         </div>
 
+        {genError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-medium">
+            {genError}
+          </div>
+        )}
         {battlecards.length === 0 ? (
-          <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center space-y-2">
-            <h4 className="text-sm font-bold text-slate-800">No Competitors Configured Yet</h4>
+          <div className="p-8 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center space-y-3">
+            <h4 className="text-sm font-bold text-slate-800 capitalize">
+              No competitor battlecards generated for {companyLabel} yet
+            </h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Add your top market rivals in Logic & ICP Studio to unlock custom battlecard playbooks and real-time competitor churn radar.
+              Whipstitch reads your company description and offering, works out who you actually
+              lose deals to, and writes a battlecard for each — traps, kill-shots, and objection scripts.
             </p>
+            <button
+              onClick={handleAutoGenerate}
+              disabled={isAutoGenerating}
+              className="btn-primary px-4 py-2 text-xs disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              {isAutoGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              <span className="capitalize">
+                {isAutoGenerating ? 'Generating…' : `Generate AI battlecards for ${companyLabel}`}
+              </span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -745,7 +784,7 @@ export default function CompetitorBattlecards({ currentTenant }) {
                 <label className="block text-slate-700 font-semibold mb-1">Target Prospect (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Apex Logistics Global"
+                  placeholder="e.g. Acme Corp"
                   value={customBuyer}
                   onChange={(e) => setCustomBuyer(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-none"

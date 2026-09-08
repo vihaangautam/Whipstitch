@@ -68,6 +68,9 @@ class ICPCheck(BaseModel):
 
 
 class TenantConfigSchema(BaseModel):
+    company_description: str = Field(default="", description="What the company does, in the seller's words")
+    offering: str = Field(default="", description="What the company sells / its core value proposition")
+    onboarded: bool = Field(default=False, description="True once the workspace setup wizard is completed")
     enrichment_waterfall_order: list[str] = Field(
         default=["apollo", "people_data_labs", "hunter", "diffbot", "crawl4ai", "llm_fallback"]
     )
@@ -85,7 +88,15 @@ class TenantConfigSchema(BaseModel):
     )
     target_decision_maker_roles: list[str] = Field(
         default=["Head of Marketing", "Founder", "VP Growth", "UGC Lead"],
-        description="Target roles for executive finder resolution"
+        description="Buyer titles — who you actually contact once an account is found"
+    )
+    trigger_roles: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Roles a target company hiring for implies budget and an unmet need in your "
+            "category (e.g. 'SEO Specialist' for an SEO agency). Powers free hiring-signal "
+            "discovery via ATS job boards when Apollo credits are unavailable."
+        ),
     )
     routing_matrix: dict = Field(
         default={

@@ -1,56 +1,19 @@
-"""Integration tests for Meeting Intelligence & Champion Notes API."""
-from unittest.mock import AsyncMock
+"""Integration tests for the tenant-scoped, DB-backed Meeting Intelligence API (no seed data)."""
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.db.session import get_db_session
 from app.main import app
 
 
 @pytest.mark.asyncio
 async def test_meetings_api_lifecycle():
-    mock_session = AsyncMock()
-
-    async def override_get_db_session():
-        yield mock_session
-
-    app.dependency_overrides[get_db_session] = override_get_db_session
-
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # 1. List Meetings (seeds default mock meetings)
+        # 1. A fresh workspace has no meetings.
         res = await client.get("/v1/meetings?tenant_id=trifid_media")
         assert res.status_code == 200
-        meetings = res.json()
-        assert len(meetings) >= 2
-        first_meeting_id = meetings[0]["id"]
 
-        # 2. Get Pre-Call Briefing
-        briefing_res = await client.get(f"/v1/meetings/{first_meeting_id}/briefing")
-        assert briefing_res.status_code == 200
-        briefing = briefing_res.json()
-        assert "strategic_discovery_questions" in briefing
-        assert len(briefing["strategic_discovery_questions"]) == 3
-        assert len(briefing["attendees"]) > 0
-
-        # 3. Get 7-Filter Champion Selling Kit
-        kit_res = await client.get(f"/v1/meetings/{first_meeting_id}/champion-kit")
-        assert kit_res.status_code == 200
-        kit = kit_res.json()
-        assert "filter_1_wiifm_career_narrative" in kit
-        assert "filter_2_cfo_business_case_roi" in kit
-        assert "filter_3_infosec_architecture" in kit
-        assert "filter_4_time_triggers_urgency" in kit
-        assert "filter_5_power_structure_dynamics" in kit
-        assert "filter_6_vendor_disqualification" in kit
-        assert "filter_7_shadow_influence_landmines" in kit
-
-        # 4. Trigger Prep Refresh
-        prep_res = await client.post(f"/v1/meetings/{first_meeting_id}/prep")
-        assert prep_res.status_code == 200
-        assert prep_res.json()["status"] == "ready"
-
-        # 5. Create a New Meeting
+        # 2. Create a real meeting from rep-entered details.
         create_res = await client.post(
             "/v1/meetings?tenant_id=trifid_media",
             json={
@@ -64,5 +27,22 @@ async def test_meetings_api_lifecycle():
         created = create_res.json()
         assert created["company_name"] == "FinTech Scale"
         assert len(created["attendees"]) == 2
+        meeting_id = created["id"]
 
-    app.dependency_overrides.clear()
+        # 3. It now shows up in the list.
+        listed = (await client.get("/v1/meetings?tenant_id=trifid_media")).json()
+        assert any(m["id"] == meeting_id for m in listed)
+
+        # 4. Pre-call briefing synthesises from the real attendees + signals.
+        briefing = (await client.get(f"/v1/meetings/{meeting_id}/briefing")).json()
+        assert briefing["company_name"] == "FinTech Scale"
+        assert len(briefing["strategic_discovery_questions"]) == 3
+        assert len(briefing["attendees"]) == 2
+
+        # 5. 7-filter champion kit.
+        kit = (await client.get(f"/v1/meetings/{meeting_id}/champion-kit")).json()
+        for i in range(1, 8):
+            assert any(k.startswith(f"filter_{i}_") for k in kit)
+
+        # 6. Unknown meeting id -> 404, not a fake fallback.
+        assert (await client.get("/v1/meetings/not-a-real-id/briefing")).status_code == 404

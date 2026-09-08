@@ -98,22 +98,15 @@ export default function Header({
         <div className="flex items-center gap-3">
           {currentView !== 'landing' ? (
             <>
-              {/* Tenant Switcher */}
-              <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
-                <span className="text-slate-400 font-medium">tenant:</span>
-                <select
-                  value={currentTenant}
-                  onChange={(e) => setCurrentTenant(e.target.value)}
-                  className="bg-transparent text-slate-900 font-semibold border-none text-xs py-0 pl-1 pr-3 cursor-pointer focus:ring-0 focus:outline-none"
-                  aria-label="Select tenant"
-                >
-                  <option value="trifid_media">Trifid Media</option>
-                  <option value="acme_corp">Acme Global</option>
-                  {currentTenant !== 'trifid_media' && currentTenant !== 'acme_corp' && (
-                    <option value={currentTenant}>{currentTenant.replace(/_/g, ' ')}</option>
-                  )}
-                </select>
-              </div>
+              {/* Workspace label (single workspace per user) */}
+              {currentTenant && (
+                <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
+                  <span className="text-slate-400 font-medium">workspace:</span>
+                  <span className="text-slate-900 font-semibold capitalize">
+                    {currentTenant.replace(/_/g, ' ')}
+                  </span>
+                </div>
+              )}
 
               {/* Apollo Credits Indicator */}
               {summaryData && (

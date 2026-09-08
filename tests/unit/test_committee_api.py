@@ -32,10 +32,7 @@ async def test_get_committee_members():
             assert response.status_code == 200
             data = response.json()
             assert isinstance(data, list)
-            assert len(data) >= 4
-            roles = [m["tag"] for m in data]
-            assert "Internal Champion" in roles
-            assert "Budget Owner" in roles
+            assert data == []  # no fabricated roster when none exist
     finally:
         app.dependency_overrides.clear()
 

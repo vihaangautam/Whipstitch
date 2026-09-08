@@ -4,66 +4,122 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from temporalio import activity
 
+from app.core.apollo_budget import ApolloBudgetGuard
+from app.core.config import settings
 from app.core.logging import bind_correlation_id, get_logger
 from app.db.models import CRMSyncRecord, OutboundProspect, Tenant
 from app.db.session import AsyncSessionLocal
 from app.models.schemas import DecisionMaker, ICPCheck
 from app.services.crm.hubspot import HubSpotCRMProvider
-from app.services.enrichment.crawl4ai import Crawl4AIProvider
+from app.services.enrichment.apollo import apollo_search_organizations
+from app.services.profiling.serper_service import SerperService
 
 logger = get_logger(__name__)
+
+# Contact-confidence badge shown on the prospect card. The free discovery path (Serper /
+# job-board hiring signals) has no verified-email source, so it is capped at "probable" —
+# only paid providers with a verified contact may ever reach "verified".
+_FREE_SOURCES = {"serper_hiring", "serper", "none", "unknown"}
+
+
+def _confidence_label(source: str, has_contact: bool) -> str:
+    if not has_contact:
+        return "inferred"
+    if source in _FREE_SOURCES:
+        return "probable"
+    return "probable"  # ponytail: bump to "verified" once email verification is wired
 
 
 @activity.defn(name="discover_prospects_activity")
 async def discover_prospects_activity(tenant_key: str, batch_size: int = 5) -> List[Dict[str, Any]]:
-    """Temporal Activity (Pattern 3): Discovers new prospects matching ICP, checking credit budget."""
-    logger.info("discover_prospects_activity_started", tenant_key=tenant_key, batch_size=batch_size)
+    """Temporal Activity (Pattern 3): Discovers real prospects matching the tenant ICP.
 
-    prospects = []
+    Primary source is Apollo organization search (1 credit, budget-gated). When Apollo is
+    unavailable (mock mode, no key, budget exhausted, or free-tier block), falls back to
+    free hiring-signal discovery: companies posting for the tenant's `trigger_roles` on ATS
+    job boards. Returns [] if neither yields anything — never a fabricated list.
+    """
+    logger.info("discover_prospects_activity_started", tenant_key=tenant_key, batch_size=batch_size)
+    batch_size = max(1, min(batch_size, 15))
 
     async with AsyncSessionLocal() as session:
-        # Fetch tenant
         tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_key))
         tenant = tenant_res.scalar_one_or_none()
-        tenant_uuid = tenant.id if tenant else uuid.uuid4()
+        if not tenant:
+            logger.warning("discover_prospects_no_tenant", tenant_key=tenant_key)
+            return []
+        tenant_uuid = tenant.id
+        config = tenant.config or {}
+        icp = config.get("icp_criteria", {})
+        industries = icp.get("target_industries", [])
+        geographies = icp.get("geographies", []) or config.get("geographies", [])
+        emp_min = icp.get("employee_count_min")
+        emp_max = icp.get("employee_count_max")
 
-        # Read tenant ICP criteria from configuration
-        icp_criteria = (tenant.config or {}).get("icp_criteria", {}) if tenant else {}
-        target_industries = [ind.lower() for ind in icp_criteria.get("target_industries", [])]
+        existing_res = await session.execute(
+            select(OutboundProspect.domain).where(OutboundProspect.tenant_id == tenant_uuid)
+        )
+        existing_domains = {d.lower() for (d,) in existing_res.all() if d}
 
-        # Candidate company directory covering top ICP sectors
-        all_candidate_companies = [
-            {"name": "NovaScale Technologies", "domain": "novascale.io", "industry": "D2C & E-Commerce"},
-            {"name": "ApexPay Solutions", "domain": "apexpay.co", "industry": "Fintech & Payments"},
-            {"name": "OmniRetail AI", "domain": "omniretail.ai", "industry": "Retail Tech"},
-            {"name": "BlockCompetitor Inc", "domain": "competitor.com", "industry": "Disqualified Competitor"},
-            {"name": "HyperGrowth Labs", "domain": "hypergrowthlabs.com", "industry": "SaaS & AI"},
-            {"name": "Veritas Logistics Cloud", "domain": "veritaslogistics.com", "industry": "Logistics & Supply Chain"},
-            {"name": "FinFlow Technologies", "domain": "finflow.io", "industry": "Fintech & SaaS"},
-            {"name": "CloudScale Systems", "domain": "cloudscale.io", "industry": "B2B SaaS"},
-        ]
+    # Apollo organization search (budget-gated, 1 credit)
+    candidates: List[Dict[str, Any]] = []
+    source = "none"
+    guard = ApolloBudgetGuard()
+    if settings.MOCK_APOLLO:
+        logger.info("discover_prospects_skipped_apollo_mock_mode", tenant_key=tenant_key)
+    elif not await guard.can_consume(tenant_key, 1):
+        logger.warning("discover_prospects_apollo_budget_exhausted", tenant_key=tenant_key)
+    else:
+        apollo_orgs = await apollo_search_organizations(
+            industries, geographies, emp_min, emp_max, per_page=batch_size + 5
+        )
+        if apollo_orgs:
+            await guard.consume_credits(tenant_key, 1)
+            candidates = apollo_orgs
+            source = "apollo"
 
-        # Prioritize companies matching the tenant's configured ICP industries
-        if target_industries:
-            matched = [
-                c for c in all_candidate_companies
-                if any(ind in c["industry"].lower() for ind in target_industries)
-            ]
-            unmatched = [c for c in all_candidate_companies if c not in matched]
-            sample_companies = matched + unmatched
+    # Free fallback: hiring-signal discovery via ATS job boards (no paid credits)
+    if not candidates:
+        trigger_roles = config.get("trigger_roles", [])
+        if trigger_roles:
+            hiring = await SerperService().discover_via_hiring_signals(
+                trigger_roles, geographies, limit=batch_size + 5
+            )
+            if hiring:
+                candidates = hiring
+                source = "serper_hiring"
         else:
-            sample_companies = all_candidate_companies
+            logger.info("discover_prospects_no_trigger_roles_configured", tenant_key=tenant_key)
 
-        for i in range(min(batch_size, len(sample_companies))):
-            item = sample_companies[i]
+    logger.info("discover_prospects_source", source=source, count=len(candidates))
+    if not candidates:
+        logger.warning("discover_prospects_no_candidates", tenant_key=tenant_key)
+        return []
+
+    prospects: List[Dict[str, Any]] = []
+    async with AsyncSessionLocal() as session:
+        for item in candidates:
+            domain = (item.get("domain") or "").lower().lstrip("www.")
+            if not domain or domain in existing_domains:
+                continue
+            existing_domains.add(domain)
+            sig: Dict[str, Any] = {
+                "source": source,
+                "employee_count": item.get("employee_count"),
+                "confidence_label": "inferred",
+            }
+            hiring_signal = item.get("hiring_signal")
+            if hiring_signal:
+                sig["hiring_signal_label"] = hiring_signal.get("label")
+                sig["hiring_signal_url"] = hiring_signal.get("evidence_url")
             prospect = OutboundProspect(
                 id=uuid.uuid4(),
                 tenant_id=tenant_uuid,
-                company_name=item["name"],
-                domain=item["domain"],
-                industry=item["industry"],
+                company_name=item.get("name") or domain,
+                domain=domain,
+                industry=item.get("industry"),
                 scrape_status="discovered",
-                signals_json={"source": "apollo_discovery", "batch_index": i},
+                signals_json=sig,
             )
             session.add(prospect)
             prospects.append(
@@ -74,7 +130,8 @@ async def discover_prospects_activity(tenant_key: str, batch_size: int = 5) -> L
                     "industry": prospect.industry,
                 }
             )
-
+            if len(prospects) >= batch_size:
+                break
         await session.commit()
 
     logger.info("discover_prospects_activity_completed", count=len(prospects))
@@ -129,23 +186,62 @@ async def disqualify_prospect_gate_activity(
 
 @activity.defn(name="discover_decision_maker_activity")
 async def discover_decision_maker_activity(
-    prospect_id: str, company_name: str, domain: str, target_roles: List[str]
+    prospect_id: str,
+    company_name: str,
+    domain: str,
+    target_roles: Optional[List[str]] = None,
+    tenant_key: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Temporal Activity (Pattern 2): Resolves named executive contact details.
+    """Temporal Activity (Pattern 2): Resolves a named executive + LinkedIn URL via Serper.
 
-    No contact resolver is wired up yet, so this returns an unresolved contact instead of
-    inventing a plausible-looking one. Staging refuses anything with is_verified=False.
+    `target_roles` (buyer titles) come from the tenant's onboarding config when not passed
+    explicitly. No verified-email source is wired, so is_verified stays False and CRM staging
+    parks the prospect for contact research rather than emailing a guessed address.
     """
     bind_correlation_id(prospect_id)
     logger.info("discover_decision_maker_started", prospect_id=prospect_id, company=company_name)
 
-    dm = DecisionMaker(exact_title=target_roles[0] if target_roles else None)
+    roles = [r for r in (target_roles or []) if r]
+    if not roles and tenant_key:
+        try:
+            async with AsyncSessionLocal() as session:
+                t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_key))
+                t = t_res.scalar_one_or_none()
+                if t and t.config:
+                    roles = [r for r in t.config.get("target_decision_maker_roles", []) if r]
+        except Exception as e:
+            logger.warning("decision_maker_roles_lookup_failed", error=str(e))
+    if not roles:
+        roles = ["Head of Marketing", "Founder", "VP Growth"]
+
+    resolved = await SerperService().find_decision_maker(company_name, domain, roles)
+
+    dm = DecisionMaker(
+        full_name=resolved.get("full_name"),
+        exact_title=resolved.get("exact_title") or (roles[0] if roles else None),
+        linkedin_url=resolved.get("linkedin_url"),
+        confidence_score=0.5 if resolved.get("full_name") else 0.0,
+        is_verified=False,
+    )
+
+    try:
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(
+                select(OutboundProspect).where(OutboundProspect.id == uuid.UUID(prospect_id))
+            )
+            p = res.scalar_one_or_none()
+            if p:
+                p.decision_maker_name = dm.full_name
+                p.decision_maker_title = dm.exact_title
+                p.decision_maker_linkedin = dm.linkedin_url
+                await session.commit()
+    except Exception as e:
+        logger.warning("discover_decision_maker_persist_failed", error=str(e))
 
     logger.info(
-        "discover_decision_maker_unresolved",
+        "discover_decision_maker_completed",
         prospect_id=prospect_id,
-        company=company_name,
-        reason="no_contact_resolver_configured",
+        resolved=bool(dm.full_name),
     )
     return dm.model_dump()
 
@@ -154,19 +250,34 @@ async def discover_decision_maker_activity(
 async def research_prospect_activity(
     prospect_id: str, company_name: str, domain: str, bm25_query_terms: str
 ) -> Dict[str, Any]:
-    """Temporal Activity (Pattern 1): Scrapes website & applies BM25 content filtering for buying signals."""
+    """Temporal Activity (Pattern 1): Pulls real company news/signals via Serper and builds
+    a fit-markdown summary. Falls back to an explicit 'no signals found' note."""
     bind_correlation_id(prospect_id)
     logger.info("research_prospect_started", prospect_id=prospect_id, domain=domain)
 
-    crawler = Crawl4AIProvider()
-    profile = await crawler.enrich(email=f"contact@{domain}", company_name=company_name, domain=domain)
+    news = await SerperService().search_company_signals(company_name)
 
-    fit_markdown = f"# Company Analysis: {company_name}\nTarget Domain: {domain}\nExtracted Signals: Active hiring for growth engineers, raised Series A funding, using Shopify & Klaviyo."
+    blob = " ".join(
+        (n.get("headline", "") + " " + n.get("snippet", "")) for n in news
+    ).lower()
     signals = {
-        "hiring_signal": "Active hiring for growth & marketing roles",
-        "tech_stack_signals": profile.tech_stack if profile else ["Shopify", "Google Analytics"],
-        "funding_signal": "Recent Series A round",
+        "news": news[:4],
+        "hiring_signal": any(k in blob for k in ("hiring", "job opening", "careers", "recruit", "we are hiring")),
+        "funding_signal": any(k in blob for k in ("raised", "funding", "series a", "series b", "seed round", "investment round")),
+        "expansion_signal": any(k in blob for k in ("expands", "expansion", "launches", "new office", "acquire", "acquisition")),
     }
+
+    if news:
+        lines = "\n".join(
+            f"- **{n.get('headline', '')}** — {n.get('snippet', '')}" for n in news[:4]
+        )
+        fit_markdown = (
+            f"# Company Research: {company_name}\nDomain: {domain}\n\n## Recent signals\n{lines}"
+        )
+    else:
+        fit_markdown = (
+            f"# Company Research: {company_name}\nDomain: {domain}\n\n_No external signals found via search._"
+        )
 
     async with AsyncSessionLocal() as session:
         res = await session.execute(
@@ -174,12 +285,17 @@ async def research_prospect_activity(
         )
         prospect = res.scalar_one_or_none()
         if prospect:
+            prior = dict(prospect.signals_json or {})
+            merged = {**prior, **signals}
+            src = prior.get("source", "unknown")
+            merged["source"] = src
+            merged["confidence_label"] = _confidence_label(src, bool(prospect.decision_maker_name))
             prospect.fit_markdown = fit_markdown
-            prospect.signals_json = signals
+            prospect.signals_json = merged
             prospect.scrape_status = "researched"
             await session.commit()
 
-    logger.info("research_prospect_completed", prospect_id=prospect_id)
+    logger.info("research_prospect_completed", prospect_id=prospect_id, signal_count=len(news))
     return {"fit_markdown": fit_markdown, "signals": signals}
 
 
@@ -193,16 +309,27 @@ async def qualify_outbound_prospect_activity(
 
     from app.activities.qualification_activity import call_real_llm_qualification
 
+    signals = (research_data or {}).get("signals", {})
+    industry = "Unknown"
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(
+            select(OutboundProspect).where(OutboundProspect.id == uuid.UUID(prospect_id))
+        )
+        prospect = res.scalar_one_or_none()
+        if prospect and prospect.industry:
+            industry = prospect.industry
+
     enrichment_payload = {
         "company_name": company_name,
-        "industry": "SaaS / Tech",
-        "employee_count": 120,
-        "geography": "Global",
-        "tech_stack": research_data.get("signals", {}).get("tech_stack_signals", ["Shopify"]),
+        "industry": industry,
+        "geography": "Unknown",
+        "recent_signals": signals.get("news", []),
+        "hiring": signals.get("hiring_signal"),
+        "funding": signals.get("funding_signal"),
     }
 
     qualification = await call_real_llm_qualification(
-        company_name, "SaaS / Tech", enrichment_payload, tenant_key=tenant_key
+        company_name, industry, enrichment_payload, tenant_key=tenant_key
     )
 
     async with AsyncSessionLocal() as session:

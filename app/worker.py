@@ -4,6 +4,11 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from app.activities.audit_activity import log_execution_step_activity
+from app.activities.battlecard_activity import (
+    auto_generate_tenant_battlecards_activity,
+    classify_account_signal_activity,
+    generate_competitor_battlecard_activity,
+)
 from app.activities.crm_activity import sync_to_crm_activity
 from app.activities.deal_diagnostic_activity import (
     extract_medpicc_scores_activity,
@@ -12,6 +17,10 @@ from app.activities.deal_diagnostic_activity import (
     update_crm_deal_stage_activity,
 )
 from app.activities.enrichment_activity import enrich_lead_waterfall_activity
+from app.activities.meeting_prep_activity import (
+    build_champion_kit_activity,
+    build_meeting_briefing_activity,
+)
 from app.activities.outbound_activity import (
     discover_decision_maker_activity,
     discover_prospects_activity,
@@ -24,8 +33,10 @@ from app.activities.qualification_activity import qualify_lead_llm_activity
 from app.activities.sla_activity import trigger_sla_escalation_activity
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.workflows.battlecard_workflow import BattlecardWorkflow
 from app.workflows.deal_diagnostic_workflow import DealDiagnosticWorkflow
 from app.workflows.inbound_lead import WhipstitchLeadWorkflow
+from app.workflows.meeting_prep_workflow import MeetingPrepWorkflow
 from app.workflows.outbound_workflow import OutboundProspectingWorkflow
 
 logger = get_logger(__name__)
@@ -48,7 +59,13 @@ async def run_worker():
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
-        workflows=[WhipstitchLeadWorkflow, OutboundProspectingWorkflow, DealDiagnosticWorkflow],
+        workflows=[
+            WhipstitchLeadWorkflow,
+            OutboundProspectingWorkflow,
+            DealDiagnosticWorkflow,
+            BattlecardWorkflow,
+            MeetingPrepWorkflow,
+        ],
         activities=[
             log_execution_step_activity,
             enrich_lead_waterfall_activity,
@@ -65,6 +82,11 @@ async def run_worker():
             extract_medpicc_scores_activity,
             update_crm_deal_stage_activity,
             render_medpicc_pdf_activity,
+            generate_competitor_battlecard_activity,
+            auto_generate_tenant_battlecards_activity,
+            classify_account_signal_activity,
+            build_meeting_briefing_activity,
+            build_champion_kit_activity,
         ],
     )
 

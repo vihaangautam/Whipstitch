@@ -16,6 +16,7 @@ from app.core.security import (
 from app.db.models import Tenant, User
 from app.db.session import get_db_session
 from app.models.auth_schemas import (
+    OnboardingRequest,
     TokenResponse,
     UserLoginRequest,
     UserRegisterRequest,
@@ -24,6 +25,30 @@ from app.models.auth_schemas import (
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/auth", tags=["User Authentication & Profile"])
+
+
+async def _resolve_tenant(session: AsyncSession, user: User):
+    """Returns (tenant_key, tenant_config) for a user, with safe fallbacks."""
+    if not user.tenant_id:
+        return "trifid_media", {}
+    res = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
+    tenant = res.scalar_one_or_none()
+    if not tenant:
+        return "trifid_media", {}
+    return tenant.tenant_key, (tenant.config or {})
+
+
+def _user_response(user: User, tenant_key: str, tenant_config: dict) -> UserResponse:
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        tenant_id=tenant_key,
+        is_active=user.is_active,
+        onboarded=bool(tenant_config.get("onboarded", False)),
+        created_at=user.created_at,
+    )
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -59,6 +84,7 @@ async def register(
             tenant_key=tenant_key,
             name=company or tenant_key.replace("_", " ").title(),
             config={
+                "onboarded": False,
                 "icp_criteria": {
                     "employee_count_min": 50,
                     "employee_count_max": 500,
@@ -99,18 +125,11 @@ async def register(
     access_token = create_access_token(token_data)
 
     logger.info("user_registered_successfully", user_id=str(user.id), email=user.email)
+    _key, _cfg = await _resolve_tenant(session, user)
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse(
-            id=str(user.id),
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role,
-            tenant_id=tenant_key,
-            is_active=user.is_active,
-            created_at=user.created_at,
-        ),
+        user=_user_response(user, _key, _cfg),
     )
 
 
@@ -138,13 +157,7 @@ async def login(
             detail="Account is deactivated.",
         )
 
-    # Fetch tenant key if associated
-    tenant_key = "trifid_media"
-    if user.tenant_id:
-        t_res = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        if tenant:
-            tenant_key = tenant.tenant_key
+    tenant_key, tenant_cfg = await _resolve_tenant(session, user)
 
     token_data = {
         "sub": str(user.id),
@@ -159,15 +172,7 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse(
-            id=str(user.id),
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role,
-            tenant_id=tenant_key,
-            is_active=user.is_active,
-            created_at=user.created_at,
-        ),
+        user=_user_response(user, tenant_key, tenant_cfg),
     )
 
 
@@ -208,18 +213,11 @@ async def demo_login(
     }
     access_token = create_access_token(token_data)
 
+    _key, _cfg = await _resolve_tenant(session, user)
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse(
-            id=str(user.id),
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role,
-            tenant_id="trifid_media",
-            is_active=user.is_active,
-            created_at=user.created_at,
-        ),
+        user=_user_response(user, _key, {**_cfg, "onboarded": True}),
     )
 
 
@@ -229,19 +227,51 @@ async def get_my_profile(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Retrieves current authenticated user profile."""
-    tenant_key = "trifid_media"
-    if user.tenant_id:
-        t_res = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        if tenant:
-            tenant_key = tenant.tenant_key
+    tenant_key, tenant_cfg = await _resolve_tenant(session, user)
+    return _user_response(user, tenant_key, tenant_cfg)
 
-    return UserResponse(
-        id=str(user.id),
-        email=user.email,
-        full_name=user.full_name,
-        role=user.role,
-        tenant_id=tenant_key,
-        is_active=user.is_active,
-        created_at=user.created_at,
+
+@router.post("/onboarding", response_model=UserResponse)
+async def complete_onboarding(
+    payload: OnboardingRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Persists workspace setup answers into the tenant config and marks it onboarded."""
+    if not user.tenant_id:
+        raise HTTPException(status_code=400, detail="User has no workspace to configure.")
+
+    res = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
+    tenant = res.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Workspace not found.")
+
+    config = dict(tenant.config or {})
+    icp = dict(config.get("icp_criteria", {}))
+    if payload.target_industries:
+        icp["target_industries"] = payload.target_industries
+    if payload.geographies:
+        icp["geographies"] = payload.geographies
+    if payload.employee_count_min is not None:
+        icp["employee_count_min"] = payload.employee_count_min
+    if payload.employee_count_max is not None:
+        icp["employee_count_max"] = payload.employee_count_max
+
+    config.update(
+        {
+            "company_description": payload.company_description.strip(),
+            "offering": payload.offering.strip(),
+            "icp_criteria": icp,
+            "onboarded": True,
+        }
     )
+    if payload.target_decision_maker_roles:
+        config["target_decision_maker_roles"] = payload.target_decision_maker_roles
+    if payload.trigger_roles:
+        config["trigger_roles"] = payload.trigger_roles
+
+    tenant.config = config
+    await session.commit()
+    logger.info("tenant_onboarding_completed", tenant_key=tenant.tenant_key, user_id=str(user.id))
+
+    return _user_response(user, tenant.tenant_key, config)

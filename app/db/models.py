@@ -268,6 +268,46 @@ class EvidenceQuote(Base):
     score_item = relationship("MEDPICCScore", back_populates="evidence_quotes")
 
 
+class Meeting(Base):
+    __tablename__ = "meetings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    deal_id = Column(UUID(as_uuid=True), nullable=True)
+    title = Column(String(500), nullable=False)
+    company_name = Column(String(255), nullable=False)
+    tenant_track = Column(String(64), default="Service / Retainer", nullable=False)
+    buyer_tier = Column(String(64), default="Tier 1: Founder-Led SMB", nullable=False)
+    deal_size = Column(Float, nullable=True)
+    currency = Column(String(8), default="INR", nullable=False)
+    offering_summary = Column(Text, nullable=True)
+    scheduled_time = Column(String(128), nullable=True)
+    objective = Column(String(255), nullable=True)
+    attendees_json = Column(JSONB, nullable=False, default=list)  # list of MeetingAttendee dicts
+    champion_name = Column(String(255), nullable=True)
+    champion_title = Column(String(255), nullable=True)
+    briefing_json = Column(JSONB, nullable=True)        # cached PreCallBriefing
+    champion_kit_json = Column(JSONB, nullable=True)    # cached ChampionSellingKit
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
+class TenantBattlecard(Base):
+    __tablename__ = "tenant_battlecards"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    competitor_id = Column(String(128), nullable=False)   # slug, unique per tenant
+    competitor_name = Column(String(255), nullable=False)
+    card_json = Column(JSONB, nullable=False)             # full CompetitorBattlecard
+    generated_by = Column(String(32), default="llm", nullable=False)  # llm | template
+    model_used = Column(String(64), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    __table_args__ = (Index("ix_tenant_battlecards_tenant_competitor", "tenant_id", "competitor_id", unique=True),)
+
+
 class BuyingCommitteeMember(Base):
     __tablename__ = "buying_committee_members"
 

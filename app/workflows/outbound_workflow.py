@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Any, Dict, List
 from temporalio import workflow
 
-with workflow.unsafe.imports_passed_by_value():
+with workflow.unsafe.imports_passed_through():
     from app.activities.outbound_activity import (
         discover_decision_maker_activity,
         discover_prospects_activity,
@@ -51,11 +51,10 @@ class OutboundProspectingWorkflow:
                 workflow.logger.info(f"Prospect {company_name} ({domain}) disqualified at circuit breaker gate.")
                 continue
 
-            # Step B: Decision-Maker Finder
-            target_roles = ["Head of Marketing", "Founder", "VP Growth"]
+            # Step B: Decision-Maker Finder (buyer titles resolved from tenant config)
             dm_info: Dict[str, Any] = await workflow.execute_activity(
                 discover_decision_maker_activity,
-                args=[prospect_id, company_name, domain, target_roles],
+                args=[prospect_id, company_name, domain, None, tenant_key],
                 start_to_close_timeout=activity_timeout,
             )
 

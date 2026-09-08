@@ -46,44 +46,6 @@ async def get_committee_members(
         select(BuyingCommitteeMember).where(BuyingCommitteeMember.deal_id == deal_uuid)
     )
     members = res.scalars().all()
-    if not members:
-        # Return sensible default roster if not populated yet
-        return [
-            CommitteeMemberSchema(
-                id=str(uuid.uuid4()),
-                deal_id=deal_id,
-                name="Sarah Chen",
-                role="VP RevOps",
-                tag="Internal Champion",
-                status="Engaged",
-                email="sarah.chen@apexlogistics.com",
-            ),
-            CommitteeMemberSchema(
-                id=str(uuid.uuid4()),
-                deal_id=deal_id,
-                name="Unassigned",
-                role="Chief Financial Officer",
-                tag="Budget Owner",
-                status="Missing",
-            ),
-            CommitteeMemberSchema(
-                id=str(uuid.uuid4()),
-                deal_id=deal_id,
-                name="David Miller",
-                role="Head of InfoSec",
-                tag="Security Reviewer",
-                status="Pending",
-                email="david.miller@apexlogistics.com",
-            ),
-            CommitteeMemberSchema(
-                id=str(uuid.uuid4()),
-                deal_id=deal_id,
-                name="Emma Watson",
-                role="Procurement Counsel",
-                tag="Legal & Contracts",
-                status="Uncontacted",
-            ),
-        ]
 
     return [
         CommitteeMemberSchema(
@@ -149,8 +111,8 @@ async def auto_find_committee_candidate(
     deal_res = await session.execute(select(Deal).where(Deal.id == deal_uuid))
     deal = deal_res.scalar_one_or_none()
 
-    company_name = payload.company_name or (deal.company_name if deal else "Apex Logistics Global")
-    domain = payload.domain or (deal.domain if deal else "apexlogistics.com")
+    company_name = payload.company_name or (deal.company_name if deal else "")
+    domain = payload.domain or (deal.domain if deal else "")
 
     candidate = await committee_service.auto_find_candidate(
         company_name=company_name,
@@ -169,8 +131,8 @@ async def auto_find_committee_candidate(
 async def stream_committee_discovery(
     deal_id: str,
     role_tag: str = Query("Budget Owner", description="Target missing committee role"),
-    company_name: str = Query("Apex Logistics Global"),
-    domain: str = Query("apexlogistics.com"),
+    company_name: str = Query(""),
+    domain: str = Query(""),
 ):
     """Streams real-time agent execution events as candidate executives are discovered and verified."""
 

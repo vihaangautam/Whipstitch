@@ -112,7 +112,7 @@ Return ONLY a JSON object with this exact schema:
     if settings.GEMINI_API_KEY and "mock" not in settings.GEMINI_API_KEY.lower():
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {"response_mime_type": "application/json"},
@@ -134,7 +134,7 @@ Return ONLY a JSON object with this exact schema:
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
                     json={
-                        "model": "llama-3.3-70b-versatile",
+                        "model": "openai/gpt-oss-20b",
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": {"type": "json_object"},
                     },

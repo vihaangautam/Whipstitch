@@ -50,15 +50,26 @@ async def update_tenant_config(
         result = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
         tenant = result.scalar_one_or_none()
 
+        new_config = config_update.model_dump()
         if not tenant:
             tenant = Tenant(
                 tenant_key=tenant_id,
                 name=tenant_id.replace("_", " ").title(),
-                config=config_update.model_dump(),
+                config=new_config,
             )
             session.add(tenant)
         else:
-            tenant.config = config_update.model_dump()
+            # A full-schema POST carries defaults for every field; don't let those clobber
+            # values this workspace already set through onboarding but this form doesn't edit.
+            existing = tenant.config or {}
+            new_config["onboarded"] = new_config.get("onboarded") or existing.get("onboarded", False)
+            for k in ("company_description", "offering", "trigger_roles", "target_decision_maker_roles"):
+                if not new_config.get(k) and existing.get(k):
+                    new_config[k] = existing[k]
+            # icp_criteria is a nested dict — keep sub-keys the form omits (e.g. trigger data)
+            merged_icp = {**existing.get("icp_criteria", {}), **new_config.get("icp_criteria", {})}
+            new_config["icp_criteria"] = merged_icp
+            tenant.config = new_config
 
         await session.commit()
         logger.info("tenant_config_updated", tenant_id=tenant_id)

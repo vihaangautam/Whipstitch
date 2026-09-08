@@ -1,6 +1,22 @@
 """Pydantic schemas and data contracts for Competitor Battlecards and 6-Signal Agent."""
 from typing import Any, Dict, List, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_EVIDENCE_BASES = ("tenant_verified_intel", "category_structural_pattern", "socratic_inquiry")
+
+
+def _normalise_evidence_basis(v: Any) -> str:
+    """Coerce free-form model output onto one of the three claims-safety categories."""
+    if not v:
+        return "category_structural_pattern"
+    s = str(v).strip().lower().replace(" ", "_").replace("-", "_")
+    if s in _EVIDENCE_BASES:
+        return s
+    if any(k in s for k in ("verified", "tenant", "closed_won", "customer_quote", "case_study")):
+        return "tenant_verified_intel"
+    if any(k in s for k in ("question", "socratic", "inquiry", "probe", "ask_the_buyer")):
+        return "socratic_inquiry"
+    return "category_structural_pattern"
 
 
 class BattlecardKillShot(BaseModel):
@@ -10,10 +26,12 @@ class BattlecardKillShot(BaseModel):
     the_counter_strike: str = Field(..., description="The exact Socratic question or pivot for the sales rep to expose the weakness.")
     verbatim_soundbite: str = Field(..., description="Crisp, executive soundbite the rep can say word-for-word.")
     evidence_proof: Optional[str] = Field(default=None, description="Customer metric, technical benchmark, or case study proof.")
-    evidence_basis: Literal["tenant_verified_intel", "category_structural_pattern", "socratic_inquiry"] = Field(
+    evidence_basis: str = Field(
         default="category_structural_pattern",
-        description="Legal safety categorization: verified tenant intel vs safe category structural pattern vs probing question."
+        description="Claims-safety basis: 'tenant_verified_intel', 'category_structural_pattern', or 'socratic_inquiry'.",
     )
+
+    _norm_basis = field_validator("evidence_basis", mode="before")(_normalise_evidence_basis)
 
 
 class ObjectionHandlingEntry(BaseModel):
@@ -29,6 +47,17 @@ class BlackboardStageResult(BaseModel):
     executive_summary: str = Field(..., description="High-level finding from this stage.")
     details: Dict[str, Any] = Field(default_factory=dict, description="Structured attributes extracted in this stage.")
 
+    @field_validator("details", mode="before")
+    @classmethod
+    def _coerce_details(cls, v):
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, (list, tuple)):
+            return {f"point_{i + 1}": str(x) for i, x in enumerate(v)}
+        return {"note": str(v)}
+
 
 class CompetitorBattlecard(BaseModel):
     id: str = Field(..., description="Unique competitor ID (e.g. 'zoominfo', 'apollo-alone').")
@@ -39,6 +68,8 @@ class CompetitorBattlecard(BaseModel):
     feature_gaps: List[str] = Field(default_factory=list, description="Key functional capabilities they lack.")
     evidence_basis: str = Field(default="category_structural_pattern", description="Audit classification for claims safety.")
     leakage_calculation_basis: Optional[str] = Field(default=None, description="Transparent explanation of how financial impact was derived.")
+
+    _norm_basis = field_validator("evidence_basis", mode="before")(_normalise_evidence_basis)
     
     # Core Deliverables
     kill_shots: List[BattlecardKillShot] = Field(default_factory=list, description="Lethal landmines and trap questions.")
@@ -74,6 +105,7 @@ class AccountSignal(BaseModel):
 
 class GenerateBattlecardRequest(BaseModel):
     competitor_name: str = Field(..., description="Name of the rival or in-house alternative.")
+    tenant_id: Optional[str] = Field(default="trifid_media", description="Tenant key for context + persistence.")
     buyer_company: Optional[str] = Field(default=None, description="Prospect evaluating this competitor.")
     seller_company: Optional[str] = Field(default="Whipstitch", description="Our product or agency name.")
     tenant_offering: Optional[str] = Field(default=None, description="What the tenant sells (e.g., Performance Creative Retainer).")

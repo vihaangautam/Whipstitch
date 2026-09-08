@@ -111,3 +111,51 @@ async def test_auth_registration_and_login():
             json={"email": unique_email, "password": "WrongPassword999!"},
         )
         assert bad_login.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_new_workspace_requires_onboarding_then_completes():
+    """A freshly registered company workspace is not onboarded until the wizard is submitted."""
+    email = f"founder_{hash_password('seed2')[:8]}@example.com"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg = await client.post(
+            "/v1/auth/register",
+            json={
+                "email": email,
+                "password": "SecurePassword123!",
+                "full_name": "Sam Founder",
+                "company_name": f"Wizard Co {hash_password('seed2')[:6]}",
+            },
+        )
+        assert reg.status_code == 201
+        token = reg.json()["access_token"]
+        assert reg.json()["user"]["onboarded"] is False
+
+        auth = {"Authorization": f"Bearer {token}"}
+        done = await client.post(
+            "/v1/auth/onboarding",
+            headers=auth,
+            json={
+                "company_description": "We sell CRM automation.",
+                "offering": "Managed lead routing.",
+                "target_industries": ["B2B SaaS", "Fintech"],
+                "geographies": ["US"],
+                "target_decision_maker_roles": ["VP RevOps"],
+                "trigger_roles": ["Sales Operations Manager", "RevOps Analyst"],
+                "employee_count_min": 50,
+                "employee_count_max": 500,
+            },
+        )
+        assert done.status_code == 200
+        assert done.json()["onboarded"] is True
+
+        me = await client.get("/v1/auth/me", headers=auth)
+        assert me.json()["onboarded"] is True
+
+        from app.core.config import settings
+        cfg = await client.get(
+            f"/v1/tenants/{me.json()['tenant_id']}/config",
+            headers={"X-API-Key": settings.API_KEY},
+        )
+        assert cfg.status_code == 200
+        assert cfg.json()["trigger_roles"] == ["Sales Operations Manager", "RevOps Analyst"]

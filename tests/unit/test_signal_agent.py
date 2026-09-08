@@ -3,18 +3,15 @@ import pytest
 from app.services.signals.autonomous_signal_agent import AutonomousSignalAgent
 
 
-def test_seed_signals_loaded():
+def test_signals_start_empty_and_accumulate_from_ingestion():
     agent = AutonomousSignalAgent()
-    signals = agent.list_signals()
-    assert len(signals) >= 6
+    assert agent.list_signals() == []  # no seed fixtures
 
-    types = {s.signal_type for s in signals}
-    assert "leadership_shift" in types
-    assert "capital_expansion" in types
-    assert "tech_stack_migration" in types
-    assert "compliance_infosec" in types
-    assert "incumbent_churn" in types
-    assert "velocity_surge" in types
+    agent.classify_signal("Acme", "Acme hires new VP Sales", "Ex-Snowflake exec joins.")
+    agent.classify_signal("Beta Inc", "Beta Inc raises $30M Series B", "Funds accelerate expansion.")
+    signals = agent.list_signals()
+    assert len(signals) == 2
+    assert {s.signal_type for s in signals} == {"leadership_shift", "capital_expansion"}
 
 
 def test_classify_leadership_shift():

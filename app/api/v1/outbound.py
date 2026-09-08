@@ -83,7 +83,7 @@ async def trigger_outbound_prospecting(
                 if not icp_res.get("is_viable_prospect", True):
                     continue
                 dm_res = await discover_decision_maker_activity(
-                    p_id, c_name, dom, ["Head of Marketing", "Founder", "VP Growth"]
+                    p_id, c_name, dom, None, payload.tenant_id
                 )
                 res_data = await research_prospect_activity(
                     p_id, c_name, dom, "ugc creator marketing roas product features"

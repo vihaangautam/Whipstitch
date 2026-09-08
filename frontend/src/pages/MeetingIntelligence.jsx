@@ -35,7 +35,7 @@ import {
 import InfoTooltip from '../components/InfoTooltip';
 
 function formatCurrency(amount, currency = 'INR') {
-  if (!amount && amount !== 0) return currency === 'INR' ? '₹28 Lakhs' : '$60,000';
+  if (!amount && amount !== 0) return currency === 'INR' ? '₹—' : '$—';
   const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
   if (currency === 'INR') {
     if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
@@ -82,10 +82,10 @@ export default function MeetingIntelligence({ currentTenant }) {
   // New Meeting Form
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
-  const [newOffering, setNewOffering] = useState('Organic Search & SEO Retainer');
+  const [newOffering, setNewOffering] = useState('');
   const [newTrack, setNewTrack] = useState('Service / Retainer');
-  const [newTier, setNewTier] = useState('Tier 2: Growth Scale-up');
-  const [newDealSize, setNewDealSize] = useState('2800000');
+  const [newTier, setNewTier] = useState('Tier 1: Founder-Led SMB');
+  const [newDealSize, setNewDealSize] = useState('');
   const [newCurrency, setNewCurrency] = useState('INR');
   const [newTime, setNewTime] = useState('');
   const [newEmails, setNewEmails] = useState('');
@@ -149,9 +149,9 @@ export default function MeetingIntelligence({ currentTenant }) {
           company_name: newCompany,
           tenant_track: newTrack,
           buyer_tier: newTier,
-          deal_size: parseFloat(newDealSize) || 2800000,
+          deal_size: parseFloat(newDealSize) || null,
           currency: newCurrency,
-          offering_summary: newOffering,
+          offering_summary: newOffering || null,
           scheduled_time: newTime || 'Upcoming Call',
           attendee_emails: emailList,
         },
@@ -229,8 +229,30 @@ Soundbite: "${championKit.filter_7_shadow_influence_landmines.verbatim_soundbite
     { key: 'f7', badge: 'Angle 7', data: championKit.filter_7_shadow_influence_landmines, icon: Briefcase, border: 'border-purple-200 bg-purple-50/40' },
   ] : [];
 
+  const companyLabel = (currentTenant || 'your company').replace(/_/g, ' ');
+  const hasMeetings = meetings.length > 0;
+
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
+      {!hasMeetings && !isLoading ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 shadow-card flex flex-col items-center text-center gap-3">
+          <div className="p-3 rounded-xl bg-slate-900 text-white">
+            <Calendar className="w-6 h-6 text-emerald-400" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 capitalize">
+            No scheduled meetings in the {companyLabel} workspace yet
+          </h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Add a prospect meeting with real attendee emails — Whipstitch builds the pre-call
+            briefing and champion cheat sheet from their profiles and live company signals.
+          </p>
+          <button onClick={() => setShowNewMeetingModal(true)} className="btn-primary px-4 py-2 text-xs mt-1">
+            <Plus className="w-3.5 h-3.5" />
+            <span>Schedule New Meeting</span>
+          </button>
+        </div>
+      ) : (
+      <>
       {/* ─── 1. TOP HEADER & WORKSPACE TOOLBAR ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-3.5">
@@ -702,6 +724,8 @@ Soundbite: "${championKit.filter_7_shadow_influence_landmines.verbatim_soundbite
             ))}
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* ─── 6. NEW MEETING MODAL ─── */}

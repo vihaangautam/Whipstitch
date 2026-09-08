@@ -106,7 +106,10 @@ async def _seed_default_data(session: AsyncSession):
         tenant_key="trifid_media",
         name="Trifid Media",
         config={
+            "onboarded": True,
             "industry": "Agency & B2B SaaS",
+            "company_description": "Trifid Media runs performance-marketing and SEO retainers for D2C and B2B SaaS brands.",
+            "offering": "Managed growth retainers (SEO, paid, UGC creative) with senior-only delivery and turnaround SLAs.",
             "icp_criteria": {
                 "min_employees": 10,
                 "target_roles": ["Founder", "VP Marketing", "Head of Growth", "CCO"],

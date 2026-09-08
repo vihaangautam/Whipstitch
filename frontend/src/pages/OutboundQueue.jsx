@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Rocket, CheckCircle2, XCircle, RefreshCw, Building2, User, Linkedin, Globe, Sparkles } from 'lucide-react';
+import { Rocket, CheckCircle2, XCircle, RefreshCw, Building2, User, Linkedin, Globe, Sparkles, Briefcase } from 'lucide-react';
 import { fetchOutboundProspects, triggerOutboundBatch, approveOutboundProspect } from '../api';
+
+const CONFIDENCE_BADGE = {
+  verified: { label: 'Verified', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  probable: { label: 'Probable', cls: 'bg-blue-50 text-blue-800 border-blue-200' },
+  inferred: { label: 'Inferred', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+};
 
 export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
   const [prospects, setProspects] = useState([]);
@@ -42,7 +48,8 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Outbound Prospecting Queue</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Verified decision makers, Crawl4AI signal filtering & Human-in-the-Loop CRM staging.
+            Signal-based account discovery, contact resolution & human-in-the-loop CRM staging.
+            Every contact carries a confidence badge — review before you send.
           </p>
         </div>
         <button
@@ -76,6 +83,9 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
             const isApproved = p.scrape_status === 'approved';
             const isRejected = p.scrape_status === 'rejected';
             const hasContact = Boolean(p.decision_maker_name);
+            const signals = p.signals_json || {};
+            const badge = CONFIDENCE_BADGE[signals.confidence_label] || CONFIDENCE_BADGE.inferred;
+            const hiringLabel = signals.hiring_signal_label;
 
             return (
               <div
@@ -88,8 +98,14 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                       {p.company_name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <h3 className="font-bold text-base text-slate-900">{p.company_name}</h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border ${badge.cls}`}
+                          title="Contact confidence. The free discovery path never reaches 'Verified'."
+                        >
+                          {badge.label}
+                        </span>
                         <a
                           href={`https://${p.domain}`}
                           target="_blank"
@@ -100,8 +116,13 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                           {p.domain}
                         </a>
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5 font-medium">
-                        {p.industry || 'B2B Software'}
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium flex items-center gap-2 flex-wrap">
+                        <span>{p.industry || 'Industry not resolved'}</span>
+                        {hiringLabel && (
+                          <span className="inline-flex items-center gap-1 text-slate-600">
+                            <Briefcase className="w-3 h-3" /> {hiringLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

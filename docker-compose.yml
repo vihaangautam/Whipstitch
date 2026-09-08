@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   fastapi-app:
     build:
@@ -8,24 +6,13 @@ services:
     container_name: whipstitch_app
     ports:
       - "8000:8000"
+    env_file: .env
     environment:
-      - ENVIRONMENT=development
-      - LOG_LEVEL=INFO
-      - API_KEY=whipstitch-dev-key-12345
-      - TENANT_DEFAULT_ID=trifid_media
       - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=whipstitch_db
-      - POSTGRES_USER=whipstitch_user
-      - POSTGRES_PASSWORD=whipstitch_password
-      - DATABASE_URL=postgresql+asyncpg://whipstitch_user:whipstitch_password@postgres:5432/whipstitch_db
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://whipstitch_user:whipstitch_password@postgres:5432/whipstitch_db
       - TEMPORAL_HOST=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      - TEMPORAL_TASK_QUEUE=whipstitch-inbound-queue
-      - MOCK_APOLLO=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,6 +20,30 @@ services:
         condition: service_healthy
       temporal:
         condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whipstitch_worker
+    command: ["python", "-m", "app.worker"]
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://whipstitch_user:whipstitch_password@postgres:5432/whipstitch_db
+      - TEMPORAL_HOST=temporal:7233
+    depends_on:
+      fastapi-app:
+        condition: service_started
+      temporal:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
