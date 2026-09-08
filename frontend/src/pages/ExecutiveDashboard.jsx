@@ -156,18 +156,12 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
 
   return (
     <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
-      {/* Top Banner / Control Center */}
+      {/* Top Banner */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-200 pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-xs font-semibold text-slate-500">
-              Live Control Center
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Executive Dashboard</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Telemetry & pipeline execution for <span className="text-slate-900 font-semibold">{currentTenant === 'trifid_media' ? 'Trifid Media' : 'Acme Global'}</span>
+            Pipeline telemetry and opportunity tracking for <span className="text-slate-900 font-semibold">{currentTenant === 'trifid_media' ? 'Trifid Media' : 'Acme Global'}</span>
           </p>
         </div>
 
@@ -198,7 +192,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
             value: (summaryData?.total_leads_inbound ?? 0).toLocaleString(),
             change: `${summaryData?.total_leads_inbound ?? 0} total`,
             changeType: 'positive',
-            sub: 'Validated & Deduplicated',
+            sub: 'Inbound submissions',
             icon: Inbox,
             iconColor: 'text-slate-700',
             bgColor: 'bg-slate-100 border-slate-200',
@@ -208,7 +202,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
             value: `${summaryData?.sla_compliance_rate ?? 100}%`,
             change: '15m window',
             changeType: 'emerald',
-            sub: 'Zero Breached Hot Leads',
+            sub: '15-minute response target',
             icon: Timer,
             iconColor: 'text-emerald-700',
             bgColor: 'bg-emerald-50 border-emerald-200',
@@ -220,7 +214,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
             valueSuffix: '/100',
             change: summaryData?.avg_lead_score >= 70 ? 'High Fit' : summaryData?.avg_lead_score > 0 ? 'Evaluating' : 'Pending',
             changeType: summaryData?.avg_lead_score >= 70 ? 'emerald' : 'blue',
-            sub: 'Pydantic Validated',
+            sub: 'Qualification criteria',
             icon: ShieldCheck,
             iconColor: 'text-blue-700',
             bgColor: 'bg-blue-50 border-blue-200',
@@ -231,7 +225,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
             value: `${summaryData?.staged_awaiting_approval ?? 0}`,
             change: `${summaryData?.staged_awaiting_approval ?? 0} queued`,
             changeType: 'slate',
-            sub: 'Human-in-the-Loop',
+            sub: 'Awaiting sales review',
             icon: Rocket,
             iconColor: 'text-indigo-700',
             bgColor: 'bg-indigo-50 border-indigo-200',
@@ -286,8 +280,8 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
               <h2 className="text-base font-bold text-slate-900 tracking-tight">Workflow Telemetry</h2>
               <p className="text-xs text-slate-500 mt-0.5">Last 7 days throughput (Inbound vs Outbound)</p>
             </div>
-            <span className="text-xs font-semibold bg-emerald-50 text-emerald-800 px-3 py-1 rounded-md border border-emerald-200">
-              1,000 req/min cap
+            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+              Last 7 days
             </span>
           </div>
 
@@ -308,7 +302,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>Idempotent Ingestion SLA: 99.98%</span>
+            <span>System status: Operational</span>
             <button
               onClick={() => onNavigate('analytics')}
               className="text-emerald-800 hover:text-emerald-900 font-semibold hover:underline"
@@ -322,12 +316,11 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
         <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-4 flex flex-col justify-between">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-700" />
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">Live Event Log</h2>
+              <Activity className="w-4 h-4 text-slate-600" />
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">Recent Activity</h2>
             </div>
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Temporal Engine Live
+            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+              Live Stream
             </span>
           </div>
 
@@ -338,21 +331,21 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
                   key={idx}
                   className="p-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition text-xs flex items-start gap-2.5"
                 >
-                  <span className="text-emerald-800 font-bold shrink-0">{log.time}</span>
-                  <span className="text-slate-800 font-medium leading-relaxed">{log.text}</span>
+                  <span className="text-slate-900 font-semibold shrink-0">{log.time}</span>
+                  <span className="text-slate-700 font-medium leading-relaxed">{log.text}</span>
                 </div>
               ))
             ) : (
               <div className="py-12 text-center text-slate-400 space-y-2">
                 <Activity className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="font-semibold text-slate-600">No recent execution logs</p>
-                <p className="text-xs text-slate-400">Execution events will stream here live when workflows run.</p>
+                <p className="font-semibold text-slate-600">No recent activity logs</p>
+                <p className="text-xs text-slate-400">Events will stream here automatically as workflows run.</p>
               </div>
             )}
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>worker pool: operational (42ms avg)</span>
+            <span>Workflow audit events</span>
             <button
               onClick={() => onNavigate('inbound')}
               className="text-emerald-800 hover:text-emerald-900 font-semibold hover:underline"

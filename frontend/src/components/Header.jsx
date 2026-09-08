@@ -6,6 +6,7 @@ export default function Header({
   setCurrentView,
   currentTenant,
   setCurrentTenant,
+  summaryData,
   onRefresh,
   isRefreshing,
   currentUser,
@@ -112,10 +113,12 @@ export default function Header({
               </div>
 
               {/* Apollo Credits Indicator */}
-              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-medium">
-                <Database className="w-3.5 h-3.5 text-emerald-600" />
-                <span>12/50 Credits</span>
-              </div>
+              {summaryData && (
+                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium">
+                  <Database className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{summaryData.apollo_credits_used ?? 0}/{summaryData.apollo_credits_max ?? 50} Credits</span>
+                </div>
+              )}
 
               {/* Telemetry Refresh */}
               <button
@@ -146,14 +149,14 @@ export default function Header({
                     className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 transition cursor-pointer text-left focus:outline-none"
                     aria-label="User Profile Menu"
                   >
-                    <div className="w-7 h-7 rounded-full bg-slate-900 text-emerald-400 border border-slate-700 flex items-center justify-center text-xs font-bold shadow-sm">
+                    <div className="w-7 h-7 rounded-full bg-slate-900 text-slate-100 border border-slate-700 flex items-center justify-center text-xs font-semibold shadow-xs">
                       {initials}
                     </div>
                     <div className="hidden lg:block text-left">
                       <div className="text-xs font-semibold text-slate-900 leading-tight">
                         {currentUser.full_name || 'Alex Morgan'}
                       </div>
-                      <div className="text-[10px] text-emerald-600 font-medium leading-tight flex items-center gap-1">
+                      <div className="text-[10px] text-slate-500 font-medium leading-tight flex items-center gap-1">
                         <Shield className="w-2.5 h-2.5" />
                         <span>Sales Representative</span>
                       </div>
@@ -176,9 +179,9 @@ export default function Header({
                     <div className="px-4 py-3 border-b border-slate-100">
                       <p className="text-xs font-bold text-slate-900">{currentUser.full_name || 'Alex Morgan'}</p>
                       <p className="text-[11px] text-slate-500 truncate">{currentUser.email || 'rep@trifidmedia.in'}</p>
-                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-semibold border border-emerald-200">
-                        <CheckCircle className="w-3 h-3 text-emerald-600" />
-                        <span>Sales Representative &bull; Full Access</span>
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[10px] font-medium border border-slate-200">
+                        <Shield className="w-3 h-3 text-slate-500" />
+                        <span>Sales Representative</span>
                       </div>
                     </div>
 

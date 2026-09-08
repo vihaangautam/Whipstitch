@@ -87,6 +87,7 @@ export default function App() {
         setCurrentView={setCurrentView}
         currentTenant={currentTenant}
         setCurrentTenant={setCurrentTenant}
+        summaryData={summaryData}
         onRefresh={loadSummary}
         isRefreshing={isRefreshing}
         currentUser={currentUser}
