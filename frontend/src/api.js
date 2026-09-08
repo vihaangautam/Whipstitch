@@ -112,17 +112,17 @@ export async function fetchAnalyticsSummary(tenantId = "trifid_media") {
     if (!res.ok) throw new Error("Failed to fetch analytics summary");
     return await res.json();
   } catch (err) {
-    console.warn("Using fallback analytics summary", err);
+    console.warn("Analytics summary error", err);
     return {
       tenant_id: tenantId,
-      total_leads_inbound: 1248,
-      total_prospects_outbound: 42,
-      staged_awaiting_approval: 18,
-      sla_compliance_rate: 98.4,
-      avg_lead_score: 84,
-      apollo_credits_used: 12,
+      total_leads_inbound: 0,
+      total_prospects_outbound: 0,
+      staged_awaiting_approval: 0,
+      sla_compliance_rate: 100.0,
+      avg_lead_score: 0,
+      apollo_credits_used: 0,
       apollo_credits_max: 50,
-      active_workflows_count: 12,
+      active_workflows_count: 0,
       systems_status: "operational",
     };
   }
@@ -134,27 +134,36 @@ export async function fetchLeadsOverTime(tenantId = "trifid_media", days = 7) {
     if (!res.ok) throw new Error("Failed to fetch leads over time");
     return await res.json();
   } catch (err) {
+    console.warn("Leads over time error", err);
     return {
-      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      labels: [],
       datasets: [
-        {
-          label: "Inbound Webhooks",
-          data: [42, 68, 95, 110, 84, 52, 76],
-          borderColor: "#b9f612",
-          backgroundColor: "rgba(185, 246, 18, 0.15)",
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: "Outbound Prospecting",
-          data: [20, 35, 40, 48, 55, 30, 42],
-          borderColor: "#c0c1ff",
-          backgroundColor: "rgba(192, 193, 255, 0.15)",
-          tension: 0.3,
-          fill: true,
-        },
+        { label: "Inbound Ingested", data: [], borderColor: "#059669" },
+        { label: "Outbound Discovered", data: [], borderColor: "#2563EB" },
       ],
     };
+  }
+}
+
+export async function fetchPipelineAnalytics(tenantId = "trifid_media") {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/analytics/pipeline?tenant_id=${tenantId}`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch pipeline analytics");
+    return await res.json();
+  } catch (err) {
+    console.warn("Pipeline analytics fetch error", err);
+    return null;
+  }
+}
+
+export async function fetchAuditLogs(tenantId = "trifid_media", limit = 10) {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/analytics/audit-logs?tenant_id=${tenantId}&limit=${limit}`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch audit logs");
+    return await res.json();
+  } catch (err) {
+    console.warn("Audit logs fetch error", err);
+    return [];
   }
 }
 
@@ -167,86 +176,15 @@ export async function fetchInboundLeads(tenantId = "trifid_media", search = "", 
     if (!res.ok) throw new Error("Failed to fetch leads");
     return await res.json();
   } catch (err) {
-    console.warn("Using fallback leads data", err);
-    return [
-      {
-        id: "00000000-0000-0000-0000-000000000001",
-        company_name: "FintechCorp Asia",
-        email: "priya.sharma@fintechcorp.io",
-        lead_score: 92,
-        provider_used: "apollo",
-        status: "synced",
-        created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-      },
-      {
-        id: "00000000-0000-0000-0000-000000000002",
-        company_name: "NovaScale Technologies",
-        email: "alex.chen@novascale.io",
-        lead_score: 88,
-        provider_used: "crawl4ai",
-        status: "synced",
-        created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-      },
-      {
-        id: "00000000-0000-0000-0000-000000000003",
-        company_name: "ApexPay Solutions",
-        email: "sarah.j@apexpay.com",
-        lead_score: 42,
-        provider_used: "llm_fallback",
-        status: "scoring",
-        created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      },
-      {
-        id: "00000000-0000-0000-0000-000000000004",
-        company_name: "HyperGrowth Labs",
-        email: "david.m@hypergrowth.co",
-        lead_score: 95,
-        provider_used: "people_data_labs",
-        status: "synced",
-        created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      }
-    ];
+    console.warn("Failed to fetch inbound leads", err);
+    return [];
   }
 }
 
 export async function fetchLeadDetail(leadId) {
-  try {
-    const res = await fetch(`${BASE_URL}/v1/leads/${leadId}`, { headers });
-    if (!res.ok) throw new Error("Failed to fetch lead detail");
-    return await res.json();
-  } catch (err) {
-    return {
-      id: leadId,
-      company_name: "FintechCorp Asia",
-      email: "priya.sharma@fintechcorp.io",
-      status: "synced",
-      created_at: new Date().toISOString(),
-      enrichment: {
-        provider_used: "apollo",
-        data: {
-          employee_count: 220,
-          industry: "Fintech & Digital Payments",
-          geography: "Bengaluru, India",
-          tech_stack: ["Shopify", "Klaviyo", "HubSpot CRM", "Stripe API"],
-        },
-      },
-      qualification: {
-        lead_score: 92,
-        confidence_score: 0.95,
-        fit_reasoning: "Strong ICP fit: Scaling B2B commerce platform with active engineering hiring and modern MarTech stack.",
-        outreach_draft: {
-          observation_hook: "Noticed FintechCorp Asia recently scaled cross-border payments infrastructure in Southeast Asia.",
-          capability_link: "Our engine automates high-fidelity lead qualification and CRM syncing in under 5 seconds with zero duplicate records.",
-          low_friction_ask: "Worth sending over a 2-minute overview video of how we accelerate GTM pipelines?",
-        },
-      },
-      crm_sync: {
-        crm_provider: "hubspot",
-        crm_record_id: "hs-9f2a1b9c",
-        sync_status: "synced",
-      },
-    };
-  }
+  const res = await fetch(`${BASE_URL}/v1/leads/${leadId}`, { headers });
+  if (!res.ok) throw new Error("Failed to fetch lead detail");
+  return await res.json();
 }
 
 export async function fetchOutboundProspects(tenantId = "trifid_media") {
@@ -255,40 +193,8 @@ export async function fetchOutboundProspects(tenantId = "trifid_media") {
     if (!res.ok) throw new Error("Failed to fetch outbound prospects");
     return await res.json();
   } catch (err) {
-    return [
-      {
-        id: "00000000-0000-0000-0000-000000000010",
-        company_name: "NovaScale Technologies",
-        domain: "novascale.io",
-        industry: "B2B SaaS",
-        scrape_status: "staged_awaiting_approval",
-        decision_maker_name: "Alex Chen",
-        decision_maker_title: "Head of Growth & Acquisition",
-        decision_maker_linkedin: "https://www.linkedin.com/in/alexchen-growth",
-        signals_json: {
-          hiring_growth: true,
-          recent_funding: "Series A $12M",
-          tech_stack: ["Segment", "HubSpot", "PostgreSQL"],
-        },
-        fit_markdown: "NovaScale is actively scaling GTM engineering and expanding performance marketing.",
-      },
-      {
-        id: "00000000-0000-0000-0000-000000000011",
-        company_name: "Veritas Logistics Cloud",
-        domain: "veritaslogistics.com",
-        industry: "Logistics SaaS",
-        scrape_status: "staged_awaiting_approval",
-        decision_maker_name: "Elena Rostova",
-        decision_maker_title: "VP Revenue Operations",
-        decision_maker_linkedin: "https://www.linkedin.com/in/elena-rostova",
-        signals_json: {
-          hiring_growth: true,
-          recent_funding: "Seed $4M",
-          tech_stack: ["Salesforce", "Marketo", "AWS"],
-        },
-        fit_markdown: "Rapidly growing logistics software provider upgrading outbound tooling.",
-      }
-    ];
+    console.warn("Failed to fetch outbound prospects", err);
+    return [];
   }
 }
 
@@ -353,54 +259,8 @@ export async function fetchDeals(tenantId = "trifid_media") {
     if (!res.ok) throw new Error("Failed to fetch deals");
     return await res.json();
   } catch (err) {
-    console.warn("Using fallback deals", err);
-    return [
-      {
-        id: "d0000000-0000-0000-0000-000000000001",
-        tenant_id: tenantId,
-        deal_name: "Festive Influencer & UGC Campaign",
-        company_name: "Nykaa E-Retail",
-        domain: "nykaa.com",
-        deal_size: 1500000,
-        currency: "INR",
-        buyer_tier: "Tier 1: Founder-Led SMB",
-        tenant_track: "Service / Retainer",
-        current_stage: "Stage 3: Solution Validation",
-        latest_score: 68,
-        latest_category: "Rescue",
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      },
-      {
-        id: "d0000000-0000-0000-0000-000000000002",
-        tenant_id: tenantId,
-        deal_name: "Quick-Commerce Performance Retainer",
-        company_name: "Zepto Quick-Commerce",
-        domain: "zeptonow.com",
-        deal_size: 2800000,
-        currency: "INR",
-        buyer_tier: "Tier 2: Growth Scale-up",
-        tenant_track: "Service / Retainer",
-        current_stage: "Stage 4: SOW & 50% Advance",
-        latest_score: 84,
-        latest_category: "Advance",
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      },
-      {
-        id: "d0000000-0000-0000-0000-000000000003",
-        tenant_id: tenantId,
-        deal_name: "B2B Enterprise Content Retainer",
-        company_name: "Tata Digital",
-        domain: "tatadigital.com",
-        deal_size: 4500000,
-        currency: "INR",
-        buyer_tier: "Tier 3: Enterprise MNC",
-        tenant_track: "Service / Retainer",
-        current_stage: "Stage 1: Discovery & Needs",
-        latest_score: null,
-        latest_category: null,
-        created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-      },
-    ];
+    console.warn("Failed to fetch deals", err);
+    return [];
   }
 }
 
@@ -456,148 +316,8 @@ export async function fetchMedpiccScorecard(dealId) {
     if (!res.ok) throw new Error("Failed to fetch MEDDPICC scorecard");
     return await res.json();
   } catch (err) {
-    console.warn("Using fallback MEDDPICC scorecard", err);
-    return {
-      id: "diag-sample-nykaa-1",
-      deal_id: dealId,
-      overall_score: 68,
-      deal_category: "Rescue",
-      deal_health: "At Risk",
-      next_best_action: "Share 1-page SOW executive brief with Founder to lock 50% advance before Diwali launch deadline.",
-      outcome_trajectory: "At Risk: Founder Sign-Off Pending",
-      rubric_version: "track1-tier1-v1.0",
-      closure_if_addressed: {
-        likelihood_range: "75-85%",
-        rationale: "Diwali campaign budget of ₹15L is freeze and ROAS targets are agreed. Getting Founder sign-off on 50% advance locks kickoff before launch deadline.",
-      },
-      closure_if_ignored: {
-        likelihood_range: "15-25%",
-        rationale: "Without direct Founder approval and 50% advance payment release, accounts processing delay will cause campaign to miss the Diwali launch date.",
-      },
-      top_blocking_boxes: ["Economic Buyer", "Paper Process"],
-      seller_summary: {
-        headline: "High-intent festive campaign with ₹15L allocated budget, held up pending Founder sign-off on 50% advance payment.",
-        what_we_know: [
-          "Diwali creator campaign budget of ₹15 Lakhs confirmed by VP Marketing.",
-          "Target ROAS minimum 3.5x required by Founder before signing SOW.",
-          "Sneha Kapoor (VP Marketing) is actively championing the pitch internally.",
-        ],
-        deal_risks: [
-          "Founder has final commercial authority but hasn't attended calls.",
-          "50% advance invoice release requires 7-10 days accounts processing.",
-        ],
-        next_best_actions: [
-          "Send 1-page SOW summary directly for Founder sign-off.",
-          "Align accounts on GST and advance payment release timeline.",
-        ],
-      },
-      follow_up_email: {
-        subject: "Next Steps Alignment: Nykaa Campaign Scope & 50% Advance",
-        body_content: "Hi Sneha,\n\nThanks for the great discussion today regarding Nykaa's upcoming Diwali creator campaign! To ensure we hit your 3.5x Meta ROAS target without any launch delays, I have drafted the SOW covering the ₹15 Lakhs influencer whitelisting scope.\n\nTo ensure your accounts team can release the 50% advance invoice on time for creator bookings, could we share this 1-page summary with your Founder / Managing Director this week for sign-off?\n\nBest regards,\nRohan Mehta",
-      },
-      boxes: [
-        {
-          box: "Metrics",
-          score: 13,
-          max_score: 20,
-          rating: "Strong",
-          evidence_basis: "direct",
-          notes: "Quantified Diwali campaign budget at ₹15 Lakhs with 3.5x Meta ROAS target.",
-          coaching_questions: ["What is the revenue loss if the campaign misses the pre-Diwali live date?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor (VP Marketing)", evidence_date: "Call 1", medium: "Call", quote: "Basically hamara Diwali campaign ka budget around 15 Lakhs freeze ho gaya hai for influencer whitelisting and UGC ads." }
-          ]
-        },
-        {
-          box: "Economic Buyer",
-          score: 9,
-          max_score: 20,
-          rating: "Moderate",
-          evidence_basis: "inferred",
-          hard_cap_applied: true,
-          notes: "Founder has final commercial sign-off; Rule 6.2 Hard Cap applies until direct confirmation is logged.",
-          coaching_questions: ["Can Sneha share a 1-page brief with the Founder to confirm the ₹15L spend?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Founder sir is directly looking at this, unko Meta ROAS 3.5x minimum chahiye before we sign the SOW." }
-          ]
-        },
-        {
-          box: "Decision Criteria",
-          score: 7,
-          max_score: 10,
-          rating: "Strong",
-          evidence_basis: "direct",
-          notes: "Deliverables agreed: 25 UGC creator videos + Meta whitelisting with 3.5x ROAS minimum.",
-          coaching_questions: ["How will creator revisions and whitelisting access be scheduled?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "We need 25 creator assets delivered with full usage rights and whitelisting access." }
-          ]
-        },
-        {
-          box: "Decision Process",
-          score: 4,
-          max_score: 5,
-          rating: "Strong",
-          evidence_basis: "direct",
-          notes: "Single-step Founder sign-off required once SOW deliverables and payment terms are locked.",
-          coaching_questions: ["What is the exact target date for countersigning the SOW?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Once we agree on the deliverables sheet, sir will review and sign off within 2 days." }
-          ]
-        },
-        {
-          box: "Paper Process",
-          score: 7,
-          max_score: 15,
-          rating: "Weak",
-          evidence_basis: "inferred",
-          notes: "50% advance payment required before creator outreach; accounts team requires 7-10 days to process invoice.",
-          coaching_questions: ["Can we submit the pro-forma invoice now to avoid launch delays?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Haan, approval toh mil gaya hai, but 50% advance invoice release hone me 1 week lagega." }
-          ]
-        },
-        {
-          box: "Implicated Pain",
-          score: 12,
-          max_score: 15,
-          rating: "Strong",
-          evidence_basis: "direct",
-          notes: "Diwali festive window cannot slip; running in-house creator management has resulted in creator dropouts.",
-          coaching_questions: ["What happens to Q3 sales targets if UGC assets aren't live before Diwali?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Last year our in-house team tried managing creators and half of them didn't deliver on time." }
-          ]
-        },
-        {
-          box: "Champion",
-          score: 9,
-          max_score: 10,
-          rating: "Strong",
-          evidence_basis: "direct",
-          notes: "Sneha Kapoor (VP Marketing) is actively pitching to Founder and driving approval.",
-          coaching_questions: ["How can we empower Sneha with a crisp comparison against status quo?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "I will personally pitch this to the Founder on Thursday, just send me the SOW deck." }
-          ]
-        },
-        {
-          box: "Competition",
-          score: 4,
-          max_score: 5,
-          rating: "Moderate",
-          evidence_basis: "direct",
-          notes: "Client evaluated pitching freelance creator managers, but rejected due to lack of whitelisting capabilities.",
-          coaching_questions: ["Has client reached out to other performance creative agencies?"],
-          evidence_quotes: [
-            { person_name: "Sneha Kapoor", evidence_date: "Call 1", medium: "Call", quote: "Freelancers are cheaper, but they don't have ad-account whitelisting expertise like you guys." }
-          ]
-        }
-      ],
-      model_used: "gemini-2.0-flash",
-      pdf_report_url: null,
-      created_at: new Date().toISOString(),
-    };
+    console.warn("Failed to fetch MEDDPICC scorecard", err);
+    return null;
   }
 }
 

@@ -14,7 +14,7 @@ import BYOKSettings from './pages/BYOKSettings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import AuthModal from './components/AuthModal';
-import { fetchAnalyticsSummary, triggerOutboundBatch, fetchCurrentUser, clearAuthToken } from './api';
+import { fetchAnalyticsSummary, triggerOutboundBatch, fetchCurrentUser, clearAuthToken, fetchAuditLogs } from './api';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -29,18 +29,25 @@ export default function App() {
     role: 'sales_representative',
     tenant_id: 'trifid_media',
   });
-  const [liveLogs, setLiveLogs] = useState([
-    { time: '15:38', text: 'Deal Apex Logistics diagnosed (68/100) → Synced to HubSpot CRM' },
-    { time: '15:35', text: 'Outbound prospect NovaScale staged as Awaiting Approval' },
-    { time: '15:30', text: 'Apollo Credit Guard check: 12/50 credits consumed' },
-    { time: '15:25', text: 'Temporal Saga deal-diag-8a9f succeeded in 64ms' },
-  ]);
+  const [liveLogs, setLiveLogs] = useState([]);
 
   const loadSummary = async () => {
     setIsRefreshing(true);
-    const data = await fetchAnalyticsSummary(currentTenant);
-    setSummaryData(data);
-    setIsRefreshing(false);
+    try {
+      const data = await fetchAnalyticsSummary(currentTenant);
+      setSummaryData(data);
+      const logs = await fetchAuditLogs(currentTenant, 10);
+      if (Array.isArray(logs) && logs.length > 0) {
+        setLiveLogs(logs.map((l) => ({
+          time: l.time || 'Live',
+          text: l.text || 'Workflow execution record',
+        })));
+      }
+    } catch (e) {
+      console.warn('Error loading summary / logs', e);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   useEffect(() => { loadSummary(); }, [currentTenant]);
@@ -126,7 +133,7 @@ export default function App() {
             {currentView === 'meeting-prep' && <MeetingIntelligence currentTenant={currentTenant} />}
             {currentView === 'byok-settings' && <BYOKSettings currentTenant={currentTenant} />}
             {currentView === 'config' && <TenantConfigStudio currentTenant={currentTenant} />}
-            {currentView === 'analytics' && <PipelineAnalytics summaryData={summaryData} />}
+            {currentView === 'analytics' && <PipelineAnalytics summaryData={summaryData} currentTenant={currentTenant} />}
             {currentView === 'privacy' && <PrivacyPolicy onNavigate={setCurrentView} />}
             {currentView === 'terms' && <TermsConditions onNavigate={setCurrentView} />}
           </main>

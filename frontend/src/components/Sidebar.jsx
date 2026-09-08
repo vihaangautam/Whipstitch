@@ -17,7 +17,7 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inbound', label: 'Inbound Pipeline', icon: Inbox },
-    { id: 'outbound', label: 'Outbound Queue', icon: Rocket, badge: summaryData?.staged_awaiting_approval || 18 },
+    { id: 'outbound', label: 'Outbound Queue', icon: Rocket, badge: summaryData?.staged_awaiting_approval ?? 0 },
     { id: 'deal-health', label: 'Deal Health & Risks', icon: ShieldCheck },
   ];
 
@@ -29,8 +29,8 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
     { id: 'analytics', label: 'Pipeline Analytics', icon: BarChart3 },
   ];
 
-  const creditsUsed = summaryData?.apollo_credits_used || 12;
-  const creditsMax = summaryData?.apollo_credits_max || 50;
+  const creditsUsed = summaryData?.apollo_credits_used ?? 0;
+  const creditsMax = summaryData?.apollo_credits_max ?? 50;
   const budgetPct = Math.min(100, Math.round((creditsUsed / creditsMax) * 100));
 
   return (

@@ -30,13 +30,15 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { fetchLeadsOverTime } from '../api';
+import { fetchLeadsOverTime, fetchDeals } from '../api';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 export default function ExecutiveDashboard({ summaryData, currentTenant, onNavigate, liveLogs, onTriggerOutbound }) {
   const [chartData, setChartData] = useState(null);
   const [isLoadingChart, setIsLoadingChart] = useState(true);
+  const [deals, setDeals] = useState([]);
+  const [isLoadingDeals, setIsLoadingDeals] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -48,55 +50,54 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
         const series = await fetchLeadsOverTime(currentTenant, 7);
         if (!isMounted) return;
 
-        const labels = series && series.length > 0
-          ? series.map((s) => s.date)
-          : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-        const inboundValues = series && series.length > 0
-          ? series.map((s) => s.count)
-          : [45, 62, 58, 85, 92, 40, 78];
-
-        const outboundValues = inboundValues.map((v) => Math.round(v * 0.45));
-
-        setChartData({
-          labels,
-          datasets: [
-            {
-              label: 'Inbound Ingested',
-              data: inboundValues,
-              borderColor: '#059669',
-              backgroundColor: 'rgba(5, 150, 105, 0.08)',
+        if (series && series.labels && series.datasets) {
+          setChartData({
+            labels: series.labels,
+            datasets: series.datasets.map((ds, idx) => ({
+              ...ds,
               borderWidth: 2.5,
-              pointBackgroundColor: '#059669',
+              pointBackgroundColor: ds.borderColor,
               pointBorderColor: '#ffffff',
-              pointRadius: 4.5,
+              pointRadius: idx === 0 ? 4.5 : 4,
               pointHoverRadius: 7,
               fill: true,
               tension: 0.35,
-            },
-            {
-              label: 'Outbound Discovered',
-              data: outboundValues,
-              borderColor: '#2563EB',
-              backgroundColor: 'rgba(37, 99, 235, 0.04)',
-              borderWidth: 2.5,
-              borderDash: [5, 5],
-              pointBackgroundColor: '#2563EB',
-              pointBorderColor: '#ffffff',
-              pointRadius: 4,
-              fill: true,
-              tension: 0.35,
-            },
-          ],
-        });
+              borderDash: idx === 1 ? [5, 5] : undefined,
+            })),
+          });
+        } else {
+          setChartData(null);
+        }
       } catch (e) {
         console.warn('Failed to load chart series', e);
+        if (isMounted) setChartData(null);
       } finally {
         if (isMounted) setIsLoadingChart(false);
       }
     };
 
     loadChart();
+    return () => { isMounted = false; };
+  }, [currentTenant]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadDeals = async () => {
+      setIsLoadingDeals(true);
+      try {
+        const data = await fetchDeals(currentTenant);
+        if (isMounted) {
+          setDeals(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.warn('Failed to load deals', err);
+        if (isMounted) setDeals([]);
+      } finally {
+        if (isMounted) setIsLoadingDeals(false);
+      }
+    };
+
+    loadDeals();
     return () => { isMounted = false; };
   }, [currentTenant]);
 
@@ -144,58 +145,14 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
     },
   };
 
-  const recentDeals = [
-    {
-      id: 'd1',
-      name: 'Strategic RevOps Modernization',
-      company: 'Apex Logistics Global',
-      tags: ['Enterprise', 'Rescue'],
-      tagColors: ['bg-slate-100 text-slate-700 border-slate-200', 'bg-amber-50 text-amber-800 border-amber-200'],
-      score: 68,
-      stage: 'Rescue (68/100)',
-      owner: 'Lauren Davis',
-      created: '2 hours ago',
-    },
-    {
-      id: 'd2',
-      name: 'AI Lead Routing Rollout',
-      company: 'CloudScale Systems',
-      tags: ['SaaS', 'Advance'],
-      tagColors: ['bg-slate-100 text-slate-700 border-slate-200', 'bg-emerald-50 text-emerald-800 border-emerald-200'],
-      score: 86,
-      stage: 'Advance (86/100)',
-      owner: 'Lauren Davis',
-      created: 'Yesterday',
-    },
-    {
-      id: 'd3',
-      name: 'Enterprise Pipeline Automation',
-      company: 'FinPulse Payments',
-      tags: ['Fintech', 'Discovery'],
-      tagColors: ['bg-slate-100 text-slate-700 border-slate-200', 'bg-blue-50 text-blue-800 border-blue-200'],
-      score: null,
-      stage: 'Discovery',
-      owner: 'Ryan Martinez',
-      created: '3 days ago',
-    },
-    {
-      id: 'd4',
-      name: 'Creator Roster UGC Intake',
-      company: 'Velox Brands D2C',
-      tags: ['E-Commerce', 'Advance'],
-      tagColors: ['bg-slate-100 text-slate-700 border-slate-200', 'bg-emerald-50 text-emerald-800 border-emerald-200'],
-      score: 92,
-      stage: 'Advance (92/100)',
-      owner: 'Lauren Davis',
-      created: 'May 12, 2026',
-    },
-  ];
-
-  const filteredDeals = recentDeals.filter(
-    (d) =>
-      d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.company.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDeals = deals.filter((d) => {
+    const nameMatch = (d.deal_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const companyMatch = (d.company_name || d.domain || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (activeTab === 'recent') {
+      return (nameMatch || companyMatch) && d.latest_score !== null && d.latest_score !== undefined;
+    }
+    return nameMatch || companyMatch;
+  });
 
   return (
     <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
@@ -238,8 +195,8 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
         {[
           {
             label: 'Total Inbound Leads',
-            value: summaryData?.total_leads_inbound?.toLocaleString() || '1,248',
-            change: '+14%',
+            value: (summaryData?.total_leads_inbound ?? 0).toLocaleString(),
+            change: `${summaryData?.total_leads_inbound ?? 0} total`,
             changeType: 'positive',
             sub: 'Validated & Deduplicated',
             icon: Inbox,
@@ -248,7 +205,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
           },
           {
             label: 'SLA Compliance Rate',
-            value: `${summaryData?.sla_compliance_rate || 98.4}%`,
+            value: `${summaryData?.sla_compliance_rate ?? 100}%`,
             change: '15m window',
             changeType: 'emerald',
             sub: 'Zero Breached Hot Leads',
@@ -259,10 +216,10 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
           },
           {
             label: 'Avg Lead Score',
-            value: `${summaryData?.avg_lead_score || 84}`,
+            value: `${summaryData?.avg_lead_score ?? 0}`,
             valueSuffix: '/100',
-            change: '78% Hot',
-            changeType: 'blue',
+            change: summaryData?.avg_lead_score >= 70 ? 'High Fit' : summaryData?.avg_lead_score > 0 ? 'Evaluating' : 'Pending',
+            changeType: summaryData?.avg_lead_score >= 70 ? 'emerald' : 'blue',
             sub: 'Pydantic Validated',
             icon: ShieldCheck,
             iconColor: 'text-blue-700',
@@ -271,8 +228,8 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
           },
           {
             label: 'Outbound Staged',
-            value: `${summaryData?.staged_awaiting_approval || 18}`,
-            change: 'awaiting',
+            value: `${summaryData?.staged_awaiting_approval ?? 0}`,
+            change: `${summaryData?.staged_awaiting_approval ?? 0} queued`,
             changeType: 'slate',
             sub: 'Human-in-the-Loop',
             icon: Rocket,
@@ -342,7 +299,12 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
               </div>
             ) : chartData ? (
               <Line data={chartData} options={chartOptions} />
-            ) : null}
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 space-y-1">
+                <Activity className="w-6 h-6 text-slate-300" />
+                <span className="text-xs font-medium">No telemetry activity recorded for this tenant yet</span>
+              </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
@@ -381,24 +343,11 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
                 </div>
               ))
             ) : (
-              <>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-start gap-2.5">
-                  <span className="text-emerald-800 font-bold shrink-0">15:38</span>
-                  <span className="text-slate-800 leading-relaxed">Lead <strong>FintechCorp</strong> scored <strong>92</strong> &rarr; Synced to HubSpot</span>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-start gap-2.5">
-                  <span className="text-blue-800 font-bold shrink-0">15:35</span>
-                  <span className="text-slate-800 leading-relaxed">Outbound prospect <strong>NovaScale</strong> staged as <em>Awaiting Approval</em></span>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-start gap-2.5">
-                  <span className="text-slate-500 font-bold shrink-0">15:30</span>
-                  <span className="text-slate-800 leading-relaxed">Apollo Credit Guard: <strong>12/50</strong> credits consumed</span>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-start gap-2.5">
-                  <span className="text-emerald-800 font-bold shrink-0">15:25</span>
-                  <span className="text-slate-800 leading-relaxed">Temporal Saga <code className="text-blue-700 font-semibold">inbound-wf-8a9f</code> succeeded in 42ms</span>
-                </div>
-              </>
+              <div className="py-12 text-center text-slate-400 space-y-2">
+                <Activity className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="font-semibold text-slate-600">No recent execution logs</p>
+                <p className="text-xs text-slate-400">Execution events will stream here live when workflows run.</p>
+              </div>
             )}
           </div>
 
@@ -475,49 +424,88 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredDeals.map((deal) => (
-                <tr key={deal.id} className="hover:bg-slate-50 transition">
-                  <td className="py-4 px-6">
-                    <div className="font-semibold text-slate-900 flex items-center gap-2.5">
-                      <FileText className="w-4 h-4 text-slate-400" />
-                      <span>{deal.name}</span>
-                    </div>
-                    <div className="text-xs text-slate-400 ml-6.5">{deal.company}</div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      {deal.tags.map((t, idx) => (
-                        <span
-                          key={idx}
-                          className={`text-xs px-2.5 py-0.5 rounded-md font-medium border ${deal.tagColors[idx]}`}
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="font-medium text-slate-900">{deal.stage}</span>
-                  </td>
-                  <td className="py-4 px-6 text-slate-500">{deal.created}</td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
-                        {deal.owner.split(' ').map((n) => n[0]).join('')}
-                      </div>
-                      <span className="text-slate-800 text-xs font-medium">{deal.owner}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => onNavigate('deal-health')}
-                      className="text-xs text-slate-600 hover:text-slate-900 font-semibold px-3 py-1.5 border border-slate-200 rounded-md hover:bg-slate-50 transition cursor-pointer"
-                    >
-                      View Report
-                    </button>
+              {isLoadingDeals ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
+                    <span className="text-xs font-medium">Loading active pipeline deals...</span>
                   </td>
                 </tr>
-              ))}
+              ) : filteredDeals.length > 0 ? (
+                filteredDeals.map((deal) => {
+                  const dealName = deal.deal_name || 'Strategic Diagnostic';
+                  const companyName = deal.company_name || deal.domain || 'Enterprise Account';
+                  const stageText = deal.latest_score !== null && deal.latest_score !== undefined
+                    ? `${deal.current_stage || 'Diagnostic'} (${deal.latest_score}/100)`
+                    : (deal.current_stage || 'Discovery');
+                  const scoreColor = deal.latest_score >= 80
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : deal.latest_score >= 60
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-blue-50 text-blue-800 border-blue-200';
+                  const currencyStr = deal.currency || (currentTenant === 'trifid_media' ? 'INR' : 'USD');
+                  const sizeStr = deal.deal_size ? `${currencyStr} ${deal.deal_size.toLocaleString()}` : 'Enterprise';
+                  const createdStr = deal.created_at
+                    ? new Date(deal.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'Recent';
+
+                  return (
+                    <tr key={deal.id} className="hover:bg-slate-50 transition">
+                      <td className="py-4 px-6">
+                        <div className="font-semibold text-slate-900 flex items-center gap-2.5">
+                          <FileText className="w-4 h-4 text-slate-400" />
+                          <span>{dealName}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 ml-6.5">{companyName}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2.5 py-0.5 rounded-md font-medium border bg-slate-100 text-slate-700 border-slate-200">
+                            {sizeStr}
+                          </span>
+                          {deal.latest_category && (
+                            <span className="text-xs px-2.5 py-0.5 rounded-md font-medium border bg-emerald-50 text-emerald-800 border-emerald-200">
+                              {deal.latest_category}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`text-xs px-2.5 py-1 rounded-md font-semibold border ${scoreColor}`}>
+                          {stageText}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-slate-500 text-xs">{createdStr}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
+                            AM
+                          </div>
+                          <span className="text-slate-800 text-xs font-medium">Alex Morgan</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => onNavigate('deal-health')}
+                          className="text-xs text-slate-600 hover:text-slate-900 font-semibold px-3 py-1.5 border border-slate-200 rounded-md hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          View Report
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-500">
+                    <div className="max-w-sm mx-auto space-y-2">
+                      <FileText className="w-8 h-8 text-slate-300 mx-auto" />
+                      <p className="font-semibold text-slate-700">No active pipeline deals for this tenant</p>
+                      <p className="text-xs text-slate-400">Click "New Diagnostic" above or launch an inbound/outbound flow to populate real deal records.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
