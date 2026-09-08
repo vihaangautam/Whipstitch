@@ -107,8 +107,11 @@ export default function Header({
                   className="bg-transparent text-slate-900 font-semibold border-none text-xs py-0 pl-1 pr-3 cursor-pointer focus:ring-0 focus:outline-none"
                   aria-label="Select tenant"
                 >
-                  <option value="trifid_media">trifid_media</option>
-                  <option value="acme_corp">acme_global</option>
+                  <option value="trifid_media">Trifid Media</option>
+                  <option value="acme_corp">Acme Global</option>
+                  {currentTenant !== 'trifid_media' && currentTenant !== 'acme_corp' && (
+                    <option value={currentTenant}>{currentTenant.replace(/_/g, ' ')}</option>
+                  )}
                 </select>
               </div>
 

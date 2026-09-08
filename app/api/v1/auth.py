@@ -42,11 +42,38 @@ async def register(
             detail="An account with this email already exists.",
         )
 
-    # Resolve tenant
-    tenant_key = payload.tenant_id or "trifid_media"
+    # Resolve or auto-create company tenant workspace
+    company = (payload.company_name or "").strip()
+    if company:
+        import re
+        tenant_key = re.sub(r"[^a-zA-Z0-9_]", "_", company.lower().strip())
+        tenant_key = re.sub(r"_+", "_", tenant_key).strip("_")
+    else:
+        tenant_key = payload.tenant_id or "trifid_media"
+
     tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_key))
     tenant = tenant_res.scalar_one_or_none()
-    tenant_id = tenant.id if tenant else None
+    if not tenant:
+        tenant = Tenant(
+            id=uuid.uuid4(),
+            tenant_key=tenant_key,
+            name=company or tenant_key.replace("_", " ").title(),
+            config={
+                "icp_criteria": {
+                    "employee_count_min": 50,
+                    "employee_count_max": 500,
+                    "target_industries": ["B2B SaaS", "Fintech", "Enterprise Software", "E-Commerce"],
+                    "geographies": ["India", "US", "UAE", "UK"],
+                },
+                "competitor_blocklist": [],
+                "sla_window_minutes": 15,
+                "waterfall_order": ["apollo", "serper", "scraper", "gemini"],
+            },
+        )
+        session.add(tenant)
+        await session.flush()
+
+    tenant_id = tenant.id
 
     # Create user
     user = User(

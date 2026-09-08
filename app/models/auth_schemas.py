@@ -13,7 +13,8 @@ class UserRegisterRequest(BaseModel):
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=6, description="User password")
     full_name: str = Field(..., min_length=2, description="Full name of the user")
-    tenant_id: Optional[str] = Field("trifid_media", description="Tenant key to bind this user to")
+    company_name: Optional[str] = Field(None, description="Company name or organization")
+    tenant_id: Optional[str] = Field(None, description="Tenant key to bind this user to")
     role: str = Field("sales_representative", description="User role (defaults to sales_representative)")
 
 

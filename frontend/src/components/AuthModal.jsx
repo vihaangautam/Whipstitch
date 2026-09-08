@@ -7,7 +7,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [email, setEmail] = useState('rep@trifidmedia.in');
   const [password, setPassword] = useState('Whipstitch123!');
   const [fullName, setFullName] = useState('Alex Morgan');
-  const [tenantKey, setTenantKey] = useState('trifid_media');
+  const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -41,7 +41,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           email,
           password,
           full_name: fullName,
-          tenant_id: tenantKey,
+          company_name: companyName,
           role: 'sales_representative',
         });
         onAuthSuccess(data.user);
@@ -164,12 +164,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
           {tab === 'register' && (
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Organization Key</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Company / Workspace Name</label>
               <input
                 type="text"
-                value={tenantKey}
-                onChange={(e) => setTenantKey(e.target.value)}
-                placeholder="trifid_media"
+                required
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Acme Corp or FinFlow"
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none transition shadow-2xs"
               />
             </div>

@@ -100,6 +100,9 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={(user) => {
           setCurrentUser(user);
+          if (user.tenant_id) {
+            setCurrentTenant(user.tenant_id);
+          }
           loadSummary();
         }}
       />
