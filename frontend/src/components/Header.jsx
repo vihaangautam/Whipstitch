@@ -79,14 +79,11 @@ export default function Header({
         {/* Center: Landing Page Nav Links */}
         {currentView === 'landing' && (
           <nav className="hidden md:flex items-center gap-7">
-            <a href="#features" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              Features
-            </a>
             <a href="#engine" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              Engine Mechanics
+              How it works
             </a>
-            <a href="#pricing" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              Zero-Capital Model
+            <a href="#features" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              Engines
             </a>
             <a href="#faq" className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">
               FAQ
