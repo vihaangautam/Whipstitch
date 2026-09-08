@@ -73,11 +73,11 @@ export default function LandingPage({ setCurrentView }) {
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-tight max-w-3xl mx-auto">
-          Durable lead ingestion, waterfall enrichment, and evidence-backed deal intelligence.
+          Ingest leads durably, enrich them through a waterfall, and score deals on the evidence in the transcript.
         </h1>
 
         <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          Whipstitch automates inbound webhook processing, deep waterfall contact enrichment, outbound prospect discovery, and strict 8-box MEDDPICC deal diagnostics with zero platform markup.
+          Whipstitch automates inbound webhook processing, waterfall contact enrichment, outbound prospect discovery, and strict 8-box MEDDPICC deal diagnostics with zero platform markup.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
