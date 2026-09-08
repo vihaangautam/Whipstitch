@@ -14,6 +14,35 @@ def test_signals_start_empty_and_accumulate_from_ingestion():
     assert {s.signal_type for s in signals} == {"leadership_shift", "capital_expansion"}
 
 
+def test_signals_are_tenant_scoped():
+    agent = AutonomousSignalAgent()
+    agent.classify_signal("Acme", "Acme raises Series C", "growth", tenant_id="tenant_a")
+    agent.classify_signal("Beta", "Beta hires CRO", "leadership", tenant_id="tenant_b")
+    assert len(agent.list_signals(tenant_id="tenant_a")) == 1
+    assert len(agent.list_signals(tenant_id="tenant_b")) == 1
+    assert agent.list_signals(tenant_id="tenant_a")[0].account_name == "Acme"
+
+
+@pytest.mark.asyncio
+async def test_scan_tenant_signals_classifies_serper_news():
+    from unittest.mock import AsyncMock
+
+    agent = AutonomousSignalAgent()
+    serper = AsyncMock()
+    serper.search_company_signals = AsyncMock(return_value=[
+        {"headline": "Northwind raises $40M Series B", "snippet": "Capital to expand GTM.", "source": "News"},
+    ])
+    out = await agent.scan_tenant_signals("t1", ["Northwind", "Emptyco"], serper)
+    # Emptyco returns [] from the mock's side effect default -> only Northwind classified
+    serper.search_company_signals = AsyncMock(side_effect=lambda n: (
+        [{"headline": f"{n} raises Series B", "snippet": "x", "source": "n"}] if n == "Northwind" else []
+    ))
+    out = await agent.scan_tenant_signals("t1", ["Northwind", "Emptyco"], serper)
+    assert len(out) == 1
+    assert out[0].account_name == "Northwind"
+    assert out[0].signal_type == "capital_expansion"
+
+
 def test_classify_leadership_shift():
     agent = AutonomousSignalAgent()
     sig = agent.classify_signal(

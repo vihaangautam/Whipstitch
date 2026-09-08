@@ -129,15 +129,15 @@ export default function Sidebar({ currentView, setCurrentView, summaryData }) {
           <div className="text-[11px] text-slate-400">50 credits / month free tier</div>
         </div>
 
-        {/* Temporal Worker Liveness */}
+        {/* Workflow engine liveness */}
         <div className="flex items-center justify-between px-1 text-xs text-slate-500">
           <span className="flex items-center gap-1.5 font-medium">
             <Activity className="w-3.5 h-3.5 text-slate-400" />
-            <span>Temporal Engine</span>
+            <span>Workflow Engine</span>
           </span>
           <span className="text-emerald-800 font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Active
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            Running
           </span>
         </div>
 

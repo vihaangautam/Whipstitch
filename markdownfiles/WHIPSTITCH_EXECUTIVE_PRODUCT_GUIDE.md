@@ -914,7 +914,7 @@ Whipstitch's architecture is modular, scalable, and built for rapid enterprise e
 #### Milestone 12: Deep Multi-CRM Bidirectional Synchronization
 * **Business Rationale**: Enterprise customers demand continuous, zero-drift synchronization with legacy CRM instances without manual CSV exports.
 * **Technical Deliverables**:
-  - Native **Salesforce Enterprise REST API** integration supporting custom opportunity stages, contact roles, and MEDDPICC custom fields.
+![alt text](image.png)  - Native **Salesforce Enterprise REST API** integration supporting custom opportunity stages, contact roles, and MEDDPICC custom fields.
   - **Zoho CRM** integration for Indian mid-market customers.
   - Automated bidirectional transcript synchronization from Zoom, Google Meet, and Microsoft Teams cloud recordings.
 

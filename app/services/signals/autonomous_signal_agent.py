@@ -11,22 +11,52 @@ class AutonomousSignalAgent:
     """Monitors, classifies, and scores the 6 high-intent revenue triggers across target accounts."""
 
     def __init__(self):
-        # Signals accumulate from real ingestion (POST /v1/signals/ingest); no seed fixtures.
-        self.active_signals: List[AccountSignal] = []
+        # Per-tenant signal store. Signals come from POST /v1/signals/ingest or /scan;
+        # no seed fixtures.
+        self._by_tenant: Dict[str, List[AccountSignal]] = {}
 
+    @property
+    def active_signals(self) -> List[AccountSignal]:
+        """Back-compat flat view across all tenants."""
+        return [s for lst in self._by_tenant.values() for s in lst]
 
     def list_signals(
-        self, account_name: Optional[str] = None, buyer_tier: Optional[int] = None
+        self,
+        tenant_id: str = "default",
+        account_name: Optional[str] = None,
+        buyer_tier: Optional[int] = None,
     ) -> List[AccountSignal]:
-        """Returns all detected signals, optionally filtered by account and buyer tier."""
-        signals = self.active_signals
+        """Returns the tenant's detected signals, optionally filtered by account and tier."""
+        signals = list(self._by_tenant.get(tenant_id, []))
         if account_name:
             signals = [s for s in signals if s.account_name.lower() == account_name.lower()]
-        if buyer_tier:
-            # Tier 1/2 deprioritize compliance/tech stack migrations
-            if buyer_tier in (1, 2):
-                signals = [s for s in signals if s.opportunity_viability_boost >= 10]
+        if buyer_tier in (1, 2):
+            signals = [s for s in signals if s.opportunity_viability_boost >= 10]
         return signals
+
+    async def scan_tenant_signals(
+        self, tenant_id: str, accounts: List[str], serper
+    ) -> List[AccountSignal]:
+        """Runs a Serper company-news sweep over `accounts` and classifies each into a
+        canonical revenue signal. Replaces the tenant's signal set."""
+        self._by_tenant[tenant_id] = []
+        for name in [a.strip() for a in accounts if a and a.strip()][:8]:
+            try:
+                news = await serper.search_company_signals(name)
+            except Exception as e:
+                logger.warning("signal_scan_serper_failed for %s: %s", name, e)
+                continue
+            if not news:
+                continue
+            top = news[0]
+            self.classify_signal(
+                account_name=name,
+                headline=top.get("headline", f"{name} market activity"),
+                snippet=top.get("snippet", ""),
+                source=top.get("source", "Google Serper Radar"),
+                tenant_id=tenant_id,
+            )
+        return self._by_tenant.get(tenant_id, [])
 
     def classify_signal(
         self,
@@ -39,6 +69,7 @@ class AutonomousSignalAgent:
         tenant_offering: Optional[str] = None,
         seasonal_calendar: Optional[List[str]] = None,
         geography: Optional[str] = "India",
+        tenant_id: str = "default",
     ) -> AccountSignal:
         """Classifies an incoming event into 1 of the 7 canonical revenue signals with tier-aware weighting and configurable calendar."""
         text = f"{headline} {snippet}".lower()
@@ -127,13 +158,13 @@ class AutonomousSignalAgent:
             buyer_tier=buyer_tier or 1,
         )
 
-        self.active_signals.insert(0, signal)
-        logger.info("Signal classified: %s for %s (%s, boost=%d, tier=%s)", signal.id, account_name, sig_type, boost, str(buyer_tier))
+        self._by_tenant.setdefault(tenant_id, []).insert(0, signal)
+        logger.info("Signal classified: %s for %s (%s, boost=%d, tenant=%s)", signal.id, account_name, sig_type, boost, tenant_id)
         return signal
 
-    def calculate_account_opportunity_score(self, account_name: str) -> int:
+    def calculate_account_opportunity_score(self, account_name: str, tenant_id: str = "default") -> int:
         """Calculates the aggregate opportunity viability score (0-100) based on active signals."""
-        account_signals = self.list_signals(account_name)
+        account_signals = self.list_signals(tenant_id=tenant_id, account_name=account_name)
         if not account_signals:
             return 50  # baseline neutral
 

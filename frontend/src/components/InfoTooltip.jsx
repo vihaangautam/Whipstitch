@@ -59,17 +59,26 @@ export default function InfoTooltip({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button
-        type="button"
+      <span
+        role="button"
+        tabIndex={0}
         onClick={(e) => {
           e.stopPropagation();
+          e.preventDefault();
           setIsOpen(!isOpen);
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation();
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
         aria-label="More information"
-        className="w-4 h-4 rounded-full border border-slate-300 text-slate-500 hover:text-slate-900 hover:border-slate-500 flex items-center justify-center text-[10px] font-bold transition cursor-pointer bg-white shadow-2xs focus:outline-none"
+        className="w-4 h-4 rounded-full border border-slate-300 text-slate-500 hover:text-slate-900 hover:border-slate-500 flex items-center justify-center text-[10px] font-bold transition cursor-pointer bg-white shadow-2xs focus:outline-none select-none"
       >
         i
-      </button>
+      </span>
 
       {isOpen && (
         <div

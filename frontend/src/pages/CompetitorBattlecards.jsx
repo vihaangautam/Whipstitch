@@ -27,6 +27,7 @@ import {
   generateCustomBattlecard,
   autoGenerateBattlecards,
   fetchLiveSignals,
+  scanBuyingSignals,
   ingestSignal
 } from '../api';
 import InfoTooltip from '../components/InfoTooltip';
@@ -47,13 +48,15 @@ export default function CompetitorBattlecards({ currentTenant }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [genError, setGenError] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState(null);
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
       const [bList, sigs] = await Promise.all([
         fetchBattlecards(currentTenant),
-        fetchLiveSignals(),
+        fetchLiveSignals(currentTenant),
       ]);
       setBattlecards(bList);
       setSignals(sigs);
@@ -62,6 +65,22 @@ export default function CompetitorBattlecards({ currentTenant }) {
       setIsLoading(false);
     })();
   }, [currentTenant]);
+
+  const handleScanSignals = async () => {
+    setIsScanning(true);
+    setScanError(null);
+    try {
+      const sigs = await scanBuyingSignals(currentTenant);
+      setSignals(sigs);
+      if (sigs.length === 0) {
+        setScanError('No fresh signals found. Add prospects in the Outbound Queue or deals in Deal Health, then scan again.');
+      }
+    } catch (err) {
+      setScanError(err.message || 'Signal scan failed.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedCompetitorId) {
@@ -567,8 +586,8 @@ export default function CompetitorBattlecards({ currentTenant }) {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     {Object.entries(stage.details || {}).map(([key, val]) => (
-                      <div key={key} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
-                        <span className="font-medium text-slate-500">{friendlyParamKey(key)}:</span>
+                      <div key={key} className="text-slate-600 border-b border-slate-100 pb-1 leading-snug">
+                        <span className="font-medium text-slate-500 mr-1.5">{friendlyParamKey(key)}:</span>
                         <strong className="text-slate-900">{String(val)}</strong>
                       </div>
                     ))}
@@ -667,7 +686,7 @@ export default function CompetitorBattlecards({ currentTenant }) {
       {activeTab === 'signals' && (
         <div className="space-y-5">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card space-y-1">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-purple-600" />
@@ -675,17 +694,39 @@ export default function CompetitorBattlecards({ currentTenant }) {
                 </h3>
                 <InfoTooltip
                   title="Live Buying Signals"
-                  content="Real-world company events (like new VP hires, funding rounds, or software changes) that indicate a prospect is actively ready to buy right now."
+                  content="Real-world company events (like new VP hires, funding rounds, or software changes) that indicate a prospect is actively ready to buy right now. We scan your pipeline accounts for these on demand."
                 />
               </div>
-              <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                Live Monitoring Active
-              </span>
+              <button
+                onClick={handleScanSignals}
+                disabled={isScanning}
+                className="btn-primary text-xs px-3.5 py-2 disabled:opacity-50 shrink-0"
+              >
+                {isScanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                <span>{isScanning ? 'Scanning…' : 'Scan for Buying Signals'}</span>
+              </button>
             </div>
             <p className="text-xs text-slate-500">
-              Real-time events (Leadership moves, M&A funding, tech stack shifts, churn risks) paired with instant outreach hooks.
+              Scans your Outbound Queue prospects and Deal Health accounts for recent leadership moves,
+              funding, expansion, and churn signals — each paired with a ready outreach hook.
             </p>
           </div>
+
+          {scanError && (
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-medium">
+              {scanError}
+            </div>
+          )}
+
+          {signals.length === 0 && !isScanning && (
+            <div className="p-8 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center space-y-2">
+              <h4 className="text-sm font-bold text-slate-800">No buying signals scanned yet</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Trigger an outbound batch or add a deal first, then hit <strong>Scan for Buying Signals</strong> to
+                pull fresh company news for those accounts.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             {signals.map((sig, idx) => (

@@ -492,11 +492,10 @@ export async function generateCustomBattlecard(data) {
   }
 }
 
-export async function fetchLiveSignals(accountName = null) {
+export async function fetchLiveSignals(tenantId = "trifid_media", accountName = null) {
   try {
-    const url = accountName
-      ? `${BASE_URL}/v1/signals?account_name=${encodeURIComponent(accountName)}`
-      : `${BASE_URL}/v1/signals`;
+    let url = `${BASE_URL}/v1/signals?tenant_id=${encodeURIComponent(tenantId)}`;
+    if (accountName) url += `&account_name=${encodeURIComponent(accountName)}`;
     const res = await fetch(url, { headers });
     if (!res.ok) throw new Error("Failed to fetch live signals");
     return await res.json();
@@ -504,6 +503,19 @@ export async function fetchLiveSignals(accountName = null) {
     console.warn("fetchLiveSignals failed", err);
     return [];
   }
+}
+
+export async function scanBuyingSignals(tenantId) {
+  const res = await fetch(`${BASE_URL}/v1/signals/scan`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ tenant_id: tenantId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Signal scan failed" }));
+    throw new Error(err.detail || "Signal scan failed");
+  }
+  return await res.json();
 }
 
 export async function ingestSignal(signalData) {

@@ -123,6 +123,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <input
                 type="text"
                 required
+                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Alex Morgan"
@@ -136,6 +137,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <input
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="rep@trifidmedia.in"
@@ -155,6 +157,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <input
               type="password"
               required
+              autoComplete={tab === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -168,6 +171,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <input
                 type="text"
                 required
+                autoComplete="organization"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. Acme Corp or FinFlow"
