@@ -47,11 +47,17 @@ class LeadQualificationSchema(BaseModel):
 
 
 class DecisionMaker(BaseModel):
-    """Resolved executive contact via Pattern 2."""
-    full_name: str
-    exact_title: str
+    """Resolved executive contact via Pattern 2.
+
+    Every field is optional because an unresolved contact must be representable.
+    Only a contact with is_verified=True may be staged to CRM.
+    """
+    full_name: Optional[str] = None
+    exact_title: Optional[str] = None
+    email: Optional[str] = None
     linkedin_url: Optional[str] = None
-    confidence_score: float = Field(default=0.8, ge=0.0, le=1.0)
+    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    is_verified: bool = False
 
 
 class ICPCheck(BaseModel):

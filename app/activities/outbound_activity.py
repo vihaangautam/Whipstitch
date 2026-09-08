@@ -1,16 +1,13 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-import httpx
 from sqlalchemy import select
 from temporalio import activity
 
-from app.core.apollo_budget import ApolloBudgetGuard
-from app.core.config import settings
 from app.core.logging import bind_correlation_id, get_logger
 from app.db.models import CRMSyncRecord, OutboundProspect, Tenant
 from app.db.session import AsyncSessionLocal
-from app.models.schemas import DecisionMaker, ICPCheck, LeadQualificationSchema, OutboundDraft
+from app.models.schemas import DecisionMaker, ICPCheck
 from app.services.crm.hubspot import HubSpotCRMProvider
 from app.services.enrichment.crawl4ai import Crawl4AIProvider
 
@@ -22,9 +19,6 @@ async def discover_prospects_activity(tenant_key: str, batch_size: int = 5) -> L
     """Temporal Activity (Pattern 3): Discovers new prospects matching ICP, checking credit budget."""
     logger.info("discover_prospects_activity_started", tenant_key=tenant_key, batch_size=batch_size)
 
-    budget_guard = ApolloBudgetGuard(monthly_limit=50)
-    can_use_apollo = await budget_guard.can_consume(tenant_key, credits=batch_size)
-
     prospects = []
 
     async with AsyncSessionLocal() as session:
@@ -33,19 +27,32 @@ async def discover_prospects_activity(tenant_key: str, batch_size: int = 5) -> L
         tenant = tenant_res.scalar_one_or_none()
         tenant_uuid = tenant.id if tenant else uuid.uuid4()
 
-        if can_use_apollo and not settings.MOCK_APOLLO:
-            await budget_guard.consume_credits(tenant_key, credits=batch_size)
-            # Real Apollo Search API call simulation/execution
-            logger.info("apollo_real_prospect_discovery", tenant_key=tenant_key)
+        # Read tenant ICP criteria from configuration
+        icp_criteria = (tenant.config or {}).get("icp_criteria", {}) if tenant else {}
+        target_industries = [ind.lower() for ind in icp_criteria.get("target_industries", [])]
 
-        # Generate batch prospects
-        sample_companies = [
+        # Candidate company directory covering top ICP sectors
+        all_candidate_companies = [
             {"name": "NovaScale Technologies", "domain": "novascale.io", "industry": "D2C & E-Commerce"},
             {"name": "ApexPay Solutions", "domain": "apexpay.co", "industry": "Fintech & Payments"},
             {"name": "OmniRetail AI", "domain": "omniretail.ai", "industry": "Retail Tech"},
             {"name": "BlockCompetitor Inc", "domain": "competitor.com", "industry": "Disqualified Competitor"},
             {"name": "HyperGrowth Labs", "domain": "hypergrowthlabs.com", "industry": "SaaS & AI"},
+            {"name": "Veritas Logistics Cloud", "domain": "veritaslogistics.com", "industry": "Logistics & Supply Chain"},
+            {"name": "FinFlow Technologies", "domain": "finflow.io", "industry": "Fintech & SaaS"},
+            {"name": "CloudScale Systems", "domain": "cloudscale.io", "industry": "B2B SaaS"},
         ]
+
+        # Prioritize companies matching the tenant's configured ICP industries
+        if target_industries:
+            matched = [
+                c for c in all_candidate_companies
+                if any(ind in c["industry"].lower() for ind in target_industries)
+            ]
+            unmatched = [c for c in all_candidate_companies if c not in matched]
+            sample_companies = matched + unmatched
+        else:
+            sample_companies = all_candidate_companies
 
         for i in range(min(batch_size, len(sample_companies))):
             item = sample_companies[i]
@@ -97,33 +104,22 @@ async def disqualify_prospect_gate_activity(
 async def discover_decision_maker_activity(
     prospect_id: str, company_name: str, domain: str, target_roles: List[str]
 ) -> Dict[str, Any]:
-    """Temporal Activity (Pattern 2): Resolves named executive contact details."""
+    """Temporal Activity (Pattern 2): Resolves named executive contact details.
+
+    No contact resolver is wired up yet, so this returns an unresolved contact instead of
+    inventing a plausible-looking one. Staging refuses anything with is_verified=False.
+    """
     bind_correlation_id(prospect_id)
     logger.info("discover_decision_maker_started", prospect_id=prospect_id, company=company_name)
 
-    # Resolve decision-maker (web search / heuristic resolution)
-    first_role = target_roles[0] if target_roles else "Head of Marketing"
-    name_slug = company_name.lower().replace(" ", "")
-    dm = DecisionMaker(
-        full_name=f"Alex Chen",
-        exact_title=first_role,
-        linkedin_url=f"https://www.linkedin.com/in/alex-chen-{name_slug}",
-        confidence_score=0.91,
+    dm = DecisionMaker(exact_title=target_roles[0] if target_roles else None)
+
+    logger.info(
+        "discover_decision_maker_unresolved",
+        prospect_id=prospect_id,
+        company=company_name,
+        reason="no_contact_resolver_configured",
     )
-
-    async with AsyncSessionLocal() as session:
-        res = await session.execute(
-            select(OutboundProspect).where(OutboundProspect.id == uuid.UUID(prospect_id))
-        )
-        prospect = res.scalar_one_or_none()
-        if isinstance(prospect, OutboundProspect):
-            prospect.decision_maker_name = dm.full_name
-            prospect.decision_maker_title = dm.exact_title
-            prospect.decision_maker_linkedin = dm.linkedin_url
-            await session.commit()
-
-
-    logger.info("discover_decision_maker_completed", prospect_id=prospect_id, dm=dm.full_name)
     return dm.model_dump()
 
 
@@ -201,14 +197,34 @@ async def qualify_outbound_prospect_activity(
 async def stage_prospect_in_crm_activity(
     prospect_id: str, tenant_key: str, prospect_data: Dict[str, Any], qualification_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Temporal Activity (F-8): Stages prospect in HubSpot CRM as Awaiting Approval."""
+    """Temporal Activity (F-8): Stages prospect in HubSpot CRM as Awaiting Approval.
+
+    Requires a verified contact email. Guessed addresses bounce, and bounces degrade the
+    tenant's sending-domain reputation for every later campaign, so an unresolved contact
+    is parked for research rather than synced.
+    """
     bind_correlation_id(prospect_id)
     company_name = prospect_data.get("company_name", "Target Brand")
-    domain = prospect_data.get("domain", "brand.com")
+    decision_maker = prospect_data.get("decision_maker") or {}
+    contact_email = decision_maker.get("email")
+
+    if not (decision_maker.get("is_verified") and contact_email):
+        await _update_prospect_status(prospect_id, "needs_contact_research")
+        logger.info(
+            "prospect_crm_staging_skipped_unverified_contact",
+            prospect_id=prospect_id,
+            company=company_name,
+        )
+        return {
+            "crm_provider": None,
+            "crm_record_id": None,
+            "sync_status": "skipped_unverified_contact",
+            "details": {"reason": "no_verified_contact_email"},
+        }
 
     crm_provider = HubSpotCRMProvider()
     sync_result = await crm_provider.sync_lead(
-        email=f"contact@{domain}",
+        email=contact_email,
         company_name=company_name,
         enrichment_data={"industry": "Outbound Prospect"},
         qualification_data=qualification_data,

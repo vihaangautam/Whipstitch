@@ -75,6 +75,7 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
           prospects.map((p) => {
             const isApproved = p.scrape_status === 'approved';
             const isRejected = p.scrape_status === 'rejected';
+            const hasContact = Boolean(p.decision_maker_name);
 
             return (
               <div
@@ -116,6 +117,11 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                       </span>
                     ) : (
                       <div className="flex items-center gap-2.5">
+                        {p.scrape_status === 'needs_contact_research' && (
+                          <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-xs font-semibold">
+                            Needs Contact
+                          </span>
+                        )}
                         <button
                           onClick={() => handleReject(p.id)}
                           className="px-3.5 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition"
@@ -124,9 +130,11 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                         </button>
                         <button
                           onClick={() => handleApprove(p.id)}
-                          className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition shadow-sm"
+                          disabled={!hasContact}
+                          title={hasContact ? undefined : 'A verified contact is required before this can be staged in CRM'}
+                          className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition shadow-sm disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
                         >
-                          Approve & Stage in CRM
+                          {hasContact ? 'Approve & Stage in CRM' : 'Needs a Contact'}
                         </button>
                       </div>
                     )}
@@ -136,12 +144,16 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                 {/* Decision Maker & Fit Markdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
-                    <div className="text-xs text-slate-400 font-semibold">Resolved Decision Maker</div>
+                    <div className="text-xs text-slate-400 font-semibold">Decision Maker</div>
                     <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                       <User className="w-4 h-4 text-slate-500" />
-                      {p.decision_maker_name || 'Executive Lead'}
+                      {hasContact ? p.decision_maker_name : <span className="text-slate-400 font-medium">Not resolved yet</span>}
                     </div>
-                    <div className="text-xs text-slate-600">{p.decision_maker_title || 'VP Growth / Marketing'}</div>
+                    <div className="text-xs text-slate-600">
+                      {hasContact
+                        ? p.decision_maker_title
+                        : `Searching for: ${p.decision_maker_title || 'decision maker'}`}
+                    </div>
                     {p.decision_maker_linkedin && (
                       <a
                         href={p.decision_maker_linkedin}
@@ -155,9 +167,11 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
                   </div>
 
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
-                    <div className="text-xs text-slate-400 font-semibold">BM25 Fit Markdown Extract</div>
+                    <div className="text-xs text-slate-400 font-semibold">Research Findings</div>
                     <p className="text-slate-700 leading-relaxed text-xs sm:text-sm">
-                      {p.fit_markdown || 'Identified active growth hiring and tech stack modernizations aligning with high-velocity lead intake.'}
+                      {p.fit_markdown || (
+                        <span className="text-slate-400">No research findings yet for this account.</span>
+                      )}
                     </p>
                   </div>
                 </div>

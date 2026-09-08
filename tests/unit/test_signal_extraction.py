@@ -74,8 +74,11 @@ async def test_discover_decision_maker_resolution():
             domain="acmesolutions.com",
             target_roles=["VP Growth", "Founder"],
         )
-        assert res["full_name"] is not None
+        # The target role is echoed back, but no resolver is wired up yet, so the
+        # contact itself stays unresolved instead of being invented.
         assert res["exact_title"] == "VP Growth"
-        assert "linkedin.com" in res["linkedin_url"]
+        assert res["full_name"] is None
+        assert res["linkedin_url"] is None
+        assert res["is_verified"] is False
 
 
