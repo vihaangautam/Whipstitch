@@ -101,25 +101,18 @@ export default function App() {
     );
   }
 
-  // Unauthenticated: landing page only. Any attempt to enter the app opens the auth modal.
+  // Unauthenticated: landing page only. The landing page brings its own nav; every CTA opens the auth modal.
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-hidden">
-        <Header
-          currentView="landing"
-          setCurrentView={(v) => { if (v && v !== 'landing') setIsAuthModalOpen(true); }}
-          currentUser={null}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
-          onSignOut={handleSignOut}
-        />
+      <div className="min-h-screen bg-[#FAF9F6] text-[#0F172A] font-sans overflow-x-clip">
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onAuthSuccess={handleAuthSuccess}
         />
         <LandingPage
-          setCurrentView={(v) => { if (v && v !== 'landing') setIsAuthModalOpen(true); }}
-          onSimulateEvent={handleSimulateEvent}
+          onPrimary={() => setIsAuthModalOpen(true)}
+          onSignIn={() => setIsAuthModalOpen(true)}
         />
       </div>
     );
@@ -142,19 +135,21 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-hidden selection:bg-emerald-600 selection:text-white">
-      <Header
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-        currentTenant={currentTenant}
-        setCurrentTenant={setCurrentTenant}
-        summaryData={summaryData}
-        onRefresh={loadSummary}
-        isRefreshing={isRefreshing}
-        currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onSignOut={handleSignOut}
-      />
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-clip selection:bg-emerald-600 selection:text-white">
+      {currentView !== 'landing' && (
+        <Header
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          currentTenant={currentTenant}
+          setCurrentTenant={setCurrentTenant}
+          summaryData={summaryData}
+          onRefresh={loadSummary}
+          isRefreshing={isRefreshing}
+          currentUser={currentUser}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onSignOut={handleSignOut}
+        />
+      )}
 
       <AuthModal
         isOpen={isAuthModalOpen}
@@ -163,7 +158,7 @@ export default function App() {
       />
 
       {currentView === 'landing' ? (
-        <LandingPage setCurrentView={setCurrentView} onSimulateEvent={handleSimulateEvent} />
+        <LandingPage onPrimary={() => setCurrentView('dashboard')} onSignIn={() => setCurrentView('dashboard')} />
       ) : (
         <div className="flex flex-1 overflow-hidden">
           <Sidebar currentView={currentView} setCurrentView={setCurrentView} summaryData={summaryData} />
