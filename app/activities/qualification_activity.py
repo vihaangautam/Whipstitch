@@ -1,25 +1,42 @@
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 import httpx
 from sqlalchemy import select
 from temporalio import activity
 
 from app.core.config import settings
 from app.core.logging import bind_correlation_id, get_logger
-from app.db.models import LeadEvent, LLMQualification
+from app.db.models import LeadEvent, LLMQualification, Tenant
 from app.db.session import AsyncSessionLocal
 from app.models.schemas import LeadQualificationSchema, OutboundDraft
 
 logger = get_logger(__name__)
 
 
-def generate_mock_qualification(company_name: str, industry: str) -> LeadQualificationSchema:
-    """Generates structured qualification adhering to Pattern 5 Observation -> Link -> Ask."""
+def generate_mock_qualification(
+    company_name: str,
+    industry: str,
+    icp_criteria: Optional[Dict[str, Any]] = None,
+) -> LeadQualificationSchema:
+    """Generates structured qualification adhering to Pattern 5 Observation -> Link -> Ask, respecting configured ICP."""
+    target_industries = (icp_criteria or {}).get("target_industries", [])
+    if target_industries:
+        is_match = any(ind.lower() in industry.lower() for ind in target_industries)
+        score = 88 if is_match else 45
+        reason = (
+            f"Strong ICP fit: {company_name} operates in target vertical '{industry}' with verified scaling signals."
+            if is_match
+            else f"Sub-optimal ICP fit: '{industry}' is outside the primary target verticals ({', '.join(target_industries[:3])})."
+        )
+    else:
+        score = 88
+        reason = f"Strong ICP fit: {company_name} operates in target vertical '{industry}' with verified scaling signals."
+
     return LeadQualificationSchema(
-        lead_score=88,
-        fit_reasoning=f"Strong ICP fit: {company_name} operates in target vertical '{industry}' with verified scaling signals.",
+        lead_score=score,
+        fit_reasoning=reason,
         outreach_draft=OutboundDraft(
             observation_hook=f"Noticed {company_name} is actively scaling digital content and creator partnerships in {industry}.",
             capability_link="We manage a vetted roster of 200+ top-performing UGC creators who drive 3x higher ROAS for brands in your vertical.",
@@ -30,24 +47,58 @@ def generate_mock_qualification(company_name: str, industry: str) -> LeadQualifi
 
 
 async def call_real_llm_qualification(
-    company_name: str, industry: str, enrichment_data: Dict[str, Any]
+    company_name: str,
+    industry: str,
+    enrichment_data: Dict[str, Any],
+    icp_criteria: Optional[Dict[str, Any]] = None,
+    geographies: Optional[List[str]] = None,
+    tenant_key: Optional[str] = None,
 ) -> LeadQualificationSchema:
-    """Calls Google Gemini or Groq free tier REST API to generate real AI qualification and 3-part outreach drafts."""
+    """Calls Google Gemini or Groq free tier REST API with injected tenant ICP criteria."""
+    if tenant_key and (icp_criteria is None or geographies is None):
+        try:
+            async with AsyncSessionLocal() as session:
+                t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_key))
+                t = t_res.scalar_one_or_none()
+                if t and t.config:
+                    if icp_criteria is None:
+                        icp_criteria = t.config.get("icp_criteria", {})
+                    if geographies is None:
+                        geographies = t.config.get("geographies", [])
+        except Exception as e:
+            logger.warning("failed_to_fetch_tenant_icp_criteria", error=str(e))
+
+    icp_criteria = icp_criteria or {}
+    target_industries = icp_criteria.get("target_industries", ["E-Commerce / D2C", "Beauty & Personal Care", "FMCG & Consumer Goods", "Fintech"])
+    emp_min = icp_criteria.get("employee_count_min", 50)
+    emp_max = icp_criteria.get("employee_count_max", 5000)
+    target_geos = geographies or ["India", "United States", "UAE", "Southeast Asia"]
+
     prompt = f"""
 You are an expert B2B sales development representative.
-Analyze the following lead profile and score their ICP fit (0-100) and generate a 3-part personalized outreach draft.
+Analyze the following lead profile and score their ICP fit (0-100) based strictly on our company's target Ideal Customer Profile (ICP) rules.
 
-Lead Details:
+Tenant Target ICP Criteria:
+- Target Industries: {', '.join(target_industries)}
+- Target Employee Count Range: {emp_min} to {emp_max}
+- Target Commercial Geographies: {', '.join(target_geos)}
+
+Lead Details to Evaluate:
 - Company Name: {company_name}
 - Industry: {industry}
 - Employee Count: {enrichment_data.get('employee_count', 'Unknown')}
 - Geography: {enrichment_data.get('geography', 'Global')}
 - Tech Stack: {', '.join(enrichment_data.get('tech_stack', []))}
 
+Scoring Instructions:
+- Score 75-100: If company operates in a target industry, fits employee headcount range, and matches target geographies.
+- Score 45-74: If company partially matches (e.g. adjacent vertical or missing headcount/geo).
+- Score 0-44: If company is clearly outside target verticals and geographies.
+
 Return ONLY a JSON object with this exact schema:
 {{
   "lead_score": integer (0 to 100),
-  "fit_reasoning": "1-2 sentence explanation of ICP fit",
+  "fit_reasoning": "1-2 sentence explanation of ICP fit versus configured ICP criteria",
   "outreach_draft": {{
     "observation_hook": "Specific 1-sentence observation about their company/tech/growth",
     "capability_link": "1-sentence link to value proposition",
@@ -96,7 +147,7 @@ Return ONLY a JSON object with this exact schema:
 
     # Fallback to deterministic mock qualification if no real keys or API error
     logger.info("using_mock_llm_qualification_fallback")
-    return generate_mock_qualification(company_name, industry)
+    return generate_mock_qualification(company_name, industry, icp_criteria)
 
 
 @activity.defn(name="qualify_lead_llm_activity")
@@ -112,7 +163,9 @@ async def qualify_lead_llm_activity(
 
     logger.info("qualify_lead_llm_activity_started", lead_id=lead_id, company_name=company_name, industry=industry)
 
-    qualification = await call_real_llm_qualification(company_name, industry, enrichment_data)
+    qualification = await call_real_llm_qualification(
+        company_name, industry, enrichment_data, tenant_key=tenant_key
+    )
 
     async with AsyncSessionLocal() as session:
         qual_entry = LLMQualification(

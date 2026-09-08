@@ -95,6 +95,10 @@ class TenantConfigSchema(BaseModel):
         }
     )
     sla_window_minutes: int = 15
+    competitor_blocklist: list[str] = Field(
+        default=["competitor.com", "blocklist.com", "spam.net", "test.com", "example.com"],
+        description="Domains or competitor names to fast-fail in circuit breaker"
+    )
 
 
 class EventStatusResponse(BaseModel):

@@ -42,7 +42,7 @@ class OutboundProspectingWorkflow:
             # Step A: Circuit Breaker Gate
             icp_check: Dict[str, Any] = await workflow.execute_activity(
                 disqualify_prospect_gate_activity,
-                args=[prospect_id, company_name, domain],
+                args=[prospect_id, company_name, domain, tenant_key],
                 start_to_close_timeout=activity_timeout,
             )
 

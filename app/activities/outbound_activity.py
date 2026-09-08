@@ -83,15 +83,42 @@ async def discover_prospects_activity(tenant_key: str, batch_size: int = 5) -> L
 
 @activity.defn(name="disqualify_prospect_gate_activity")
 async def disqualify_prospect_gate_activity(
-    prospect_id: str, company_name: str, domain: str
+    prospect_id: str, company_name: str, domain: str, tenant_key: Optional[str] = None
 ) -> Dict[str, Any]:
     """Temporal Activity (Pattern 4): Circuit breaker fast-fail gate for non-viable prospects."""
     bind_correlation_id(prospect_id)
-    logger.info("disqualify_prospect_gate_started", prospect_id=prospect_id, domain=domain)
+    logger.info("disqualify_prospect_gate_started", prospect_id=prospect_id, domain=domain, tenant_key=tenant_key)
 
-    # Stage 1: Rule-based fast fail
+    # Stage 1: Baseline rule-based fast fail
     disqualified_domains = ["competitor.com", "blocklist.com", "spam.net", "test.com", "example.com"]
-    if domain.lower() in disqualified_domains or "competitor" in company_name.lower():
+
+    # Dynamic tenant competitor blocklist from Tenant config
+    if tenant_key:
+        try:
+            async with AsyncSessionLocal() as session:
+                tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_key))
+                tenant = tenant_res.scalar_one_or_none()
+                if tenant and tenant.config:
+                    custom_blocklist = tenant.config.get("competitor_blocklist", [])
+                    if custom_blocklist:
+                        for d in custom_blocklist:
+                            clean_d = d.strip().lower()
+                            if clean_d and clean_d not in disqualified_domains:
+                                disqualified_domains.append(clean_d)
+        except Exception as e:
+            logger.warning("failed_to_fetch_tenant_blocklist", error=str(e))
+
+    domain_lower = domain.lower().strip()
+    company_lower = company_name.lower().strip()
+
+    is_blocked = any(
+        domain_lower == blocked
+        or domain_lower.endswith("." + blocked)
+        or blocked in domain_lower
+        for blocked in disqualified_domains
+    )
+
+    if is_blocked or "competitor" in company_lower:
         reason = f"Domain '{domain}' or company '{company_name}' matched competitor blocklist rules."
         await _update_prospect_status(prospect_id, "circuit_disqualified", reason=reason)
         logger.info("prospect_circuit_disqualified", prospect_id=prospect_id, reason=reason)
@@ -174,7 +201,9 @@ async def qualify_outbound_prospect_activity(
         "tech_stack": research_data.get("signals", {}).get("tech_stack_signals", ["Shopify"]),
     }
 
-    qualification = await call_real_llm_qualification(company_name, "SaaS / Tech", enrichment_payload)
+    qualification = await call_real_llm_qualification(
+        company_name, "SaaS / Tech", enrichment_payload, tenant_key=tenant_key
+    )
 
     async with AsyncSessionLocal() as session:
         res = await session.execute(
@@ -262,9 +291,14 @@ async def stage_prospect_in_crm_activity(
 
 
 async def _update_prospect_status(prospect_id: str, status: str, reason: Optional[str] = None):
+    try:
+        p_uuid = uuid.UUID(prospect_id)
+    except (ValueError, TypeError):
+        return
+
     async with AsyncSessionLocal() as session:
         res = await session.execute(
-            select(OutboundProspect).where(OutboundProspect.id == uuid.UUID(prospect_id))
+            select(OutboundProspect).where(OutboundProspect.id == p_uuid)
         )
         prospect = res.scalar_one_or_none()
         if isinstance(prospect, OutboundProspect):

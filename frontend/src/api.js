@@ -1,10 +1,110 @@
 const API_KEY = "whipstitch-dev-key-12345";
 const BASE_URL = "";
+const AUTH_TOKEN_KEY = "whipstitch_auth_token";
+
+export function getAuthToken() {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+export function setAuthToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+      headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      delete headers["Authorization"];
+    }
+  } catch (e) {}
+}
+
+export function clearAuthToken() {
+  setAuthToken(null);
+}
 
 const headers = {
   "Content-Type": "application/json",
   "X-API-Key": API_KEY,
 };
+
+const initialToken = getAuthToken();
+if (initialToken) {
+  headers["Authorization"] = `Bearer ${initialToken}`;
+}
+
+export async function loginUser(email, password) {
+  const res = await fetch(`${BASE_URL}/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Login failed" }));
+    throw new Error(err.detail || "Invalid email or password");
+  }
+  const data = await res.json();
+  if (data.access_token) {
+    setAuthToken(data.access_token);
+  }
+  return data;
+}
+
+export async function registerUser(payload) {
+  const res = await fetch(`${BASE_URL}/v1/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(err.detail || "Registration failed");
+  }
+  const data = await res.json();
+  if (data.access_token) {
+    setAuthToken(data.access_token);
+  }
+  return data;
+}
+
+export async function demoLoginUser() {
+  const res = await fetch(`${BASE_URL}/v1/auth/demo-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error("Demo login failed");
+  }
+  const data = await res.json();
+  if (data.access_token) {
+    setAuthToken(data.access_token);
+  }
+  return data;
+}
+
+export async function fetchCurrentUser() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/v1/auth/me`, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      clearAuthToken();
+      return null;
+    }
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
 
 export async function fetchAnalyticsSummary(tenantId = "trifid_media") {
   try {
@@ -210,6 +310,27 @@ export async function approveOutboundProspect(prospectId, action = "approve", re
   });
   if (!res.ok) throw new Error(`Failed to ${action} prospect`);
   return await res.json();
+}
+
+export async function fetchTenantConfig(tenantId = "trifid_media") {
+  try {
+    const res = await fetch(`${BASE_URL}/v1/tenants/${tenantId}/config`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch tenant config");
+    return await res.json();
+  } catch (err) {
+    console.warn("Using fallback tenant config", err);
+    return {
+      enrichment_waterfall_order: ["apollo", "people_data_labs", "crawl4ai", "llm_fallback"],
+      icp_criteria: {
+        target_industries: ["Fintech", "D2C", "SaaS", "B2B Software"],
+        employee_count_min: 50,
+        employee_count_max: 500,
+        geographies: ["India", "UAE", "UK", "US"],
+      },
+      sla_window_minutes: 15,
+      competitor_blocklist: ["competitor.com", "blocklist.com", "spam.net"],
+    };
+  }
 }
 
 export async function saveTenantConfig(tenantId, config) {

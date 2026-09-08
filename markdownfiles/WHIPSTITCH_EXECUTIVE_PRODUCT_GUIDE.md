@@ -45,6 +45,7 @@
    - [3.5 Token-Bucket Rate Limiter & Apollo Credit Hard-Cap Guard](#35-token-bucket-rate-limiter--apollo-credit-hard-cap-guard)
    - [3.6 Real-Time Server-Sent Events (`SSE`) Streaming Architecture](#36-real-time-server-sent-events-sse-streaming-architecture)
    - [3.7 AES-256 Fernet Cryptographic Vault & In-Memory Decryption](#37-aes-256-fernet-cryptographic-vault--in-memory-decryption)
+   - [3.8 User Authentication & Single Unified Profile Architecture (`Sales Representative`)](#38-user-authentication--single-unified-profile-architecture-sales-representative)
 4. [AI Logic, Prompt Engineering & Mathematical Evaluation Rubrics](#4-ai-logic-prompt-engineering--mathematical-evaluation-rubrics)
    - [4.1 Inbound Qualification Prompt & Pydantic Validation](#41-inbound-qualification-prompt--pydantic-validation)
    - [4.2 Evidence-Based MEDDPICC 8-Box Diagnostic Engine](#42-evidence-based-medpicc-8-box-diagnostic-engine)
@@ -355,14 +356,16 @@ The Whipstitch user interface is organized into a clean, desktop sidebar with tw
 
 ### 2.8 Logic & ICP Studio (`TenantConfigStudio.jsx`)
 * **Route**: `/config`
-* **Target Personas**: Revenue Operations Managers, Sales Directors.
-* **Core Value Proposition**: No-code configuration studio allowing revenue teams to define Ideal Customer Profile (ICP) boundaries, waterfall enrichment priorities, and SLA escalation thresholds.
+* **Target Personas**: Revenue Operations Managers, Sales Directors, Sales Representatives.
+* **Core Value Proposition**: No-code configuration studio allowing revenue teams to define Ideal Customer Profile (ICP) boundaries, geographic targeting, competitor circuit breaker blocklists, waterfall enrichment priorities, and SLA escalation thresholds.
 
-#### Configurable Parameters:
-1. **Employee Headcount Boundaries**: Minimum and maximum company size sliders (e.g. `50–500 employees`).
-2. **Target ICP Industries**: Dynamic tag-based input (e.g. `Fintech`, `D2C`, `SaaS`, `Quick-Commerce`, `Logistics`).
-3. **SLA Timeout Thresholds**: Configurable minutes (e.g. `15 minutes`) before unclaimed leads trigger high-priority Slack webhook escalations.
-4. **Waterfall Priority Order**: Visual priority ranking of enrichment providers (`Apollo` ➔ `PeopleDataLabs` ➔ `Crawl4AI` ➔ `LLM Fallback`).
+#### Configurable Parameters (All 6 Studio Sections):
+1. **01 · Target Headcount Envelope**: Minimum and maximum company employee count boundaries (e.g. `50–5,000 employees`) with dynamic badge chips and real-time range slider.
+2. **02 · Priority Verticals (ICP Industries)**: Dynamic tag-based input with 1-click removal pills (e.g. `E-Commerce / D2C`, `Beauty & Personal Care`, `FMCG & Consumer Goods`, `Fintech & Payments`). LLM qualification prompts dynamically score leads against these exact verticals.
+3. **03 · Target Commercial Geographies**: Tag pills specifying approved commercial regions (e.g. `India`, `United States`, `UAE`, `Southeast Asia`). Injected directly into AI evaluation prompts to penalize accounts outside priority territories.
+4. **04 · Competitor & Disqualified Domains (Circuit Breaker Gate)**: Configurable domain blocklist (e.g. `rival.com`, `competitor.net`). The outbound discovery engine runs a zero-credit-waste fast-fail gate (`disqualify_prospect_gate_activity`), immediately disqualifying matching accounts before consuming Apollo credits or LLM tokens.
+5. **05 · Waterfall Priority Order**: Visual priority ranking and latency indicators for enrichment sequence (`Apollo.io` ➔ `PeopleDataLabs` ➔ `Crawl4AI` ➔ `LLM Web Scraper`).
+6. **06 · Sub-15m Speed-to-Lead SLA Escalation Window**: Configurable minutes (e.g. `15 minutes`) before uncontacted leads trigger automated high-priority Slack webhook alerts.
 
 ---
 
@@ -507,6 +510,34 @@ In `app/core/vault.py` and `app/core/security.py`:
 - Tenants store raw API keys securely. Keys are encrypted using **AES-256 Fernet symmetric cryptography** before database insertion.
 - When an API call is executed, keys are decrypted exclusively in volatile RAM and never written to plain-text logs or stored on disk.
 - Zero customer pipeline data is ever transmitted to third parties for AI model training.
+
+---
+
+### 3.8 User Authentication & Single Unified Profile Architecture (`Sales Representative`)
+Whipstitch implements an enterprise-grade user authentication and identity system built specifically around the user's workflow requirements:
+- **Single Unified Profile Model (`sales_representative`)**:
+  - To streamline sales operations and eliminate artificial administrative barriers, the system operates on a single unified profile: `Sales Representative`.
+  - This profile has complete, unrestricted access across all 10 pages, diagnostic studios, outbound queues, ICP configuration studios, and BYOK cryptographic key vaults.
+- **Cryptographic Security & Password Hashing**:
+  - Employs PBKDF2-HMAC-SHA256 with random 16-byte cryptographic salts (`secrets.token_hex(16)`) and 100,000 hashing iterations.
+  - Zero heavy or fragile C-extensions; 100% resilient across Windows and Linux runtime environments.
+- **PyJWT Bearer Token Architecture**:
+  - Issues signed HS256 JSON Web Tokens with a 7-day configurable lifetime (`JWT_ACCESS_TOKEN_EXPIRE_MINUTES`).
+  - Contains standard claims: `sub` (User UUID), `email`, `name`, `role` (`sales_representative`), and `tenant_id`.
+- **Dual-Authentication Layer (`app/api/deps.py`)**:
+  - Simultaneously supports `Authorization: Bearer <jwt>` tokens for web browser sessions and `X-API-Key` headers for automated CI/CD test runners and background workers without conflict.
+- **Pre-Seeded Ground 0 User**:
+  - Default Sales Representative account automatically seeded upon initialization:
+    - **Email**: `rep@trifidmedia.in`
+    - **Full Name**: `Alex Morgan`
+    - **Role**: `sales_representative`
+    - **Password**: `Whipstitch123!`
+  - Includes a 1-Click Fast Sign-In button on the frontend `AuthModal` for instant evaluation.
+- **Supabase Cloud Postgres Zero-Code Switch**:
+  - Built directly on SQLAlchemy's `ResilientSessionFactory`.
+  - When switching from the local SQLite/PostgreSQL database to Supabase, simply drop your Supabase connection string into `.env`:
+    `DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@[HOST].supabase.co:5432/postgres`
+  - The application automatically connects, verifies, and runs on Supabase Postgres with zero code modifications.
 
 ---
 
@@ -655,17 +686,22 @@ Whipstitch implements a fully relational, ACID-compliant database schema with fo
 6. **`evidence_quotes`**: Verbatim customer quotes (`id`, `medpicc_score_id`, `speaker_name`, `speaker_role`, `quote_text`, `timestamp`).
 7. **`buying_committee_members`**: Stakeholders on the account (`id`, `deal_id`, `name`, `title`, `buying_role`, `engagement_status`, `email`).
 8. **`user_api_keys`**: Encrypted credentials in the BYOK vault (`id`, `tenant_id`, `provider`, `encrypted_key`, `key_hint`, `is_valid`, `updated_at`).
-9. **`audit_logs`**: System audit trail (`id`, `tenant_id`, `event_type`, `description`, `created_at`).
+9. **`users`**: User identity and authentication profiles (`id`, `tenant_id`, `email`, `hashed_password`, `full_name`, `role="sales_representative"`, `is_active`, `created_at`, `updated_at`).
+10. **`audit_logs`**: System audit trail (`id`, `tenant_id`, `event_type`, `description`, `created_at`).
 
 ---
 
 ## 6. Complete REST API Route Catalog
 
-All routes are authenticated via `X-API-Key` header and versioned under `/v1/`.
+All routes are authenticated via `Bearer <JWT_TOKEN>` or `X-API-Key` header and versioned under `/v1/`.
 
 | Method | Endpoint Route | Request Body / Parameters | Description & System Action |
 |---|---|---|---|
 | `GET` | `/health` | None | System health check (database, redis, active workers). |
+| `POST` | `/v1/auth/login` | `UserLoginRequest` | Authenticates user (email/password), verifies PBKDF2 hash, issues 7-day JWT access token. |
+| `POST` | `/v1/auth/register` | `UserRegisterRequest` | Registers new user account with default `sales_representative` role. |
+| `POST` | `/v1/auth/demo-login` | None | **1-Click Instant Sign-In** as Alex Morgan (Sales Representative) with auto-seeding. |
+| `GET` | `/v1/auth/me` | Bearer Token / API Key | Returns authenticated user profile, role, and tenant binding. |
 | `POST` | `/v1/ingest` | `IngestLeadRequest` | Sub-second webhook ingestion with Redis idempotency lock. |
 | `GET` | `/v1/leads` | `tenant_id`, `search`, `status` | Lists enriched and scored inbound leads. |
 | `GET` | `/v1/leads/{id}` | `id` | Returns full firmographic profile and outreach draft. |

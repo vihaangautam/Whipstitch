@@ -13,13 +13,22 @@ import CompetitorBattlecards from './pages/CompetitorBattlecards';
 import BYOKSettings from './pages/BYOKSettings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
-import { fetchAnalyticsSummary, triggerOutboundBatch } from './api';
+import AuthModal from './components/AuthModal';
+import { fetchAnalyticsSummary, triggerOutboundBatch, fetchCurrentUser, clearAuthToken } from './api';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentTenant, setCurrentTenant] = useState('trifid_media');
   const [summaryData, setSummaryData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState({
+    id: 'rep-alex-morgan',
+    full_name: 'Alex Morgan',
+    email: 'rep@trifidmedia.in',
+    role: 'sales_representative',
+    tenant_id: 'trifid_media',
+  });
   const [liveLogs, setLiveLogs] = useState([
     { time: '15:38', text: 'Deal Apex Logistics diagnosed (68/100) → Synced to HubSpot CRM' },
     { time: '15:35', text: 'Outbound prospect NovaScale staged as Awaiting Approval' },
@@ -36,6 +45,16 @@ export default function App() {
 
   useEffect(() => { loadSummary(); }, [currentTenant]);
 
+  useEffect(() => {
+    async function checkAuth() {
+      const user = await fetchCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+      }
+    }
+    checkAuth();
+  }, []);
+
   const handleSimulateEvent = (eventName) => {
     const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLiveLogs((prev) => [{ time: t, text: eventName }, ...prev.slice(0, 7)]);
@@ -49,6 +68,11 @@ export default function App() {
     } catch (e) { console.warn(e); }
   };
 
+  const handleSignOut = () => {
+    clearAuthToken();
+    setCurrentUser(null);
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col relative overflow-x-hidden selection:bg-emerald-600 selection:text-white">
       <Header
@@ -58,6 +82,18 @@ export default function App() {
         setCurrentTenant={setCurrentTenant}
         onRefresh={loadSummary}
         isRefreshing={isRefreshing}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onSignOut={handleSignOut}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+          loadSummary();
+        }}
       />
 
       {currentView === 'landing' ? (

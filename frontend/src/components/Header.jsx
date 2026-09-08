@@ -1,7 +1,35 @@
-import React from 'react';
-import { RefreshCw, Database, HelpCircle, Terminal, Home, ArrowRight, User } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { RefreshCw, Database, HelpCircle, Terminal, Home, ArrowRight, User, LogOut, ChevronDown, Shield, CheckCircle } from 'lucide-react';
 
-export default function Header({ currentView, setCurrentView, currentTenant, setCurrentTenant, onRefresh, isRefreshing }) {
+export default function Header({
+  currentView,
+  setCurrentView,
+  currentTenant,
+  setCurrentTenant,
+  onRefresh,
+  isRefreshing,
+  currentUser,
+  onOpenAuthModal,
+  onSignOut,
+}) {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const initials = currentUser?.full_name
+    ? currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'AM';
+
   const getViewTitle = () => {
     switch (currentView) {
       case 'dashboard': return 'Dashboard';
@@ -109,15 +137,78 @@ export default function Header({ currentView, setCurrentView, currentTenant, set
                 <span>API Docs</span>
               </a>
 
-              {/* User Profile Avatar */}
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                  LD
-                </div>
-                <div className="hidden lg:block text-left">
-                  <div className="text-xs font-semibold text-slate-900 leading-tight">Lauren Davis</div>
-                  <div className="text-[10px] text-slate-500 leading-tight">Admin Workspace</div>
-                </div>
+              {/* User Profile Avatar & Dropdown */}
+              <div className="relative pl-2 border-l border-slate-200" ref={profileRef}>
+                {currentUser ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 transition cursor-pointer text-left focus:outline-none"
+                    aria-label="User Profile Menu"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-slate-900 text-emerald-400 border border-slate-700 flex items-center justify-center text-xs font-bold shadow-sm">
+                      {initials}
+                    </div>
+                    <div className="hidden lg:block text-left">
+                      <div className="text-xs font-semibold text-slate-900 leading-tight">
+                        {currentUser.full_name || 'Alex Morgan'}
+                      </div>
+                      <div className="text-[10px] text-emerald-600 font-medium leading-tight flex items-center gap-1">
+                        <Shield className="w-2.5 h-2.5" />
+                        <span>Sales Representative</span>
+                      </div>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onOpenAuthModal}
+                    className="btn-primary text-xs px-3 py-1.5"
+                  >
+                    Sign In
+                  </button>
+                )}
+
+                {/* Dropdown Menu */}
+                {isProfileOpen && currentUser && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-xs font-bold text-slate-900">{currentUser.full_name || 'Alex Morgan'}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{currentUser.email || 'rep@trifidmedia.in'}</p>
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-semibold border border-emerald-200">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" />
+                        <span>Sales Representative &bull; Full Access</span>
+                      </div>
+                    </div>
+
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onOpenAuthModal();
+                        }}
+                        className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      >
+                        <User className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Switch Account / Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onSignOut();
+                        }}
+                        className="w-full px-4 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
@@ -130,14 +221,14 @@ export default function Header({ currentView, setCurrentView, currentTenant, set
           ) : (
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setCurrentView('dashboard')}
-                className="text-xs font-medium text-slate-700 hover:text-slate-900 px-3 py-1.5 transition"
+                onClick={onOpenAuthModal}
+                className="text-xs font-medium text-slate-700 hover:text-slate-900 px-3 py-1.5 transition cursor-pointer"
               >
                 Sign In
               </button>
               <button
                 onClick={() => setCurrentView('dashboard')}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1.5"
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Launch Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />

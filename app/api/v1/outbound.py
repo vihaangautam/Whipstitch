@@ -79,7 +79,7 @@ async def trigger_outbound_prospecting(
                 p_id = p["prospect_id"]
                 c_name = p["company_name"]
                 dom = p["domain"]
-                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom)
+                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom, payload.tenant_id)
                 if not icp_res.get("is_viable_prospect", True):
                     continue
                 dm_res = await discover_decision_maker_activity(

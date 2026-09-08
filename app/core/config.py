@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     # Alerting
     SLACK_WEBHOOK_URL: str = "https://hooks.slack.com/services/mock/webhook/test"
 
+    # Authentication & JWT
+    JWT_SECRET_KEY: str = "whipstitch-jwt-secret-key-development-2026-very-secure"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
 
 settings = Settings()
 

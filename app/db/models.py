@@ -32,6 +32,23 @@ class Tenant(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     lead_events = relationship("LeadEvent", back_populates="tenant", cascade="all, delete-orphan")
+    users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=False)
+    role = Column(String(50), default="sales_representative", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    tenant = relationship("Tenant", back_populates="users")
 
 
 class LeadEvent(Base):

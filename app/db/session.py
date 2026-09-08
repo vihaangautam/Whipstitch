@@ -68,6 +68,7 @@ _session_maker = async_sessionmaker(
 
 async def _seed_default_data(session: AsyncSession):
     """Seeds default tenant, deals, and staged prospects for Ground 0 experience."""
+    from app.core.security import hash_password
     from app.db.models import (
         BuyingCommitteeMember,
         Deal,
@@ -75,12 +76,28 @@ async def _seed_default_data(session: AsyncSession):
         MEDPICCScore,
         OutboundProspect,
         Tenant,
+        User,
     )
 
     existing_tenant = await session.execute(
         select(Tenant).where(Tenant.tenant_key == "trifid_media")
     )
-    if existing_tenant.scalar_one_or_none():
+    tenant = existing_tenant.scalar_one_or_none()
+    if tenant:
+        # Ensure default user exists in existing database
+        user_res = await session.execute(select(User).where(User.email == "rep@trifidmedia.in"))
+        if not user_res.scalar_one_or_none():
+            default_user = User(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                email="rep@trifidmedia.in",
+                hashed_password=hash_password("Whipstitch123!"),
+                full_name="Alex Morgan",
+                role="sales_representative",
+                is_active=True,
+            )
+            session.add(default_user)
+            await session.commit()
         return
 
     logger.info("seeding_ground_zero_database")
@@ -98,6 +115,18 @@ async def _seed_default_data(session: AsyncSession):
     )
     session.add(tenant)
     await session.flush()
+
+    # Seed default Sales Representative user
+    default_user = User(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        email="rep@trifidmedia.in",
+        hashed_password=hash_password("Whipstitch123!"),
+        full_name="Alex Morgan",
+        role="sales_representative",
+        is_active=True,
+    )
+    session.add(default_user)
 
     deals_data = [
         ("Zepto - Fast Delivery Retention Engine", "Zepto", "zepto.in", 75000.0, "Discovery"),

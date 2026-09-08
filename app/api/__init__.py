@@ -8,13 +8,19 @@ from app.api.v1.leads import router as leads_router
 from app.api.v1.outbound import router as outbound_router
 from app.api.v1.settings import router as settings_router
 
-from app.api.v1.meetings import router as meetings_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.battlecards import router as battlecards_router
-from app.api.v1.signals import router as signals_router
 from app.api.v1.committee import router as committee_router
+from app.api.v1.deals import router as deals_router
+from app.api.v1.leads import router as leads_router
+from app.api.v1.meetings import router as meetings_router
+from app.api.v1.outbound import router as outbound_router
+from app.api.v1.settings import router as settings_router
+from app.api.v1.signals import router as signals_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["Health"])
+api_router.include_router(auth_router, tags=["User Authentication & Profile"])
 api_router.include_router(ingest_router, tags=["Ingestion"])
 api_router.include_router(tenant_router, tags=["Tenant Configuration"])
 api_router.include_router(leads_router, tags=["Inbound Leads"])
