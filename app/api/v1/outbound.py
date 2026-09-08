@@ -63,7 +63,45 @@ async def trigger_outbound_prospecting(
         )
         logger.info("outbound_workflow_started", workflow_id=workflow_id)
     except Exception as e:
-        logger.warning("temporal_connection_warning_offline", error=str(e))
+        logger.warning("temporal_connection_warning_offline_running_direct", error=str(e))
+        from app.activities.outbound_activity import (
+            discover_decision_maker_activity,
+            discover_prospects_activity,
+            disqualify_prospect_gate_activity,
+            qualify_outbound_prospect_activity,
+            research_prospect_activity,
+            stage_prospect_in_crm_activity,
+        )
+
+        try:
+            discovered = await discover_prospects_activity(payload.tenant_id, payload.batch_size)
+            for p in discovered:
+                p_id = p["prospect_id"]
+                c_name = p["company_name"]
+                dom = p["domain"]
+                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom)
+                if not icp_res.get("is_viable_prospect", True):
+                    continue
+                dm_res = await discover_decision_maker_activity(
+                    p_id, c_name, dom, ["Head of Marketing", "Founder", "VP Growth"]
+                )
+                res_data = await research_prospect_activity(
+                    p_id, c_name, dom, "ugc creator marketing roas product features"
+                )
+                qual_data = await qualify_outbound_prospect_activity(
+                    p_id, payload.tenant_id, c_name, dom, res_data
+                )
+                prospect_dict = {
+                    "prospect_id": p_id,
+                    "company_name": c_name,
+                    "domain": dom,
+                    "decision_maker": dm_res,
+                }
+                await stage_prospect_in_crm_activity(
+                    p_id, payload.tenant_id, prospect_dict, qual_data
+                )
+        except Exception as act_err:
+            logger.error("outbound_direct_fallback_error", error=str(act_err))
 
     return TriggerOutboundResponse(
         workflow_id=workflow_id,

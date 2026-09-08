@@ -9,7 +9,7 @@ from temporalio import activity
 from app.core.logging import bind_correlation_id, get_logger
 from app.core.llm_router import llm_router
 from app.core.prompts.medpicc_prompts import MEDPICC_SYSTEM_PROMPT, build_medpicc_prompt
-from app.db.models import Deal, DealDiagnostic, EvidenceQuote, MEDPICCScore
+from app.db.models import Deal, DealDiagnostic, EvidenceQuote, MEDPICCScore, Tenant
 from app.db.session import AsyncSessionLocal
 from app.models.medpicc_schemas import QualificationModel
 from app.services.crm.hubspot import HubSpotCRMProvider
@@ -82,11 +82,22 @@ async def extract_medpicc_scores_activity(
 
     diagnostic_id = uuid.uuid4()
     async with AsyncSessionLocal() as session:
+        # Resolve tenant_uuid
+        tenant_uuid = None
+        try:
+            tenant_uuid = uuid.UUID(tenant_id)
+        except ValueError:
+            tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
+            tenant_obj = tenant_res.scalar_one_or_none()
+            tenant_uuid = tenant_obj.id if tenant_obj else uuid.uuid4()
+
+        deal_uuid = uuid.UUID(deal_id) if isinstance(deal_id, str) and len(deal_id) == 36 else uuid.uuid4()
+
         # Create DealDiagnostic record
         diagnostic_record = DealDiagnostic(
             id=diagnostic_id,
-            deal_id=uuid.UUID(deal_id),
-            tenant_id=uuid.UUID(tenant_id),
+            deal_id=deal_uuid,
+            tenant_id=tenant_uuid,
             transcript_source="parsed_input",
             transcript_text=transcript_text[:10000],  # store first 10k chars for audit
             overall_score=qualification.overall_qualification_score_0_100,

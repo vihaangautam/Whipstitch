@@ -22,7 +22,12 @@ class ApolloBudgetGuard:
     async def get_monthly_usage(self, tenant_id: str) -> int:
         key = self._get_key(tenant_id)
         try:
-            r = aioredis.from_url(self.redis_url, decode_responses=True)
+            r = aioredis.from_url(
+                self.redis_url,
+                decode_responses=True,
+                socket_timeout=0.2,
+                socket_connect_timeout=0.2,
+            )
             val = await r.get(key)
             await r.aclose()
             return int(val) if val else 0
@@ -48,7 +53,12 @@ class ApolloBudgetGuard:
 
         key = self._get_key(tenant_id)
         try:
-            r = aioredis.from_url(self.redis_url, decode_responses=True)
+            r = aioredis.from_url(
+                self.redis_url,
+                decode_responses=True,
+                socket_timeout=0.2,
+                socket_connect_timeout=0.2,
+            )
             new_val = await r.incrby(key, credits)
             await r.expire(key, 60 * 24 * 3600)  # 60 days TTL
             await r.aclose()

@@ -105,6 +105,7 @@ class TriggerDiagnoseRequest(BaseModel):
     tenant_id: str = Field(default="trifid_media")
     deal_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
     preferred_model: Optional[str] = Field(default=None)
+    transcript_text: Optional[str] = Field(default=None)
 
 
 class DealDiagnosticResponse(BaseModel):

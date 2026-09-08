@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.vault import key_vault
-from app.db.models import LLMUsageLog, UserAPIKey
+from app.db.models import LLMUsageLog, Tenant, UserAPIKey
 from app.db.session import AsyncSessionLocal
 from app.models.medpicc_schemas import (
     ClosureLikelihood,
@@ -229,14 +229,23 @@ class MultiLLMRouter:
         """Resolves API key: checks BYOK first, then platform defaults. Returns (key, is_byok)."""
         try:
             async with AsyncSessionLocal() as session:
-                res = await session.execute(
-                    select(UserAPIKey).where(
-                        UserAPIKey.tenant_id == uuid.UUID(tenant_id),
-                        UserAPIKey.provider == provider,
-                        UserAPIKey.is_active == True,
+                t_uuid = None
+                try:
+                    t_uuid = uuid.UUID(tenant_id)
+                except ValueError:
+                    t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
+                    t_obj = t_res.scalar_one_or_none()
+                    t_uuid = t_obj.id if t_obj else None
+
+                if t_uuid:
+                    res = await session.execute(
+                        select(UserAPIKey).where(
+                            UserAPIKey.tenant_id == t_uuid,
+                            UserAPIKey.provider == provider,
+                            UserAPIKey.is_active == True,
+                        )
                     )
-                )
-                byok_entry = res.scalar_one_or_none()
+                    byok_entry = res.scalar_one_or_none()
                 if byok_entry and byok_entry.encrypted_key:
                     try:
                         decrypted = key_vault.decrypt_key(byok_entry.encrypted_key)
@@ -418,10 +427,17 @@ class MultiLLMRouter:
             total_tokens = input_tokens + output_tokens
             cost = calculate_cost(model, input_tokens, output_tokens) if is_byok else 0.0
 
+            t_uuid = None
+            if tenant_id:
+                try:
+                    t_uuid = uuid.UUID(tenant_id)
+                except ValueError:
+                    t_uuid = None
+
             async with AsyncSessionLocal() as session:
                 log_entry = LLMUsageLog(
                     id=uuid.uuid4(),
-                    tenant_id=uuid.UUID(tenant_id) if tenant_id else None,
+                    tenant_id=t_uuid,
                     feature=feature,
                     provider=provider,
                     model=model,

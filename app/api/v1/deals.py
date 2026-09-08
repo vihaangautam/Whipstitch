@@ -149,7 +149,6 @@ async def upload_transcript(
 async def trigger_diagnose_workflow(
     deal_id: str,
     payload: TriggerDiagnoseRequest,
-    transcript_text: str = Form(None),
     session: AsyncSession = Depends(get_db_session),
 ):
     """Triggers the DealDiagnosticWorkflow in Temporal or local fallback."""
@@ -158,7 +157,7 @@ async def trigger_diagnose_workflow(
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    text_to_analyze = transcript_text or payload.deal_context.get("transcript_text", "")
+    text_to_analyze = payload.transcript_text or (payload.deal_context or {}).get("transcript_text", "")
     if not text_to_analyze:
         # Check if there is an existing diagnostic transcript to re-run
         diag_res = await session.execute(
