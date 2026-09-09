@@ -241,11 +241,10 @@ function TimelineStage({ moment, engine, body, Preview, index, progress }) {
     <div className="relative sm:pl-16">
       {/* marker */}
       <div
-        className={`absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[13px] font-bold transition-colors duration-500 ${
-          active
+        className={`absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[13px] font-bold transition-colors duration-500 ${active
             ? 'bg-slate-900 border border-slate-900 text-white'
             : 'bg-white border border-slate-300 text-slate-400'
-        }`}
+          }`}
       >
         {active && !reduce && (
           <motion.span
@@ -691,22 +690,33 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
         {/* Architecture — prose, dark. Sits between the two sections as a reset. */}
         <section className="bg-slate-900 text-white">
-          <div className="max-w-3xl mx-auto px-6 py-20 sm:py-28 space-y-6">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">Sales AI can't <span className="font-extrabold">fail silently</span>.</h2>
-            <p className="text-slate-300 leading-relaxed text-[15px]">
-              Whipstitch runs its multi-step work as durable Temporal workflows. If a provider rate-limits
-              in the middle of enrichment, execution resumes on a fallback rather than leaving a deal
-              half-processed. Duplicate webhooks and retries hit a Redis lock, so nothing runs twice or
-              double-charges a credit.
-            </p>
-            <p className="text-slate-300 leading-relaxed text-[15px]">
-              Every model response is validated against a schema before you see it. When the model gets it
-              wrong, the deterministic template takes over. You never get an empty page or a malformed card.
-            </p>
-            <p className="text-slate-300 leading-relaxed text-[15px]">
-              Secrets, keys, battlecards, deals and prospects are scoped to your workspace, and every prompt
-              is built from your own onboarding answers — not a shared template.
-            </p>
+          <div className="max-w-5xl mx-auto px-6 pt-16 sm:pt-24 pb-14 sm:pb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+              <div className="lg:col-span-5">
+                <h2 className="font-display text-[2rem] sm:text-[2.75rem] lg:text-[3rem] font-light tracking-[-0.03em] leading-[1.08] text-white">
+                  Sales AI can’t <span className="font-extrabold">fail silently</span>.
+                </h2>
+              </div>
+              <div className="lg:col-span-7 space-y-6 sm:space-y-7">
+                <p className="text-slate-300 leading-relaxed text-[15px] sm:text-[16px]">
+                  <strong className="font-semibold text-white">Nothing gets stuck half-done.</strong>{' '}
+                  Whipstitch runs its multi-step work as durable Temporal workflows. If a provider rate-limits
+                  in the middle of enrichment, execution resumes on a fallback rather than leaving a deal
+                  half-processed. Duplicate webhooks and retries hit a Redis lock, so nothing runs twice or
+                  double-charges a credit.
+                </p>
+                <p className="text-slate-300 leading-relaxed text-[15px] sm:text-[16px]">
+                  <strong className="font-semibold text-white">You never see a broken output.</strong>{' '}
+                  Every model response is validated against a schema before you see it. When the model gets it
+                  wrong, the deterministic template takes over. You never get an empty page or a malformed card.
+                </p>
+                <p className="text-slate-300 leading-relaxed text-[15px] sm:text-[16px]">
+                  <strong className="font-semibold text-white">Your workspace is yours alone.</strong>{' '}
+                  Secrets, keys, battlecards, deals and prospects are scoped to your workspace, and every prompt
+                  is built from your own onboarding answers — not a shared template.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
