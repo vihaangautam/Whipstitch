@@ -981,13 +981,13 @@ export default function LandingPage({ onPrimary, onSignIn }) {
               className="absolute inset-0"
               style={{
                 background:
-                  // violet-and-green wash (per the Stitch mockup) — no amber
-                  'radial-gradient(42% 26% at 28% 6%, rgba(139,92,246,0.34) 0%, rgba(139,92,246,0) 100%),' +
-                  'radial-gradient(38% 22% at 72% 8%, rgba(124,58,237,0.20) 0%, rgba(124,58,237,0) 100%),' +
-                  'radial-gradient(46% 26% at 52% 24%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 100%),' +
-                  // mid — keeps colour continuous through the laptop band
-                  'radial-gradient(46% 28% at 16% 56%, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0) 100%),' +
-                  'radial-gradient(44% 26% at 86% 58%, rgba(139,92,246,0.17) 0%, rgba(139,92,246,0) 100%)',
+                  // amber warmth behind the headline
+                  'radial-gradient(48% 20% at 50% 8%, rgba(245,158,11,0.20) 0%, rgba(245,158,11,0) 100%),' +
+                  'radial-gradient(36% 16% at 30% 12%, rgba(251,191,36,0.14) 0%, rgba(251,191,36,0) 100%),' +
+                  // violet + green only around the laptop, lower down
+                  'radial-gradient(42% 26% at 14% 52%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 100%),' +
+                  'radial-gradient(44% 28% at 88% 50%, rgba(139,92,246,0.19) 0%, rgba(139,92,246,0) 100%),' +
+                  'radial-gradient(50% 26% at 50% 66%, rgba(124,58,237,0.13) 0%, rgba(124,58,237,0) 100%)',
                 filter: 'blur(58px)',
               }}
             />
