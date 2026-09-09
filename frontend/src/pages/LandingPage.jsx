@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight,
@@ -11,11 +11,6 @@ import {
   SlidersHorizontal,
   BarChart3,
   Rocket,
-  Sparkles,
-  Radio,
-  Lock,
-  CheckCircle2,
-  TrendingUp,
 } from 'lucide-react';
 import LegalDoc from './LegalDoc';
 
@@ -43,657 +38,219 @@ const NAV = [
   { href: '#faq', label: 'FAQ' },
 ];
 
-/* ── Compact, glanceable previews of what each engine hands back ── */
-function OutboundMini() {
+/* ═══ Section 1 — what you get. Four artifacts, one line each, tiny hint. ═══ */
+const SUMMARY = [
+  {
+    icon: Rocket,
+    name: 'Outbound Queue',
+    line: 'A first message to a company that just started hiring in your category.',
+    hint: 'Observation → link → ask',
+  },
+  {
+    icon: ShieldCheck,
+    name: 'Deal Health',
+    line: 'A MEDDPICC scorecard, scored from what the buyer actually said.',
+    hint: 'Eight boxes, quote-backed',
+  },
+  {
+    icon: Swords,
+    name: 'Competitor Playbooks',
+    line: 'A battlecard for each rival you keep losing to.',
+    hint: 'Their claim, then the question',
+  },
+  {
+    icon: CalendarClock,
+    name: 'Call Prep',
+    line: 'A briefing before every meeting on your calendar.',
+    hint: 'Three questions for the gaps',
+  },
+];
+
+function EngineSummary() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px] group-hover:bg-white group-hover:border-slate-300 transition-colors duration-200">
+    <div className="mt-12 max-w-5xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {SUMMARY.map(({ icon: Icon, name, line, hint }) => (
+        <div key={name} className="rounded-xl border border-slate-200 bg-white p-5">
+          <Icon className="w-5 h-5 text-slate-400" strokeWidth={1.75} />
+          <h3 className="mt-3 text-[15px] font-bold text-slate-900 tracking-[-0.01em]">{name}</h3>
+          <p className="mt-1.5 text-[13px] text-slate-600 leading-snug">{line}</p>
+          <p className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400">{hint}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══ Section 2 — when it fires. The same engines placed on a deal timeline. ═══ */
+const PANEL = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_44px_-24px_rgba(15,23,42,0.16)]';
+
+function RadarPanel() {
+  return (
+    <div className={`${PANEL} text-[13px]`}>
       <div className="flex items-center justify-between">
         <span className="font-semibold text-slate-900">Northwind Retail</span>
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 group-hover:bg-emerald-100/80 transition-colors">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Draft ready
-        </span>
+        <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">New</span>
       </div>
-      <div className="text-[10.5px] text-slate-400 mt-0.5">Priya Shah, Head of Growth</div>
-      <p className="mt-2 text-slate-600 leading-snug border-t border-slate-200/70 pt-2 group-hover:text-slate-800 transition-colors">
-        “You just posted for a growth marketer to own paid and lifecycle. We run
-        that exact scope as a senior pod…”
+      <p className="mt-2 text-slate-600 leading-relaxed">
+        Posted for a Head of Growth to own paid and lifecycle, four hours ago —
+        that split usually means the current mix has stopped working.
+      </p>
+      <p className="mt-3 pt-3 border-t border-slate-100 text-slate-500 leading-relaxed">
+        Bright Meridian is evaluating new customer-data tools. A second opener is staged.
       </p>
     </div>
   );
 }
 
-function ScorecardMini() {
-  const boxes = [
-    ['Metrics', 13, 15], ['Buyer', 6, 15], ['Criteria', 8, 10], ['Process', 5, 10],
-    ['Paper', 4, 10], ['Pain', 12, 15], ['Champion', 7, 15], ['Rival', 4, 10],
+function DraftPanel() {
+  return (
+    <div className={`${PANEL} text-[13px]`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-semibold text-slate-900">Trifid Media</div>
+          <div className="text-[12px] text-slate-400">Priya Shah, Head of Growth</div>
+        </div>
+        <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">Draft ready</span>
+      </div>
+      <p className="mt-3 pt-3 border-t border-slate-100 text-slate-600 leading-relaxed">
+        “You just posted for a growth marketer to own paid and lifecycle — that
+        split usually means the mix has plateaued. We run that exact scope as a
+        senior pod, live in two weeks.”
+      </p>
+    </div>
+  );
+}
+
+function CallPrepPanel() {
+  return (
+    <div className={`${PANEL} text-[13px]`}>
+      <div className="font-semibold text-slate-900">FinTech Scale</div>
+      <div className="text-[12px] text-slate-400">Ana Duarte, Founder — runs sales herself</div>
+      <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 text-slate-600 leading-relaxed">
+        <p>1. Who else needs to see the price before you can sign?</p>
+        <p>2. What happens to the number if the two current reps stay two?</p>
+        <p>3. What made the last tool you tried not stick?</p>
+      </div>
+    </div>
+  );
+}
+
+function HealthPanel() {
+  const bars = [
+    ['Economic Buyer', 6, 15, 'amber'],
+    ['Identified Pain', 12, 15, 'emerald'],
+    ['Decision Criteria', 8, 10, 'emerald'],
   ];
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 group-hover:bg-white group-hover:border-slate-300 transition-colors duration-200">
-      <div className="flex items-center justify-between text-[12px]">
-        <span className="font-semibold text-slate-900">CloudCube</span>
-        <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 group-hover:bg-amber-100/90 transition-colors">
-          Rescue · 59/100
+    <div className={PANEL}>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[13px] font-semibold text-slate-900">CloudCube</span>
+        <span className="text-[13px] font-semibold text-slate-500">
+          59<span className="text-[11px] font-normal text-slate-400"> / 100</span>
         </span>
       </div>
-      <div className="mt-2 grid grid-cols-4 gap-1">
-        {boxes.map(([name, s, max]) => {
-          const pct = s / max;
-          const tone = pct >= 0.67 ? 'bg-emerald-50 text-emerald-800 border-emerald-200 group-hover:bg-emerald-100/90'
-            : pct >= 0.4 ? 'bg-amber-50 text-amber-800 border-amber-200 group-hover:bg-amber-100/90'
-              : 'bg-rose-50 text-rose-800 border-rose-200 group-hover:bg-rose-100/90';
-          return (
-            <div key={name} className={`rounded border px-1 py-1 text-center ${tone} transition-all duration-200 group-hover:scale-[1.03]`}>
-              <div className="text-[9px] leading-none">{name}</div>
-              <div className="text-[11px] font-bold leading-tight mt-0.5">{s}/{max}</div>
+      <div className="mt-3 space-y-2.5">
+        {bars.map(([label, s, max, tone]) => (
+          <div key={label}>
+            <div className="flex justify-between text-[11.5px] mb-1">
+              <span className="text-slate-700">{label}</span>
+              <span className={tone === 'amber' ? 'text-amber-700 font-semibold' : 'text-emerald-700 font-semibold'}>{s}/{max}</span>
             </div>
-          );
-        })}
+            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${tone === 'amber' ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                style={{ width: `${(s / max) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
       </div>
+      <p className="mt-3.5 pt-3 border-t border-slate-100 text-[12.5px] text-slate-600 leading-relaxed italic">
+        “The VP is on board, but the CFO signs and that goes to the board on the 18th.”
+      </p>
     </div>
   );
 }
 
-function BattlecardMini() {
+function RivalPanel() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px] group-hover:bg-white group-hover:border-slate-300 transition-colors duration-200">
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-slate-900">vs. Directive Consulting</span>
-        <span className="text-[9.5px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">Tier 1 Rival</span>
-      </div>
-      <div className="mt-2 border-t border-slate-200/70 pt-2">
-        <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Ask the buyer</div>
-        <p className="text-slate-700 leading-snug mt-0.5 group-hover:text-slate-900 transition-colors">
-          “Does a senior person review the work, or does it queue behind twenty
-          other accounts?”
-        </p>
-      </div>
+    <div className={`${PANEL} text-[13px]`}>
+      <div className="font-semibold text-slate-900">vs. Directive Consulting</div>
+      <p className="mt-2 text-slate-500 leading-relaxed">
+        They pitch one full-service team that handles everything.
+      </p>
+      <p className="mt-3 pt-3 border-t border-slate-100 font-medium text-slate-900 leading-relaxed">
+        “When your quarter is on the line, does a senior person review the work,
+        or does it queue behind twenty other accounts?”
+      </p>
     </div>
   );
 }
 
-function BriefingMini() {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px] group-hover:bg-white group-hover:border-slate-300 transition-colors duration-200">
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-slate-900">FinTech Scale</span>
-        <span className="text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200/60 px-1.5 py-0.5 rounded">Thu 10:00</span>
-      </div>
-      <div className="mt-2 border-t border-slate-200/70 pt-2 space-y-1 text-slate-600 leading-snug text-[11.5px]">
-        <p className="hover:text-slate-900 hover:translate-x-0.5 transition-all">1. Fallback when Apollo rate-limits outbound?</p>
-        <p className="hover:text-slate-900 hover:translate-x-0.5 transition-all">2. Who signs off on the CAC payback threshold?</p>
-        <p className="hover:text-slate-900 hover:translate-x-0.5 transition-all">3. What breaks first if the two reps stay two?</p>
-      </div>
-    </div>
-  );
-}
-
-const ENGINES = [
+const STAGES = [
   {
-    icon: Rocket,
-    name: 'Outbound Queue',
-    tag: 'A first message to a company that just started hiring in your category.',
-    Artifact: OutboundMini,
+    moment: "Before you've heard of them",
+    engine: 'Account Radar',
+    body: 'Whipstitch watches your target accounts for hiring and leadership changes. When one moves, it drafts the opener — you decide whether to send it.',
+    Preview: RadarPanel,
   },
   {
-    icon: ShieldCheck,
-    name: 'Deal Health',
-    tag: 'A MEDDPICC scorecard, scored from what the buyer actually said.',
-    Artifact: ScorecardMini,
+    moment: 'The first message',
+    engine: 'Outbound Queue',
+    body: 'It resolves the decision-maker, reads what the company just posted, and writes the first email in your voice. Staged, not sent.',
+    Preview: DraftPanel,
   },
   {
-    icon: Swords,
-    name: 'Competitor Playbooks',
-    tag: 'A battlecard for each rival you keep losing to.',
-    Artifact: BattlecardMini,
+    moment: 'The night before the call',
+    engine: 'Call Prep',
+    body: 'Who you are meeting, what they care about, and three questions aimed at wherever the deal is weakest.',
+    Preview: CallPrepPanel,
   },
   {
-    icon: CalendarClock,
-    name: 'Call Prep',
-    tag: 'A briefing for every meeting on your calendar.',
-    Artifact: BriefingMini,
+    moment: 'After the call',
+    engine: 'Deal Health',
+    body: 'Paste the recording. Every MEDDPICC box moves only on a line the buyer actually said, and the boxes that need real access stay capped until you have it.',
+    Preview: HealthPanel,
+  },
+  {
+    moment: 'When a rival shows up',
+    engine: 'Competitor Playbooks',
+    body: 'The claim they make, and the one question that turns it against them. Written for this deal, not the category.',
+    Preview: RivalPanel,
   },
 ];
 
-function EngineCard({ icon: Icon, name, tag, Artifact, dim }) {
+function DealTimeline() {
   return (
-    <article
-      aria-hidden={dim}
-      tabIndex={dim ? -1 : 0}
-      className="w-[330px] sm:w-[370px] shrink-0 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_16px_-2px_rgba(15,23,42,0.04),0_16px_32px_-4px_rgba(15,23,42,0.03)] hover:shadow-[0_4px_8px_rgba(15,23,42,0.02),0_12px_24px_-2px_rgba(15,23,42,0.04),0_24px_48px_-4px_rgba(15,23,42,0.04),0_40px_72px_0_rgba(15,23,42,0.025)] hover:border-slate-300 hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between group outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 select-none cursor-grab active:cursor-grabbing"
-    >
-      <div>
-        <div className="flex items-center gap-2.5 text-slate-900">
-          <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-slate-900 group-hover:text-white transition-colors duration-200">
-            <Icon className="w-[18px] h-[18px] group-hover:scale-110 transition-transform duration-200" strokeWidth={2} />
-          </div>
-          <h3 className="text-[16px] font-bold tracking-[-0.02em] group-hover:text-slate-950 transition-colors">{name}</h3>
-        </div>
-        <p className="mt-2 text-[13px] text-slate-600 leading-snug">{tag}</p>
-      </div>
-      <div className="mt-4">
-        <Artifact />
-      </div>
-    </article>
-  );
-}
+    <section id="suite" className="scroll-mt-24 w-full py-20 sm:py-28">
+      <div className="max-w-5xl mx-auto px-6">
+        <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.1] max-w-[16ch]">
+          From first signal to <span className="font-extrabold">closed-won</span>.
+        </h2>
+        <p className="mt-4 text-[17px] text-slate-600 leading-[1.6] max-w-[52ch]">
+          Five points in a deal where Whipstitch has already done the work.
+        </p>
 
-/* Horizontal infinite scrolling track of engine cards.
-   Cruises continuously; pointer enter, focus, or drag smoothly slows it to a stop.
-   Leaving or releasing resumes smooth cruising. Interactive cards feature micro-animations on hover. */
-function EngineMarquee() {
-  const trackRef = useRef(null);
-  const groupRef = useRef(null);
-  const containerRef = useRef(null);
-  const reduce = useReducedMotion();
-
-  useEffect(() => {
-    const track = trackRef.current;
-    const group = groupRef.current;
-    const container = containerRef.current;
-    if (!track || !group || !container || reduce) return;
-
-    const CRUISE = 36; // px per second
-    let x = 0;
-    let speed = CRUISE;
-    let targetSpeed = CRUISE;
-    let last = null;
-    let raf = 0;
-    let isDragging = false;
-    let startX = 0;
-    let startPos = 0;
-
-    const frame = (t) => {
-      if (last == null) last = t;
-      const dt = Math.min((t - last) / 1000, 0.05);
-      last = t;
-
-      if (!isDragging) {
-        speed += (targetSpeed - speed) * Math.min(dt * 3.5, 1);
-        x -= speed * dt;
-
-        const period = group.offsetWidth + 20; // width + gap
-        if (period > 0) {
-          while (-x >= period) x += period;
-          while (x > 0) x -= period;
-        }
-        track.style.transform = `translate3d(${x}px,0,0)`;
-      }
-
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-
-    const onEnter = () => {
-      targetSpeed = 0;
-    };
-    const onLeave = () => {
-      if (!isDragging) {
-        targetSpeed = CRUISE;
-      }
-    };
-
-    const onDown = (e) => {
-      if (e.button !== 0 && e.pointerType === 'mouse') return;
-      isDragging = true;
-      targetSpeed = 0;
-      startX = e.clientX;
-      startPos = x;
-      container.classList.add('cursor-grabbing');
-      container.classList.remove('cursor-grab');
-      try {
-        container.setPointerCapture(e.pointerId);
-      } catch { }
-    };
-
-    const onMove = (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - startX;
-      x = startPos + dx;
-      const period = group.offsetWidth + 20;
-      if (period > 0) {
-        while (-x >= period) x += period;
-        while (x > 0) x -= period;
-      }
-      track.style.transform = `translate3d(${x}px,0,0)`;
-    };
-
-    const onUp = (e) => {
-      if (isDragging) {
-        isDragging = false;
-        container.classList.remove('cursor-grabbing');
-        container.classList.add('cursor-grab');
-        try {
-          container.releasePointerCapture(e.pointerId);
-        } catch { }
-        targetSpeed = CRUISE;
-      }
-    };
-
-    container.addEventListener('pointerenter', onEnter);
-    container.addEventListener('pointerleave', onLeave);
-    container.addEventListener('focusin', onEnter);
-    container.addEventListener('focusout', onLeave);
-    container.addEventListener('pointerdown', onDown);
-    container.addEventListener('pointermove', onMove);
-    container.addEventListener('pointerup', onUp);
-    container.addEventListener('pointercancel', onUp);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      container.removeEventListener('pointerenter', onEnter);
-      container.removeEventListener('pointerleave', onLeave);
-      container.removeEventListener('focusin', onEnter);
-      container.removeEventListener('focusout', onLeave);
-      container.removeEventListener('pointerdown', onDown);
-      container.removeEventListener('pointermove', onMove);
-      container.removeEventListener('pointerup', onUp);
-      container.removeEventListener('pointercancel', onUp);
-    };
-  }, [reduce]);
-
-  if (reduce) {
-    return (
-      <div className="mt-12 max-w-6xl mx-auto px-6 overflow-x-auto">
-        <div className="flex gap-5">
-          {ENGINES.map((e) => (
-            <EngineCard key={e.name} {...e} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative mt-12 [mask-image:linear-gradient(to_right,transparent_0%,#000_5%,#000_95%,transparent_100%)] overflow-hidden cursor-grab pt-4 pb-20 select-none touch-pan-y"
-    >
-      <div ref={trackRef} className="flex w-max gap-5 px-6 will-change-transform">
-        <div ref={groupRef} className="flex gap-5 shrink-0">
-          {ENGINES.map((e) => (
-            <EngineCard key={e.name} {...e} />
-          ))}
-        </div>
-        <div className="flex gap-5 shrink-0" aria-hidden="true">
-          {ENGINES.map((e) => (
-            <EngineCard key={`${e.name}-dup1`} {...e} dim />
-          ))}
-        </div>
-        <div className="flex gap-5 shrink-0" aria-hidden="true">
-          {ENGINES.map((e) => (
-            <EngineCard key={`${e.name}-dup2`} {...e} dim />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Production Suite: Inner Labs-style high-craftsmanship feature showcase ── */
-function ProductionSuite() {
-  return (
-    <section id="suite" className="scroll-mt-24 w-full bg-[#FAF9F6] border-t border-slate-200/70 pt-16 sm:pt-24 pb-20 sm:pb-28">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12">
-        {/* Section Header */}
-        <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16">
-
-          <h2 className="font-display text-[2.25rem] sm:text-[3.25rem] font-light tracking-[-0.03em] leading-[1.08] text-slate-950">
-            Built for the moments that <span className="font-extrabold">decide closed-won</span>.
-          </h2>
-          <p className="mt-4 text-[16px] sm:text-[17px] text-slate-600 leading-[1.6] max-w-[54ch] mx-auto">
-            Five workflows running in the background while you sell. Real research, zero guesswork, and nothing gets sent until you approve it.
-          </p>
-        </div>
-
-        {/* Top Row: 2 Large Cards (2 Columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
-          {/* Card 1: We Qualify */}
-          <div className="rounded-[32px] border border-slate-200/90 bg-white p-7 sm:p-10 shadow-[0_1px_3px_rgba(15,23,42,0.03),0_8px_20px_-6px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.03),0_18px_36px_-6px_rgba(15,23,42,0.06)] transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <h3 className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-[-0.025em]">We Qualify</h3>
-              <p className="mt-2.5 text-[14.5px] sm:text-[15px] text-slate-600 leading-[1.6]">
-                When someone requests a demo, Whipstitch researches their company, verifies their direct email, and drafts your first reply in under 15 minutes.
-              </p>
-            </div>
-
-            {/* Micro-UI Visual Canvas */}
-            <div className="mt-8 relative">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-center">
-                {/* Main Inbound Lead Stage Box */}
-                <div className="md:col-span-7 rounded-2xl border border-slate-200/80 bg-[#F8FAFC]/90 p-4 sm:p-5">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70 text-[11.5px]">
-                    <div className="flex items-center gap-2 font-semibold text-slate-900">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Inbound Demo Request</span>
-                    </div>
-                    <span className="font-mono text-[10.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
-                      Under 15m Target
-                    </span>
-                  </div>
-
-                  <div className="mt-3.5 flex items-start justify-between">
-                    <div>
-                      <div className="text-[14px] font-bold text-slate-900">Trifid Media</div>
-                      <div className="text-[11.5px] text-slate-500">Founder-Led Agency · Series A (₹18 Cr)</div>
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-700 bg-white border border-slate-200 rounded px-2 py-0.5 shadow-2xs">
-                      Priority Lead
-                    </span>
-                  </div>
-
-                  {/* Verification checkmarks */}
-                  <div className="mt-3.5 space-y-1.5 text-[11.5px]">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">✓</span>
-                        <span className="font-medium">Company Research</span>
-                      </div>
-                      <span className="text-slate-500">42 employees · +18% growth</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">✓</span>
-                        <span className="font-medium">Direct Inbox Verified</span>
-                      </div>
-                      <span className="text-slate-500">Founder direct email ready</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">✓</span>
-                        <span className="font-medium">Website & Offer Scanned</span>
-                      </div>
-                      <span className="text-slate-500">Targeting enterprise brands</span>
-                    </div>
-                  </div>
+        <div className="relative mt-14 sm:mt-20">
+          <div className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200 hidden sm:block" aria-hidden="true" />
+          <div className="space-y-16 sm:space-y-24">
+            {STAGES.map(({ moment, engine, body, Preview }, i) => (
+              <div key={engine} className="relative sm:pl-16">
+                <div className="absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full border border-slate-300 bg-white items-center justify-center text-[13px] font-bold text-slate-500">
+                  {i + 1}
                 </div>
-
-                {/* Floating Overlapping Stat Pills on the right */}
-                <div className="md:col-span-5 flex flex-col gap-3">
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-[13px] shrink-0">
-                      100%
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Sub-15m Response</div>
-                      <div className="text-[11px] text-slate-500 truncate">First to reply wins the deal</div>
-                    </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-14 items-center">
+                  <div className={i % 2 ? 'lg:order-2' : ''}>
+                    <div className="text-[13px] font-semibold text-slate-500">{moment}</div>
+                    <h3 className="mt-1.5 font-display text-[1.5rem] sm:text-[1.9rem] font-light tracking-[-0.02em] leading-[1.15]">{engine}</h3>
+                    <p className="mt-3 text-[15px] text-slate-600 leading-relaxed max-w-[44ch]">{body}</p>
                   </div>
-
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[13px] shrink-0">
-                      94%
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Verified Inboxes</div>
-                      <div className="text-[11px] text-slate-500 truncate">Zero bounced emails</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-[13px] shrink-0">
-                      0
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Duplicate Leads</div>
-                      <div className="text-[11px] text-slate-500 truncate">Clean pipeline routing</div>
-                    </div>
+                  <div className={i % 2 ? 'lg:order-1' : ''}>
+                    <Preview />
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Card 2: We Brief */}
-          <div className="rounded-[32px] border border-slate-200/90 bg-white p-7 sm:p-10 shadow-[0_1px_3px_rgba(15,23,42,0.03),0_8px_20px_-6px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.03),0_18px_36px_-6px_rgba(15,23,42,0.06)] transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <h3 className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-[-0.025em]">We Brief</h3>
-              <p className="mt-2.5 text-[14.5px] sm:text-[15px] text-slate-600 leading-[1.6]">
-                A complete briefing for every meeting on your calendar—who you're meeting, what they care about, and 3 sharp questions to lead discovery.
-              </p>
-            </div>
-
-            {/* Micro-UI Visual Canvas */}
-            <div className="mt-8 relative">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-center">
-                {/* Main Meeting Prep Dossier */}
-                <div className="md:col-span-7 rounded-2xl border border-slate-200/80 bg-[#F8FAFC]/90 p-4 sm:p-5">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70 text-[11.5px]">
-                    <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-                      <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
-                      <span>FinTech Scale</span>
-                      <span className="text-slate-400 font-normal">· Cal Synced</span>
-                    </div>
-                    <span className="font-mono text-[10.5px] text-slate-600 bg-white border border-slate-200 rounded px-1.5 py-0.5">
-                      Today 10:00 AM
-                    </span>
-                  </div>
-
-                  <div className="mt-3.5 flex items-center justify-between">
-                    <div className="text-[14px] font-bold text-slate-900">Ana Duarte, Founder</div>
-                    <div className="flex gap-1.5">
-                      <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-0.5">Decisive</span>
-                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">ROI-Obsessed</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 space-y-1.5 text-[11.5px]">
-                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">3 Socratic Questions to Ask</div>
-                    <div className="p-2.5 rounded-lg bg-white border border-slate-200/70 text-slate-700 space-y-1.5 leading-snug">
-                      <div className="flex gap-2">
-                        <span className="font-mono text-slate-400 font-bold shrink-0">1.</span>
-                        <span>“What's your fallback when outbound reps get rate-limited?”</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-mono text-slate-400 font-bold shrink-0">2.</span>
-                        <span>“Who validates CAC payback threshold before hiring?”</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-mono text-slate-400 font-bold shrink-0">3.</span>
-                        <span>“What breaks first if the two reps stay two in Q4?”</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating Overlapping Stat Pills on the right */}
-                <div className="md:col-span-5 flex flex-col gap-3">
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-[13px] shrink-0">
-                      7-Pt
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Champion Cheat Sheet</div>
-                      <div className="text-[11px] text-slate-500 truncate">Help your buyer sell internally</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700 font-bold text-[13px] shrink-0">
-                      3
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Competitor Angles</div>
-                      <div className="text-[11px] text-slate-500 truncate">Planted during discovery</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.06)] flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-[13px] shrink-0">
-                      100%
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-slate-900 leading-tight">Grounded in Facts</div>
-                      <div className="text-[11px] text-slate-500 truncate">From real calls & public data</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Row: 3 Cards (3 Columns) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-          {/* Card 3: We Diagnose */}
-          <div className="rounded-[32px] border border-slate-200/90 bg-white p-7 sm:p-9 shadow-[0_1px_3px_rgba(15,23,42,0.03),0_8px_20px_-6px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.03),0_18px_36px_-6px_rgba(15,23,42,0.06)] transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <h3 className="text-xl sm:text-[24px] font-bold text-slate-900 tracking-[-0.025em]">We Diagnose</h3>
-              <p className="mt-2.5 text-[14px] sm:text-[14.5px] text-slate-600 leading-[1.6]">
-                Scores deal health directly from call recordings. No wishful thinking—deals only move forward when the buyer actually commits on tape.
-              </p>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200/80 bg-[#F8FAFC]/90 p-4 sm:p-5">
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70">
-                <div>
-                  <div className="text-[13.5px] font-bold text-slate-900">CloudCube</div>
-                  <div className="text-[11px] text-slate-500">Enterprise Logistics · 60d cycle</div>
-                </div>
-                <span className="text-[10.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
-                  Rescue · 59/100
-                </span>
-              </div>
-
-              {/* MEDDPICC Diagnostic Score Rows */}
-              <div className="mt-3.5 space-y-3 text-[11.5px]">
-                <div>
-                  <div className="flex justify-between text-slate-600 mb-1">
-                    <span className="font-semibold text-slate-900">Economic Buyer</span>
-                    <span className="font-mono text-amber-700 font-bold">6/15 · Unverified ⚠</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full w-[40%]" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-slate-600 mb-1">
-                    <span className="font-semibold text-slate-900">Identified Pain</span>
-                    <span className="font-mono text-emerald-700 font-bold">12/15 · High</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full w-[80%]" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-slate-600 mb-1">
-                    <span className="font-semibold text-slate-900">Decision Criteria</span>
-                    <span className="font-mono text-emerald-700 font-bold">8/10 · Validated</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full w-[80%]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Verbatim quote callout */}
-              <div className="mt-3.5 p-2.5 rounded-lg bg-white border border-slate-200 text-[11.5px] text-slate-600 italic leading-snug">
-                “VP approved the pilot, but CFO sign-off is pending board review on the 18th.”
-              </div>
-              <div className="mt-2.5 text-[10.5px] text-slate-400 flex items-center gap-1 font-medium">
-                <Lock className="w-3 h-3 text-amber-600 shrink-0" />
-                <span>Safety Cap Active · Score locked until CFO meets with you</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: We Defend */}
-          <div className="rounded-[32px] border border-slate-200/90 bg-white p-7 sm:p-9 shadow-[0_1px_3px_rgba(15,23,42,0.03),0_8px_20px_-6px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.03),0_18px_36px_-6px_rgba(15,23,42,0.06)] transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <h3 className="text-xl sm:text-[24px] font-bold text-slate-900 tracking-[-0.025em]">We Defend</h3>
-              <p className="mt-2.5 text-[14px] sm:text-[14.5px] text-slate-600 leading-[1.6]">
-                Instant battlecards for the competitors you keep running into. Spot their weak spots, plant trap questions, and protect your margins.
-              </p>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200/80 bg-[#F8FAFC]/90 p-4 sm:p-5">
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70">
-                <div className="flex items-center gap-1.5">
-                  <Swords className="w-3.5 h-3.5 text-slate-600" />
-                  <span className="text-[13.5px] font-bold text-slate-900">Directive Consulting</span>
-                </div>
-                <span className="text-[9.5px] font-mono text-slate-600 bg-white border border-slate-200 rounded px-1.5 py-0.5">
-                  Tier 1 Rival
-                </span>
-              </div>
-
-              <div className="mt-3.5 space-y-2.5">
-                <div className="p-2.5 rounded-lg bg-white border border-slate-200/80">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Trap Question to Plant</div>
-                  <p className="mt-1 text-[11.5px] text-slate-700 font-medium leading-snug">
-                    “Does a senior partner actually run your account, or does it get handed off to junior staff?”
-                  </p>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white border border-slate-200/80">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">How to Position</div>
-                  <p className="mt-1 text-[11.5px] text-slate-600 leading-snug">
-                    “They sell billable hours. We deliver automated pipeline intelligence with zero headcount markup.”
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3.5 flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                <span>72% Win Rate</span>
-                <span className="font-semibold text-emerald-600">Displacement Ready</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 5: We Radar */}
-          <div className="rounded-[32px] border border-slate-200/90 bg-white p-7 sm:p-9 shadow-[0_1px_3px_rgba(15,23,42,0.03),0_8px_20px_-6px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.03),0_18px_36px_-6px_rgba(15,23,42,0.06)] transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <h3 className="text-xl sm:text-[24px] font-bold text-slate-900 tracking-[-0.025em]">We Radar</h3>
-              <p className="mt-2.5 text-[14px] sm:text-[14.5px] text-slate-600 leading-[1.6]">
-                Monitors key accounts for hiring spikes and executive changes. When an account is ripe to buy, it drafts the outreach for your review.
-              </p>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200/80 bg-[#F8FAFC]/90 p-4 sm:p-5 space-y-2.5">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
-                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-900">
-                  <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                  <span>Account Radar</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-500">6 Buying Triggers</span>
-              </div>
-
-              {/* Event item 1 */}
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200/80">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] font-bold text-slate-900">Northwind Retail</span>
-                  <span className="text-[9.5px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
-                    Hiring Spike
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  Posted for Head of Growth (paid & lifecycle) 4h ago
-                </div>
-                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px]">
-                  <span className="text-slate-600 font-medium">Staged: “Saw your expansion…”</span>
-                  <span className="font-semibold text-slate-900 underline decoration-slate-300 hover:text-emerald-700 cursor-pointer">Review Draft</span>
-                </div>
-              </div>
-
-              {/* Event item 2 */}
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200/80">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] font-bold text-slate-900">Bright Meridian</span>
-                  <span className="text-[9.5px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5">
-                    Tech Shift
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  Evaluating new customer data tools
-                </div>
-                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px]">
-                  <span className="text-slate-600 font-medium">Auto-staged outreach hook</span>
-                  <span className="font-semibold text-slate-900 underline decoration-slate-300 hover:text-emerald-700 cursor-pointer">Review Draft</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1043,8 +600,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
           </section>
         </div>
 
-        {/* What each engine produces — full-width off-white section division */}
-        <section id="engines" className="scroll-mt-24 w-full bg-[#FAF9F6] border-t border-slate-200/70 pt-16 sm:pt-24 pb-10 sm:pb-14">
+        {/* Section 1 — what you get */}
+        <section id="engines" className="scroll-mt-24 w-full py-16 sm:py-24">
           <div className="max-w-2xl mx-auto px-6 text-center">
             <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
               It drafts. <span className="font-extrabold">You</span> send.
@@ -1054,33 +611,10 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             </p>
           </div>
 
-          <EngineMarquee />
+          <EngineSummary />
         </section>
 
-        {/* Infrastructure — full-width white section division */}
-        <section id="infra" className="scroll-mt-24 w-full bg-white border-t border-slate-200/70 py-20 sm:py-28">
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
-              The <span className="font-extrabold">infrastructure</span> underneath
-            </h2>
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
-              {INFRA.map(({ icon: Icon, name, body }) => (
-                <div key={name} className="flex gap-3.5">
-                  <Icon className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" strokeWidth={1.75} />
-                  <div>
-                    <div className="font-semibold text-slate-900 text-sm">{name}</div>
-                    <p className="text-sm text-slate-600 leading-relaxed mt-1">{body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Production Suite — Inner Labs-style executive capability bento */}
-        <ProductionSuite />
-
-        {/* Architecture — prose, dark */}
+        {/* Architecture — prose, dark. Sits between the two sections as a reset. */}
         <section className="bg-slate-900 text-white">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-28 space-y-6">
             <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">Sales AI can't <span className="font-extrabold">fail silently</span>.</h2>
@@ -1098,6 +632,29 @@ export default function LandingPage({ onPrimary, onSignIn }) {
               Secrets, keys, battlecards, deals and prospects are scoped to your workspace, and every prompt
               is built from your own onboarding answers — not a shared template.
             </p>
+          </div>
+        </section>
+
+        {/* Section 2 — when it fires (deal timeline) */}
+        <DealTimeline />
+
+        {/* Infrastructure */}
+        <section id="infra" className="scroll-mt-24 w-full py-16 sm:py-24 bg-white border-t border-slate-200/70">
+          <div className="max-w-5xl mx-auto px-6">
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
+              The <span className="font-extrabold">infrastructure</span> underneath
+            </h2>
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
+              {INFRA.map(({ icon: Icon, name, body }) => (
+                <div key={name} className="flex gap-3.5">
+                  <Icon className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm">{name}</div>
+                    <p className="text-sm text-slate-600 leading-relaxed mt-1">{body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
