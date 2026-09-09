@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useReducedMotion, useScroll, useSpring, useTransform, useMotionValueEvent } from 'motion/react';
 import {
   ArrowRight,
   ChevronDown,
@@ -220,7 +220,79 @@ const STAGES = [
   },
 ];
 
+/* One stage on the timeline. The marker fills as the scroll-linked spine
+   reaches it; text and preview slide in from their own sides on first view. */
+function TimelineStage({ moment, engine, body, Preview, index, progress }) {
+  const reduce = useReducedMotion();
+  const n = STAGES.length;
+  // fraction of the spine at which this marker sits; light it a touch early
+  const at = index / (n - 1);
+  const [active, setActive] = useState(index === 0);
+  useMotionValueEvent(progress, 'change', (v) => setActive(v >= at - 0.07));
+
+  const rightText = index % 2 === 1;
+  const ease = [0.22, 1, 0.36, 1];
+  const textInit = reduce ? {} : { opacity: 0, x: rightText ? 28 : -28 };
+  const panelInit = reduce ? {} : { opacity: 0, x: rightText ? -28 : 28, scale: 0.97 };
+  const inView = { opacity: 1, x: 0, scale: 1 };
+  const vp = { once: true, margin: '-15% 0px -25% 0px' };
+
+  return (
+    <div className="relative sm:pl-16">
+      {/* marker */}
+      <div
+        className={`absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[13px] font-bold transition-colors duration-500 ${
+          active
+            ? 'bg-slate-900 border border-slate-900 text-white'
+            : 'bg-white border border-slate-300 text-slate-400'
+        }`}
+      >
+        {active && !reduce && (
+          <motion.span
+            className="absolute inset-0 rounded-full bg-slate-900/15"
+            initial={{ scale: 1, opacity: 0.6 }}
+            animate={{ scale: 2, opacity: 0 }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+          />
+        )}
+        <span className="relative">{index + 1}</span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-14 items-center">
+        <motion.div
+          className={rightText ? 'lg:order-2' : ''}
+          initial={textInit}
+          whileInView={inView}
+          viewport={vp}
+          transition={{ duration: 0.6, ease }}
+        >
+          <div className="text-[13px] font-semibold text-slate-500">{moment}</div>
+          <h3 className="mt-1.5 font-display text-[1.5rem] sm:text-[1.9rem] font-light tracking-[-0.02em] leading-[1.15]">{engine}</h3>
+          <p className="mt-3 text-[15px] text-slate-600 leading-relaxed max-w-[44ch]">{body}</p>
+        </motion.div>
+        <motion.div
+          className={rightText ? 'lg:order-1' : ''}
+          initial={panelInit}
+          whileInView={inView}
+          viewport={vp}
+          transition={{ duration: 0.7, ease, delay: 0.08 }}
+        >
+          <Preview />
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 function DealTimeline() {
+  const reduce = useReducedMotion();
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start 72%', 'end 72%'],
+  });
+  const progress = useSpring(scrollYProgress, { stiffness: 90, damping: 26, mass: 0.4 });
+
   return (
     <section id="suite" className="scroll-mt-24 w-full py-20 sm:py-28">
       <div className="max-w-5xl mx-auto px-6">
@@ -231,25 +303,28 @@ function DealTimeline() {
           Five points in a deal where Whipstitch has already done the work.
         </p>
 
-        <div className="relative mt-14 sm:mt-20">
-          <div className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200 hidden sm:block" aria-hidden="true" />
+        <div ref={ref} className="relative mt-14 sm:mt-20">
+          {/* spine — grey track + a scroll-linked coloured fill; both fade out
+             past the last marker so the tail reads as intentional */}
+          <div
+            className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200 hidden sm:block overflow-hidden"
+            aria-hidden="true"
+            style={{
+              maskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+            }}
+          >
+            <motion.div
+              className="w-px h-full origin-top"
+              style={{
+                scaleY: reduce ? 1 : progress,
+                background: 'linear-gradient(to bottom, #10B981, #8B5CF6)',
+              }}
+            />
+          </div>
           <div className="space-y-16 sm:space-y-24">
-            {STAGES.map(({ moment, engine, body, Preview }, i) => (
-              <div key={engine} className="relative sm:pl-16">
-                <div className="absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full border border-slate-300 bg-white items-center justify-center text-[13px] font-bold text-slate-500">
-                  {i + 1}
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-14 items-center">
-                  <div className={i % 2 ? 'lg:order-2' : ''}>
-                    <div className="text-[13px] font-semibold text-slate-500">{moment}</div>
-                    <h3 className="mt-1.5 font-display text-[1.5rem] sm:text-[1.9rem] font-light tracking-[-0.02em] leading-[1.15]">{engine}</h3>
-                    <p className="mt-3 text-[15px] text-slate-600 leading-relaxed max-w-[44ch]">{body}</p>
-                  </div>
-                  <div className={i % 2 ? 'lg:order-1' : ''}>
-                    <Preview />
-                  </div>
-                </div>
-              </div>
+            {STAGES.map((s, i) => (
+              <TimelineStage key={s.engine} {...s} index={i} progress={progress} />
             ))}
           </div>
         </div>
