@@ -459,9 +459,34 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </nav>
       </div>
 
-      <main id="top">
+      <main id="top" className="relative">
+        {/* Hero aura — ambient multi-hue glow behind the headline, grain over the top
+           so it reads as diffused light rather than a CSS mesh */}
+        <div
+          className="pointer-events-none absolute top-[-140px] left-1/2 -translate-x-1/2 w-[1080px] max-w-[130vw] h-[620px]"
+          aria-hidden="true"
+          style={{
+            maskImage: 'radial-gradient(closest-side, #000 30%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(closest-side, #000 30%, transparent 100%)',
+          }}
+        >
+          <div
+            className="absolute inset-0 blur-[72px] opacity-[0.45]"
+            style={{
+              background:
+                'radial-gradient(32% 42% at 30% 40%, #8B5CF6 0%, rgba(139,92,246,0) 70%),' +
+                'radial-gradient(30% 40% at 70% 36%, #F59E0B 0%, rgba(245,158,11,0) 70%),' +
+                'radial-gradient(30% 36% at 52% 58%, #10B981 0%, rgba(16,185,129,0) 72%)',
+            }}
+          />
+          <div
+            className="absolute inset-0 mix-blend-multiply opacity-[0.25]"
+            style={{ backgroundImage: GRAIN }}
+          />
+        </div>
+
         {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
+        <section className="relative max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
           <motion.h1
             {...rise}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
