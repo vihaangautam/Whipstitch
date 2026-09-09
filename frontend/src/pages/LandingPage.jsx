@@ -482,8 +482,17 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-900 font-geist">
+      {/* Announcement bar */}
+      <div className="bg-slate-900 text-slate-300 text-[12.5px]">
+        <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-2.5 text-center">
+          <span className="text-white font-medium">Free-tier Gemini and Groq are included.</span>
+          <span>Add your own keys for zero markup.</span>
+          <a href="#faq" className="text-emerald-400 hover:text-emerald-300 font-medium">How the models work</a>
+        </div>
+      </div>
+
       {/* Nav — floating pill, always solid, as on the reference sites */}
-      <div className="sticky top-4 z-40 px-4">
+      <div className="sticky top-4 z-40 px-4 mt-4">
         <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${
           scrolled ? 'glass-panel shadow-[0_8px_30px_-12px_rgba(15,23,42,0.18)]' : 'shadow-[0_2px_14px_-8px_rgba(15,23,42,0.14)]'
         }`}>
@@ -700,15 +709,53 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200">
-        <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6 text-sm text-slate-500">
-          <div className="flex items-center gap-2.5">
-            <Mark className="w-7 h-7" />
-            <span className="font-semibold text-slate-900">Whipstitch</span>
+        <div className="max-w-6xl mx-auto px-6 py-14">
+          <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <Mark className="w-7 h-7" />
+                <span className="font-semibold text-slate-900">Whipstitch</span>
+              </div>
+              <p className="mt-3 text-sm text-slate-500 leading-relaxed max-w-[32ch]">
+                The sales work between a signal and a booked call, generated and staged for your review.
+              </p>
+            </div>
+            {[
+              ['What it produces', [
+                ['Outbound Queue', '#engines'],
+                ['Deal Health', '#engines'],
+                ['Competitor Playbooks', '#engines'],
+                ['Call Prep', '#engines'],
+              ]],
+              ['Under the hood', [
+                ['Logic & ICP Studio', '#infra'],
+                ['Inbound Pipeline', '#infra'],
+                ['BYOK Vault', '#infra'],
+                ['Pipeline Analytics', '#infra'],
+              ]],
+              ['More', [
+                ['API docs', '/docs'],
+                ['Questions', '#faq'],
+              ]],
+            ].map(([heading, links]) => (
+              <div key={heading}>
+                <div className="text-[13px] font-semibold text-slate-900">{heading}</div>
+                <ul className="mt-3 space-y-2 text-sm text-slate-500">
+                  {links.map(([label, href]) => (
+                    <li key={label}>
+                      <a href={href} className="hover:text-slate-900 transition-colors">{label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-6">
-            <a href="/docs" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">API docs</a>
-            <button onClick={signIn} className="hover:text-slate-900 transition-colors">Sign in</button>
-            <span>© {new Date().getFullYear()}</span>
+          <div className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <span>© {new Date().getFullYear()} Whipstitch</span>
+            <div className="flex items-center gap-5">
+              <button onClick={signIn} className="hover:text-slate-700 transition-colors">Sign in</button>
+              <button onClick={primary} className="hover:text-slate-700 transition-colors">Get started</button>
+            </div>
           </div>
         </div>
       </footer>
