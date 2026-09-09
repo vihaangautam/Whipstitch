@@ -676,7 +676,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </div>
 
         {/* Section 1 — what you get */}
-        <section id="engines" className="scroll-mt-24 w-full py-16 sm:py-24">
+        <section id="engines" className="scroll-mt-24 w-full py-16 sm:py-24 border-t border-slate-200/70">
           <div className="max-w-2xl mx-auto px-6 text-center">
             <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
               It drafts. <span className="font-extrabold">You</span> send.
