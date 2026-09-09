@@ -322,7 +322,9 @@ async def _get_active_session() -> AsyncSession:
     global _pg_tested, _use_sqlite, engine
     if not _pg_tested:
         try:
-            async with asyncio.timeout(1.0):
+            # Generous enough that a slow first connection to a managed Postgres
+            # (Supabase pooler warm-up) doesn't wrongly trip the SQLite fallback.
+            async with asyncio.timeout(8.0):
                 async with pg_engine.connect() as conn:
                     await conn.execute(text("SELECT 1"))
             _pg_tested = True

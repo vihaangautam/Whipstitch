@@ -1,31 +1,17 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { loginUser, registerUser, demoLoginUser } from '../api';
+import { loginUser, registerUser } from '../api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [tab, setTab] = useState('login'); // 'login' | 'register'
-  const [email, setEmail] = useState('rep@trifidmedia.in');
-  const [password, setPassword] = useState('Whipstitch123!');
-  const [fullName, setFullName] = useState('Alex Morgan');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
-
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await demoLoginUser();
-      onAuthSuccess(data.user);
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Demo sign-in failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -126,7 +112,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                 autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Alex Morgan"
+                placeholder="Your name"
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none transition shadow-2xs"
               />
             </div>
@@ -140,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="rep@trifidmedia.in"
+              placeholder="you@company.com"
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none transition shadow-2xs"
             />
           </div>
@@ -188,19 +174,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             {isLoading ? 'Authenticating...' : tab === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
-
-        {/* Quiet, Professional Demo Helper */}
-        <div className="pt-4 mt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Demo environment</span>
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
-          >
-            Sign in as Alex Morgan (Sales Rep) &rarr;
-          </button>
-        </div>
       </div>
     </div>
   );
