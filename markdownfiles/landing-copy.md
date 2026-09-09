@@ -72,7 +72,7 @@ Harborline Logistics / Bright Meridian).
 |---|---|
 | Heading | It drafts. **You** send. |
 | Sub | Four things Whipstitch produces from your setup. Nothing leaves your workspace until you approve it. |
-| Layout | Static 2×2 grid. No motion, no interaction copy — a visitor scans all four at once. |
+| Layout | Interactive infinite-scrolling marquee track (auto-cruises continuously, smoothly eases to a stop on hover or drag, with card elevation & micro-animations on user interaction). |
 
 Four cards. Each: **name**, one line, a small preview.
 
@@ -82,18 +82,6 @@ Four cards. Each: **name**, one line, a small preview.
 | Deal Health | A MEDDPICC scorecard, scored from what the buyer actually said. | CloudCube · Rescue 59/100 · 8-box grid (Metrics 13/15, Buyer 6/15, Criteria 8/10, Process 5/10, Paper 4/10, Pain 12/15, Champion 7/15, Rival 4/10) |
 | Competitor Playbooks | A battlecard for each rival you keep losing to. | vs. Directive Consulting · "Does a senior person review the work, or does it queue behind twenty other accounts?" |
 | Call Prep | A briefing for every meeting on your calendar. | FinTech Scale · Thu 10:00 · three questions to ask on the call |
-
----
-
-## 4b. A closer look (Production Suite)
-
-Two alternating deep-dive rows: one real product surface per row, prose beside it.
-
-| Slot | Current |
-|---|---|
-| Heading | The two you'll use on **every deal**. |
-| Row 1 — Deal Health | *A scorecard that won't flatter you.* Paste a call recording. Whipstitch reads it and fills in an eight-box MEDDPICC scorecard, and every box moves only on something the buyer actually said — a verbatim line you can click through to. Enthusiasm in a demo doesn't count. Economic Buyer and Champion stay capped until you have real access, so a deal that looks warm on the surface still reads as the rescue it is. |
-| Row 2 — Competitor Playbooks | *Know the counter before they bring it up.* Whipstitch reads your company profile, works out who you actually lose deals to, and writes a battlecard for each one. Not a feature grid — the claim the rival makes, the question that turns it against them, and a line you can say back. Written for the deal in front of you, not a category. |
 
 ---
 
