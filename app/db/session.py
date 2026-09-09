@@ -40,11 +40,14 @@ SQLITE_DATABASE_URL = f"sqlite+aiosqlite:///{SQLITE_DB_PATH}"
 # Managed Postgres (Supabase, Neon, RDS…) requires TLS. Local Docker/localhost does not.
 # asyncpg wants ssl passed as a connect arg, not an ?sslmode= URL param.
 _pg_host = settings.DATABASE_URL.split("@")[-1].split("/")[0].lower()
-_pg_connect_args = {}
-if "?ssl" not in settings.DATABASE_URL and not any(
+_is_local_pg = any(
     h in _pg_host for h in ("localhost", "127.0.0.1", "postgres:", "@postgres", "::1")
-):
-    _pg_connect_args = {"ssl": "require"}
+)
+# 10s connect timeout so a wrong host fails fast into the SQLite fallback instead
+# of hanging asyncpg's 60s default; TLS for any managed (non-local) Postgres.
+_pg_connect_args = {"timeout": 10}
+if not _is_local_pg and "?ssl" not in settings.DATABASE_URL:
+    _pg_connect_args["ssl"] = "require"
 
 pg_engine = create_async_engine(
     settings.DATABASE_URL.split("?")[0],
