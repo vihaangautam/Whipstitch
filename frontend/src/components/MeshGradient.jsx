@@ -25,11 +25,28 @@ export default function MeshGradient({
   const flip = origin === "right" ? "scaleX(-1)" : "none";
   const [c1, c2, c3] = colors;
 
+  // Soft falloff on the bottom and the outward (bleed) edge, composited, so the
+  // mesh dissolves into the page instead of hard-stopping at a container edge.
+  // The container is mirrored for origin="right", so "to right" here is always
+  // the outward edge in screen space.
+  const mask = [
+    "linear-gradient(to bottom, #000 0%, #000 56%, transparent 97%)",
+    "linear-gradient(to right, transparent 0%, #000 20%, #000 100%)",
+  ].join(", ");
+
   return (
     <div
       aria-hidden="true"
       className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
-      style={{ transform: flip }}
+      style={{
+        transform: flip,
+        maskImage: mask,
+        WebkitMaskImage: mask,
+        maskComposite: "intersect",
+        WebkitMaskComposite: "source-in",
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+      }}
     >
       {/* Blob layer. inset:-25% keeps the blur from showing a hard edge. */}
       <div

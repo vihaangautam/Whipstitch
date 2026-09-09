@@ -75,6 +75,23 @@ body {
   -webkit-backdrop-filter: blur(14px) saturate(150%);
 }
 
+/* ── Landing page: engine marquee ── */
+@keyframes engine-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.engine-marquee-track {
+  animation: engine-marquee 46s linear infinite;
+}
+.engine-marquee:hover .engine-marquee-track,
+.engine-marquee:focus-within .engine-marquee-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .engine-marquee-track { animation: none; }
+  .engine-marquee { overflow-x: auto; }
+}
+
 /* Clean UI Utility Classes */
 @layer components {
   .btn-primary {

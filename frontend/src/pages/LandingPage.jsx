@@ -31,37 +31,36 @@ function Mark({ className = 'w-8 h-8' }) {
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-/* An original drawing, in the spirit of the reference sites' line art:
-   a rep riding the signal instead of chasing it. */
-function RocketDoodle({ className = '' }) {
+/* A clean single-weight rocket, drawn upright then tilted so the two halves
+   stay symmetric. No figure — just the craft and its trail. */
+function RocketArt({ className = '' }) {
   return (
     <svg viewBox="0 0 240 240" fill="none" className={className} aria-hidden="true"
-      stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-      {/* Drawn upright, then tilted — far easier to keep the proportions honest. */}
-      <g transform="rotate(38 120 130)">
-        {/* fuselage */}
-        <path d="M100 196 L100 116 C100 88 108 62 120 42 C132 62 140 88 140 116 L140 196 Z" />
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <g transform="rotate(42 120 120)">
+        {/* body: rounded shoulders into a pointed nose */}
+        <path d="M102 190
+                 C 96 150 96 110 108 78
+                 C 113 62 120 50 120 50
+                 C 120 50 127 62 132 78
+                 C 144 110 144 150 138 190 Z" />
+        {/* nose tip cap */}
+        <path d="M112 74 C 116 64 124 64 128 74" />
         {/* porthole */}
-        <circle cx="120" cy="104" r="12" />
+        <circle cx="120" cy="104" r="11" />
         {/* fins */}
-        <path d="M100 158 C86 168 78 182 74 200 C82 197 92 193 100 188" />
-        <path d="M140 158 C154 168 162 182 166 200 C158 197 148 193 140 188" />
-        {/* hatch line */}
-        <path d="M100 176 L140 176" />
-        {/* exhaust */}
-        <path d="M110 204 C108 214 107 222 108 232" />
-        <path d="M120 206 C120 218 120 228 120 238" />
-        <path d="M130 204 C132 214 133 222 132 232" />
-        {/* rider, straddling the nose */}
-        <circle cx="120" cy="6" r="11" />
-        <path d="M120 17 L120 40" />
-        <path d="M120 22 L146 4" />
-        <path d="M120 24 L100 38" />
-        <path d="M120 40 L104 58" />
-        <path d="M120 40 L136 58" />
+        <path d="M102 156 C 88 164 80 178 78 196 C 90 192 98 186 104 178" />
+        <path d="M138 156 C 152 164 160 178 162 196 C 150 192 142 186 136 178" />
+        {/* exhaust nozzle + flame */}
+        <path d="M110 190 L 130 190" />
+        <path d="M112 198 C 114 208 116 216 116 224" />
+        <path d="M120 200 L 120 230" />
+        <path d="M128 198 C 126 208 124 216 124 224" />
       </g>
-      {/* speed marks trailing behind */}
-      <path d="M36 176 h24" /><path d="M22 196 h20" /><path d="M52 206 h18" />
+      {/* three motion ticks trailing the tail */}
+      <path d="M40 150 h26" />
+      <path d="M28 172 h20" />
+      <path d="M52 186 h16" />
     </svg>
   );
 }
@@ -174,25 +173,25 @@ const ENGINES = [
   {
     icon: Rocket,
     name: 'Outbound Queue',
-    body: 'It finds companies actively hiring the roles your buyers hire when they have budget in your category, resolves the decision-maker, and drafts the first message. Free — no paid data needed.',
+    tag: 'Companies hiring for your category, the decision-maker resolved, and a first draft written.',
     Artifact: OutboundArtifact,
   },
   {
     icon: ShieldCheck,
     name: 'Deal Health',
-    body: 'Paste a call transcript. You get an eight-box MEDDPICC scorecard with the exact quotes it scored from. A positive tone never raises a box, and Economic Buyer stays capped until you have real access.',
+    tag: 'An eight-box MEDDPICC scorecard built from the exact quotes in your call transcript.',
     Artifact: ScorecardArtifact,
   },
   {
     icon: Swords,
     name: 'Competitor Playbooks',
-    body: 'It reads your company profile, works out who you actually lose deals to, and writes a battlecard for each rival — the claim they make, the question that exposes it, and a line you can say back.',
+    tag: 'A battlecard per rival: the claim they make, the question that beats it, the line you say back.',
     Artifact: BattlecardArtifact,
   },
   {
     icon: CalendarClock,
     name: 'Call Prep',
-    body: 'Before each meeting: what the attendees care about, three questions aimed at your weakest MEDDPICC boxes, the company’s recent news, and a kit your champion uses in the room without you.',
+    tag: 'Attendee priorities, three sharp questions, recent news, and a kit your champion uses without you.',
     Artifact: BriefingArtifact,
   },
 ];
@@ -460,15 +459,27 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </nav>
       </div>
 
-      <main id="top" className="relative">
-        {/* Hero + product shot share one grainy mesh backdrop that bleeds from
-           the left, Amplemarket-style, and fades out toward the centre */}
-        <div
-          className="relative overflow-hidden"
-          style={{ '--mesh-fade': '#F8FAFC' }}
-        >
-          <MeshGradient origin="left" intensity={2.1} />
-          <MeshGradient origin="right" intensity={1.3} />
+      <main id="top" className="relative" style={{ '--mesh-fade': '#F8FAFC' }}>
+        {/* Ambient synthesis glow behind the hero + product shot. One radial that
+           fades to transparent on every side, so it connects the whole area with
+           no seam. Grain on top keeps it from looking like a plain gradient. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1400px]" aria-hidden="true">
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(115% 52% at 50% -4%, rgba(129,140,248,0.24) 0%, rgba(217,119,6,0.11) 38%, rgba(129,140,248,0) 72%),' +
+                'radial-gradient(60% 40% at 82% 8%, rgba(217,119,6,0.16) 0%, rgba(217,119,6,0) 66%),' +
+                'radial-gradient(52% 38% at 16% 4%, rgba(79,70,229,0.14) 0%, rgba(79,70,229,0) 64%)',
+              filter: 'blur(36px)',
+            }}
+          />
+          <div
+            className="absolute inset-0 mix-blend-overlay opacity-[0.22]"
+            style={{ backgroundImage: GRAIN }}
+          />
+          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
+        </div>
 
         {/* Hero */}
         <section className="relative z-10">
@@ -512,62 +523,53 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         <section className="relative z-10 px-6 overflow-x-clip">
           <LaptopMock />
         </section>
-        </div>
 
-        {/* What each engine produces */}
-        <section id="engines" className="relative border-t border-slate-200 bg-white overflow-hidden">
-          {/* grainy aurora behind the heading — masked so it has no edges of its own */}
-          <div
-            className="pointer-events-none absolute -top-40 -right-56 w-[820px] h-[640px]"
-            aria-hidden="true"
-            style={{
-              maskImage: 'radial-gradient(closest-side, #000 42%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(closest-side, #000 42%, transparent 100%)',
-            }}
-          >
-            <div
-              className="absolute inset-0 blur-[60px] opacity-60"
-              style={{
-                background:
-                  'radial-gradient(40% 38% at 58% 26%, #F97316 0%, rgba(249,115,22,0) 72%),' +
-                  'radial-gradient(44% 42% at 40% 60%, #7C3AED 0%, rgba(124,58,237,0) 74%),' +
-                  'radial-gradient(34% 32% at 72% 66%, #D946EF 0%, rgba(217,70,239,0) 72%)',
-              }}
-            />
-            <div
-              className="absolute inset-0 mix-blend-multiply opacity-[0.30]"
-              style={{ backgroundImage: GRAIN }}
-            />
+        {/* What each engine produces — a slow horizontal band of the actual
+           output; hover or focus to pause and read */}
+        <section
+          id="engines"
+          className="relative border-t border-slate-200 bg-white overflow-hidden"
+          style={{ '--mesh-fade': '#FFFFFF' }}
+        >
+          {/* grainy blob bleeding from the right, behind the heading + rocket */}
+          <div className="pointer-events-none absolute -top-24 right-0 w-[74%] h-[600px]" aria-hidden="true">
+            <MeshGradient origin="right" intensity={2.3} colors={['249,115,22', '124,58,237', '217,70,239']} />
           </div>
 
-          <div className="relative max-w-5xl mx-auto px-6 py-20 sm:py-28">
-            <div className="lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:items-start">
+          <div className="relative py-20 sm:py-28">
+            <div className="max-w-5xl mx-auto px-6 lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:items-start">
               <div>
                 <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
                   Four engines that produce work you can send.
                 </h2>
                 <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
                   Nothing leaves your workspace on its own. Each engine drafts, and you approve.
+                  Hover a card to stop and read it.
                 </p>
               </div>
-              <RocketDoodle className="hidden lg:block w-52 h-48 text-slate-900/85 shrink-0 -mt-4" />
+              <RocketArt className="hidden lg:block w-48 h-44 text-slate-900/85 shrink-0 -mt-3" />
             </div>
 
-            <div className="mt-16 space-y-14 sm:space-y-20">
-              {ENGINES.map(({ icon: Icon, name, body, Artifact }, i) => (
-                <div key={name} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
-                  <div className={i % 2 ? 'lg:order-2' : ''}>
+            <div className="engine-marquee relative mt-14 [mask-image:linear-gradient(to_right,transparent,#000_5%,#000_95%,transparent)]">
+              <div className="engine-marquee-track flex w-max gap-5 px-6">
+                {[...ENGINES, ...ENGINES].map(({ icon: Icon, name, tag, Artifact }, i) => (
+                  <article
+                    key={i}
+                    aria-hidden={i >= ENGINES.length}
+                    tabIndex={i < ENGINES.length ? 0 : -1}
+                    className="w-[340px] shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_14px_34px_-16px_rgba(15,23,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                  >
                     <div className="flex items-center gap-2.5 text-slate-900">
-                      <Icon className="w-5 h-5" strokeWidth={1.75} />
-                      <span className="text-[21px] font-medium tracking-[-0.02em]">{name}</span>
+                      <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+                      <h3 className="text-[16px] font-medium tracking-[-0.02em]">{name}</h3>
                     </div>
-                    <p className="mt-3 text-[15px] text-slate-600 leading-relaxed max-w-[52ch]">{body}</p>
-                  </div>
-                  <div className={i % 2 ? 'lg:order-1' : ''}>
-                    <Artifact />
-                  </div>
-                </div>
-              ))}
+                    <p className="mt-2 text-[13px] text-slate-600 leading-relaxed min-h-[54px]">{tag}</p>
+                    <div className="mt-3.5">
+                      <Artifact />
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </section>
