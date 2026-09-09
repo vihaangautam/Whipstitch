@@ -104,7 +104,7 @@ export default function App() {
   // Unauthenticated: landing page only. The landing page brings its own nav; every CTA opens the auth modal.
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] text-[#0F172A] font-sans overflow-x-clip">
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans overflow-x-clip">
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
