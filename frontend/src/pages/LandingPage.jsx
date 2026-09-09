@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import MeshGradient from '../components/MeshGradient';
 import {
   ArrowRight,
   ChevronDown,
@@ -460,33 +461,18 @@ export default function LandingPage({ onPrimary, onSignIn }) {
       </div>
 
       <main id="top" className="relative">
-        {/* Hero aura — ambient multi-hue glow behind the headline, grain over the top
-           so it reads as diffused light rather than a CSS mesh */}
+        {/* Hero + product shot share one grainy mesh backdrop that bleeds from
+           the left, Amplemarket-style, and fades out toward the centre */}
         <div
-          className="pointer-events-none absolute top-[-140px] left-1/2 -translate-x-1/2 w-[1080px] max-w-[130vw] h-[620px]"
-          aria-hidden="true"
-          style={{
-            maskImage: 'radial-gradient(closest-side, #000 30%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(closest-side, #000 30%, transparent 100%)',
-          }}
+          className="relative overflow-hidden"
+          style={{ '--mesh-fade': '#F8FAFC' }}
         >
-          <div
-            className="absolute inset-0 blur-[72px] opacity-[0.45]"
-            style={{
-              background:
-                'radial-gradient(32% 42% at 30% 40%, #8B5CF6 0%, rgba(139,92,246,0) 70%),' +
-                'radial-gradient(30% 40% at 70% 36%, #F59E0B 0%, rgba(245,158,11,0) 70%),' +
-                'radial-gradient(30% 36% at 52% 58%, #10B981 0%, rgba(16,185,129,0) 72%)',
-            }}
-          />
-          <div
-            className="absolute inset-0 mix-blend-multiply opacity-[0.25]"
-            style={{ backgroundImage: GRAIN }}
-          />
-        </div>
+          <MeshGradient origin="left" intensity={2.1} />
+          <MeshGradient origin="right" intensity={1.3} />
 
         {/* Hero */}
-        <section className="relative max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
+        <section className="relative z-10">
+          <div className="max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
           <motion.h1
             {...rise}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
@@ -519,12 +505,14 @@ export default function LandingPage({ onPrimary, onSignIn }) {
           <motion.p {...rise} transition={{ duration: 0.65, delay: 0.24 }} className="mt-7 text-[13px] text-slate-500">
             Free-tier AI included. No credit card. Bring your own keys.
           </motion.p>
+          </div>
         </section>
 
         {/* Laptop */}
-        <section className="px-6 overflow-x-clip">
+        <section className="relative z-10 px-6 overflow-x-clip">
           <LaptopMock />
         </section>
+        </div>
 
         {/* What each engine produces */}
         <section id="engines" className="relative border-t border-slate-200 bg-white overflow-hidden">
