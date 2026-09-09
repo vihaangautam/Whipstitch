@@ -781,16 +781,22 @@ function ScreenMock() {
             <div className="col-span-7 rounded-md border border-slate-200 bg-white p-2.5">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[9.5px] font-semibold text-slate-900">Pipeline, last 7 days</span>
-                <span className="text-[8px] text-slate-400 font-mono">inbound / outbound</span>
+                <span className="flex items-center gap-2 text-[8px] text-slate-400">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />inbound</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-violet-500" />outbound</span>
+                </span>
               </div>
               <div className="relative h-[86px] rounded bg-slate-50 border border-slate-100 overflow-hidden">
                 <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 400 120">
                   {[24, 48, 72, 96].map((y) => (
                     <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#E2E8F0" strokeWidth="1" />
                   ))}
-                  <path d="M0,96 C70,90 120,80 180,66 C240,52 300,28 400,14 L400,120 L0,120 Z" fill="#05966918" />
+                  {/* inbound — emerald, filled */}
+                  <path d="M0,96 C70,90 120,80 180,66 C240,52 300,28 400,14 L400,120 L0,120 Z" fill="#05966914" />
                   <path d="M0,96 C70,90 120,80 180,66 C240,52 300,28 400,14" fill="none" stroke="#059669" strokeWidth="2.5" />
-                  <path d="M0,104 C80,98 150,92 220,80 C290,68 340,50 400,38" fill="none" stroke="#94A3B8" strokeDasharray="5 4" strokeWidth="1.75" />
+                  {/* outbound — violet, filled */}
+                  <path d="M0,106 C80,100 150,94 220,82 C290,70 340,52 400,40 L400,120 L0,120 Z" fill="#8B5CF614" />
+                  <path d="M0,106 C80,100 150,94 220,82 C290,70 340,52 400,40" fill="none" stroke="#8B5CF6" strokeWidth="2.5" />
                 </svg>
               </div>
             </div>
@@ -975,13 +981,13 @@ export default function LandingPage({ onPrimary, onSignIn }) {
               className="absolute inset-0"
               style={{
                 background:
-                  // hero glow, top
-                  'radial-gradient(40% 24% at 34% 7%, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 100%),' +
-                  'radial-gradient(38% 22% at 66% 5%, rgba(245,158,11,0.24) 0%, rgba(245,158,11,0) 100%),' +
-                  'radial-gradient(44% 24% at 52% 20%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 100%),' +
+                  // violet-and-green wash (per the Stitch mockup) — no amber
+                  'radial-gradient(42% 26% at 28% 6%, rgba(139,92,246,0.34) 0%, rgba(139,92,246,0) 100%),' +
+                  'radial-gradient(38% 22% at 72% 8%, rgba(124,58,237,0.20) 0%, rgba(124,58,237,0) 100%),' +
+                  'radial-gradient(46% 26% at 52% 24%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 100%),' +
                   // mid — keeps colour continuous through the laptop band
-                  'radial-gradient(46% 26% at 22% 54%, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0) 100%),' +
-                  'radial-gradient(42% 24% at 84% 58%, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0) 100%)',
+                  'radial-gradient(46% 28% at 16% 56%, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0) 100%),' +
+                  'radial-gradient(44% 26% at 86% 58%, rgba(139,92,246,0.17) 0%, rgba(139,92,246,0) 100%)',
                 filter: 'blur(58px)',
               }}
             />
