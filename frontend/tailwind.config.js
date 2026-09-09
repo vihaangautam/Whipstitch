@@ -67,8 +67,9 @@ export default {
       fontFamily: {
         sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
-        // Marketing pages: Geist grotesk, set at medium weight and large sizes.
-        display: ["Geist", "'Plus Jakarta Sans'", "system-ui", "sans-serif"],
+        // Marketing pages: Familjen Grotesk sets headlines, Geist sets body.
+        display: ["'Familjen Grotesk'", "Geist", "system-ui", "sans-serif"],
+        geist: ["Geist", "system-ui", "sans-serif"],
         mono: ["'Geist Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {

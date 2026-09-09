@@ -25,6 +25,46 @@ function Mark({ className = 'w-8 h-8' }) {
   );
 }
 
+/* Film grain, as a filter-generated SVG. Overlaid on the gradients so they
+   read as printed ink rather than a CSS mesh. */
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
+/* An original drawing, in the spirit of the reference sites' line art:
+   a rep riding the signal instead of chasing it. */
+function RocketDoodle({ className = '' }) {
+  return (
+    <svg viewBox="0 0 240 240" fill="none" className={className} aria-hidden="true"
+      stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      {/* Drawn upright, then tilted — far easier to keep the proportions honest. */}
+      <g transform="rotate(38 120 130)">
+        {/* fuselage */}
+        <path d="M100 196 L100 116 C100 88 108 62 120 42 C132 62 140 88 140 116 L140 196 Z" />
+        {/* porthole */}
+        <circle cx="120" cy="104" r="12" />
+        {/* fins */}
+        <path d="M100 158 C86 168 78 182 74 200 C82 197 92 193 100 188" />
+        <path d="M140 158 C154 168 162 182 166 200 C158 197 148 193 140 188" />
+        {/* hatch line */}
+        <path d="M100 176 L140 176" />
+        {/* exhaust */}
+        <path d="M110 204 C108 214 107 222 108 232" />
+        <path d="M120 206 C120 218 120 228 120 238" />
+        <path d="M130 204 C132 214 133 222 132 232" />
+        {/* rider, straddling the nose */}
+        <circle cx="120" cy="6" r="11" />
+        <path d="M120 17 L120 40" />
+        <path d="M120 22 L146 4" />
+        <path d="M120 24 L100 38" />
+        <path d="M120 40 L104 58" />
+        <path d="M120 40 L136 58" />
+      </g>
+      {/* speed marks trailing behind */}
+      <path d="M36 176 h24" /><path d="M22 196 h20" /><path d="M52 206 h18" />
+    </svg>
+  );
+}
+
 const NAV = [
   { href: '#engines', label: 'What it produces' },
   { href: '#infra', label: 'Under the hood' },
@@ -393,7 +433,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
   const rise = reduce ? {} : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 
   return (
-    <div className="w-full bg-[#F8FAFC] text-slate-900 font-display">
+    <div className="w-full bg-[#F8FAFC] text-slate-900 font-geist">
       {/* Nav — floating pill, always solid, as on the reference sites */}
       <div className="sticky top-4 z-40 px-4">
         <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${
@@ -425,9 +465,9 @@ export default function LandingPage({ onPrimary, onSignIn }) {
           <motion.h1
             {...rise}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            className="font-medium tracking-[-0.032em] leading-[1.02] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
+            className="font-display font-medium tracking-[-0.032em] leading-[1.02] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
           >
-            The sales work between a signal and a booked call.
+            The sales work between a <i className="italic">signal</i> and a <i className="italic">booked call</i>.
           </motion.h1>
           <motion.p
             {...rise}
@@ -462,14 +502,43 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </section>
 
         {/* What each engine produces */}
-        <section id="engines" className="border-t border-slate-200 bg-white">
-          <div className="max-w-5xl mx-auto px-6 py-20 sm:py-28">
-            <h2 className="text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
-              Four engines that produce work you can send.
-            </h2>
-            <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
-              Nothing leaves your workspace on its own. Each engine drafts, and you approve.
-            </p>
+        <section id="engines" className="relative border-t border-slate-200 bg-white overflow-hidden">
+          {/* grainy aurora behind the heading — masked so it has no edges of its own */}
+          <div
+            className="pointer-events-none absolute -top-40 -right-56 w-[820px] h-[640px]"
+            aria-hidden="true"
+            style={{
+              maskImage: 'radial-gradient(closest-side, #000 42%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(closest-side, #000 42%, transparent 100%)',
+            }}
+          >
+            <div
+              className="absolute inset-0 blur-[60px] opacity-60"
+              style={{
+                background:
+                  'radial-gradient(40% 38% at 58% 26%, #F97316 0%, rgba(249,115,22,0) 72%),' +
+                  'radial-gradient(44% 42% at 40% 60%, #7C3AED 0%, rgba(124,58,237,0) 74%),' +
+                  'radial-gradient(34% 32% at 72% 66%, #D946EF 0%, rgba(217,70,239,0) 72%)',
+              }}
+            />
+            <div
+              className="absolute inset-0 mix-blend-multiply opacity-[0.30]"
+              style={{ backgroundImage: GRAIN }}
+            />
+          </div>
+
+          <div className="relative max-w-5xl mx-auto px-6 py-20 sm:py-28">
+            <div className="lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:items-start">
+              <div>
+                <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
+                  Four engines that produce work you can send.
+                </h2>
+                <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
+                  Nothing leaves your workspace on its own. Each engine drafts, and you approve.
+                </p>
+              </div>
+              <RocketDoodle className="hidden lg:block w-52 h-48 text-slate-900/85 shrink-0 -mt-4" />
+            </div>
 
             <div className="mt-16 space-y-14 sm:space-y-20">
               {ENGINES.map(({ icon: Icon, name, body, Artifact }, i) => (
@@ -493,7 +562,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* Infrastructure */}
         <section id="infra" className="border-t border-slate-200">
           <div className="max-w-5xl mx-auto px-6 py-20 sm:py-24">
-            <h2 className="text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">The infrastructure underneath</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">The infrastructure underneath</h2>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
               {INFRA.map(({ icon: Icon, name, body }) => (
                 <div key={name} className="flex gap-3.5">
@@ -511,7 +580,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* Architecture — prose, dark */}
         <section className="bg-slate-900 text-white">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-28 space-y-6">
-            <h2 className="text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">Sales AI can't fail silently.</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">Sales AI can't fail silently.</h2>
             <p className="text-slate-300 leading-relaxed text-[15px]">
               Whipstitch runs its multi-step work as durable Temporal workflows. If a provider rate-limits
               in the middle of enrichment, execution resumes on a fallback rather than leaving a deal
@@ -532,7 +601,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* FAQ */}
         <section id="faq" className="border-t border-slate-200">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-24">
-            <h2 className="text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] mb-10">Questions</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] mb-10">Questions</h2>
             <div className="divide-y divide-slate-200 border-t border-slate-200">
               {FAQS.map((f, i) => {
                 const open = openFaq === i;
@@ -553,20 +622,42 @@ export default function LandingPage({ onPrimary, onSignIn }) {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="bg-slate-900 text-white border-t border-slate-800">
-          <div className="max-w-3xl mx-auto px-6 py-20 sm:py-24 text-center space-y-5">
-            <h2 className="text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">Set up your workspace</h2>
-            <p className="text-slate-300 text-[15px] leading-relaxed max-w-[44ch] mx-auto">
-              Register, answer a few questions about what you sell, and the engines run against your ICP.
-            </p>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button onClick={primary} className="w-full sm:w-auto bg-white text-slate-900 font-semibold px-7 py-3.5 rounded-full hover:bg-slate-100 transition-colors text-sm">
-                Get started
-              </button>
-              <button onClick={signIn} className="w-full sm:w-auto border border-slate-700 text-white font-medium px-7 py-3.5 rounded-full hover:bg-slate-800 transition-colors text-sm">
-                Sign in
-              </button>
+        {/* CTA — inset gradient card */}
+        <section className="px-4 sm:px-6 pb-16 sm:pb-24 pt-4">
+          <div className="relative max-w-6xl mx-auto rounded-[26px] sm:rounded-[34px] overflow-hidden text-white">
+            {/* deep navy base, violet on the right, warm rust in the corners */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(72% 108% at 93% 46%, rgba(139,68,245,0.95) 0%, rgba(88,32,178,0.52) 34%, rgba(20,16,43,0) 68%),' +
+                  'radial-gradient(56% 72% at 2% 94%, rgba(158,92,60,0.60) 0%, rgba(158,92,60,0) 62%),' +
+                  'radial-gradient(44% 54% at 0% 2%, rgba(132,74,58,0.42) 0%, rgba(132,74,58,0) 64%),' +
+                  'linear-gradient(112deg, #17122F 0%, #131028 52%, #1D1540 100%)',
+              }}
+            />
+            <div className="absolute inset-0 mix-blend-overlay opacity-[0.20]" style={{ backgroundImage: GRAIN }} />
+
+            <div className="relative px-6 sm:px-10 py-20 sm:py-24 text-center">
+              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-medium tracking-[-0.03em] leading-[1.04] max-w-[18ch] mx-auto">
+                <span className="text-slate-300">Turn raw signals into</span>{' '}
+                <span className="text-white">closed revenue.</span>
+              </h2>
+              <p className="mt-6 text-[15px] sm:text-base text-slate-300/90 leading-[1.65] max-w-[52ch] mx-auto">
+                Register, answer a few questions about what you sell, and the engines start
+                producing against your ICP — outbound, scorecards, battlecards and briefings.
+              </p>
+              <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button onClick={primary} className="w-full sm:w-auto bg-white text-slate-900 font-semibold px-7 py-3.5 rounded-full hover:bg-slate-100 transition-colors text-sm">
+                  Get started
+                </button>
+                <button onClick={signIn} className="w-full sm:w-auto bg-white/10 hover:bg-white/[0.18] border border-white/20 text-white font-medium px-7 py-3.5 rounded-full transition-colors text-sm backdrop-blur-sm">
+                  Sign in
+                </button>
+              </div>
+              <p className="mt-8 font-mono text-[11px] sm:text-xs text-white/45">
+                No token markup. Free-tier AI included. Cancel anytime.
+              </p>
             </div>
           </div>
         </section>
