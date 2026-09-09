@@ -31,40 +31,6 @@ function Mark({ className = 'w-8 h-8' }) {
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-/* A clean single-weight rocket, drawn upright then tilted so the two halves
-   stay symmetric. No figure — just the craft and its trail. */
-function RocketArt({ className = '' }) {
-  return (
-    <svg viewBox="0 0 240 240" fill="none" className={className} aria-hidden="true"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <g transform="rotate(42 120 120)">
-        {/* body: rounded shoulders into a pointed nose */}
-        <path d="M102 190
-                 C 96 150 96 110 108 78
-                 C 113 62 120 50 120 50
-                 C 120 50 127 62 132 78
-                 C 144 110 144 150 138 190 Z" />
-        {/* nose tip cap */}
-        <path d="M112 74 C 116 64 124 64 128 74" />
-        {/* porthole */}
-        <circle cx="120" cy="104" r="11" />
-        {/* fins */}
-        <path d="M102 156 C 88 164 80 178 78 196 C 90 192 98 186 104 178" />
-        <path d="M138 156 C 152 164 160 178 162 196 C 150 192 142 186 136 178" />
-        {/* exhaust nozzle + flame */}
-        <path d="M110 190 L 130 190" />
-        <path d="M112 198 C 114 208 116 216 116 224" />
-        <path d="M120 200 L 120 230" />
-        <path d="M128 198 C 126 208 124 216 124 224" />
-      </g>
-      {/* three motion ticks trailing the tail */}
-      <path d="M40 150 h26" />
-      <path d="M28 172 h20" />
-      <path d="M52 186 h16" />
-    </svg>
-  );
-}
-
 const NAV = [
   { href: '#engines', label: 'What it produces' },
   { href: '#infra', label: 'Under the hood' },
@@ -432,13 +398,13 @@ function LaptopMock() {
             backgroundImage:
               'linear-gradient(to right, rgba(15,23,42,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.14) 1px, transparent 1px)',
             maskImage:
-              'radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%)',
+              'radial-gradient(ellipse 95% 75% at 50% 0%, #000 20%, transparent 68%)',
             WebkitMaskImage:
-              'radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%)',
+              'radial-gradient(ellipse 95% 75% at 50% 0%, #000 20%, transparent 68%)',
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#F8FAFC]" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-[#F8FAFC] from-25% via-[#F8FAFC]/80 to-transparent" />
         <div className="absolute inset-y-0 left-0 w-[38%] bg-gradient-to-r from-[#F8FAFC] to-transparent" />
         <div className="absolute inset-y-0 right-0 w-[38%] bg-gradient-to-l from-[#F8FAFC] to-transparent" />
       </div>
@@ -608,24 +574,21 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
         {/* What each engine produces — a slow horizontal band of the actual
            output; pointer or focus inside eases it to a stop */}
-        <section id="engines" className="relative overflow-hidden">
-          {/* grainy blob bleeding from the right, behind the heading + rocket */}
-          <div className="pointer-events-none absolute -top-24 right-0 w-[74%] h-[600px]" aria-hidden="true">
-            <MeshGradient origin="right" intensity={2.3} colors={['249,115,22', '124,58,237', '217,70,239']} />
+        <section id="engines" className="relative overflow-x-clip">
+          {/* grainy blob bleeding from the right, behind the heading */}
+          <div className="pointer-events-none absolute -top-16 right-0 w-[76%] h-[620px]" aria-hidden="true">
+            <MeshGradient origin="right" intensity={1.6} colors={['249,115,22', '124,58,237', '217,70,239']} />
           </div>
 
           <div className="relative pt-10 sm:pt-14 pb-20 sm:pb-28">
-            <div className="max-w-5xl mx-auto px-6 lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:items-start">
-              <div>
-                <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
-                  Four engines that produce work you can send.
-                </h2>
-                <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
-                  Nothing leaves your workspace on its own. Each engine drafts, and you approve.
-                  Point at a card to stop the row and read it.
-                </p>
-              </div>
-              <RocketArt className="hidden lg:block w-48 h-44 text-slate-900/85 shrink-0 -mt-3" />
+            <div className="max-w-5xl mx-auto px-6">
+              <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
+                Four engines that produce work you can send.
+              </h2>
+              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
+                Nothing leaves your workspace on its own. Each engine drafts, and you approve.
+                Point at a card to stop the row and read it.
+              </p>
             </div>
 
             <EngineMarquee />
