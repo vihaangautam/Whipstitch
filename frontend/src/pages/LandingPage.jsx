@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import MeshGradient from '../components/MeshGradient';
 import {
@@ -196,6 +196,82 @@ const ENGINES = [
   },
 ];
 
+/* Horizontal band of engine cards. Cruises left on its own; pointer or focus
+   inside the strip eases it to a stop; leaving eases it back up to speed. */
+function EngineMarquee() {
+  const trackRef = useRef(null);
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || reduce) return;
+
+    const CRUISE = 40; // px/sec
+    let x = 0;
+    let speed = CRUISE;
+    let target = CRUISE;
+    let last = null;
+    let raf = 0;
+
+    const frame = (t) => {
+      if (last == null) last = t;
+      const dt = Math.min((t - last) / 1000, 0.05);
+      last = t;
+      speed += (target - speed) * Math.min(dt * 2.5, 1); // ease toward target
+      x -= speed * dt;
+      const half = track.scrollWidth / 2;
+      if (half > 0 && -x >= half) x += half;
+      track.style.transform = `translate3d(${x}px,0,0)`;
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+
+    const slow = () => { target = 0; };
+    const go = () => { target = CRUISE; };
+    track.addEventListener('pointerenter', slow);
+    track.addEventListener('pointerleave', go);
+    track.addEventListener('focusin', slow);
+    track.addEventListener('focusout', go);
+    return () => {
+      cancelAnimationFrame(raf);
+      track.removeEventListener('pointerenter', slow);
+      track.removeEventListener('pointerleave', go);
+      track.removeEventListener('focusin', slow);
+      track.removeEventListener('focusout', go);
+    };
+  }, [reduce]);
+
+  return (
+    <div
+      className={`relative mt-14 ${
+        reduce
+          ? 'overflow-x-auto'
+          : '[mask-image:linear-gradient(to_right,transparent,#000_5%,#000_95%,transparent)]'
+      }`}
+    >
+      <div ref={trackRef} className="flex w-max gap-5 px-6">
+        {[...ENGINES, ...ENGINES].map(({ icon: Icon, name, tag, Artifact }, i) => (
+          <article
+            key={i}
+            aria-hidden={i >= ENGINES.length}
+            tabIndex={i < ENGINES.length ? 0 : -1}
+            className="w-[340px] shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_16px_36px_-18px_rgba(15,23,42,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+          >
+            <div className="flex items-center gap-2.5 text-slate-900">
+              <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+              <h3 className="text-[16px] font-medium tracking-[-0.02em]">{name}</h3>
+            </div>
+            <p className="mt-2 text-[13px] text-slate-600 leading-relaxed min-h-[54px]">{tag}</p>
+            <div className="mt-3.5">
+              <Artifact />
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const INFRA = [
   { icon: SlidersHorizontal, name: 'Logic & ICP Studio', body: 'One place to set your offering, industries, geographies and buyer titles. Every engine reads from it.' },
   { icon: Inbox, name: 'Inbound Pipeline', body: 'Webhook ingestion behind a Redis lock, then a provider waterfall ending in a drafted reply.' },
@@ -344,8 +420,9 @@ function LaptopMock() {
     : { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 } };
 
   return (
-    <div className="relative pb-24 sm:pb-32">
-      {/* perspective grid floor — full-bleed, the laptop stands on it */}
+    <div className="relative pb-28 sm:pb-40">
+      {/* perspective grid floor — full-bleed, the laptop stands on it. Fades out
+         on every side so it dissolves into the page with no hard edge. */}
       <div className="pointer-events-none absolute inset-x-[-50vw] bottom-0 top-[38%] overflow-hidden" aria-hidden="true">
         <div
           className="absolute inset-0 origin-bottom"
@@ -353,10 +430,15 @@ function LaptopMock() {
             transform: 'perspective(560px) rotateX(60deg)',
             backgroundSize: '46px 46px',
             backgroundImage:
-              'linear-gradient(to right, rgba(15,23,42,0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.16) 1px, transparent 1px)',
+              'linear-gradient(to right, rgba(15,23,42,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.14) 1px, transparent 1px)',
+            maskImage:
+              'radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%)',
+            WebkitMaskImage:
+              'radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%)',
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#F8FAFC]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/70 to-transparent" />
         <div className="absolute inset-y-0 left-0 w-[38%] bg-gradient-to-r from-[#F8FAFC] to-transparent" />
         <div className="absolute inset-y-0 right-0 w-[38%] bg-gradient-to-l from-[#F8FAFC] to-transparent" />
       </div>
@@ -460,25 +542,25 @@ export default function LandingPage({ onPrimary, onSignIn }) {
       </div>
 
       <main id="top" className="relative" style={{ '--mesh-fade': '#F8FAFC' }}>
-        {/* Ambient synthesis glow behind the hero + product shot. One radial that
-           fades to transparent on every side, so it connects the whole area with
-           no seam. Grain on top keeps it from looking like a plain gradient. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1400px]" aria-hidden="true">
+        {/* Ambient aura behind the hero + product shot. One centred radial that
+           fades to transparent on every side (per landingmockup.html) so it
+           blends the whole upper page with no seam. Grain keeps it from looking
+           like a plain gradient. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1500px] flex justify-center overflow-hidden" aria-hidden="true">
           <div
-            className="absolute inset-0"
+            className="w-[1180px] max-w-[160vw] h-[860px] -mt-24 rounded-[50%]"
             style={{
               background:
-                'radial-gradient(115% 52% at 50% -4%, rgba(129,140,248,0.24) 0%, rgba(217,119,6,0.11) 38%, rgba(129,140,248,0) 72%),' +
-                'radial-gradient(60% 40% at 82% 8%, rgba(217,119,6,0.16) 0%, rgba(217,119,6,0) 66%),' +
-                'radial-gradient(52% 38% at 16% 4%, rgba(79,70,229,0.14) 0%, rgba(79,70,229,0) 64%)',
-              filter: 'blur(36px)',
+                'radial-gradient(circle at 38% 30%, rgba(139,92,246,0.28) 0%, rgba(139,92,246,0) 60%),' +
+                'radial-gradient(circle at 66% 24%, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0) 58%),' +
+                'radial-gradient(circle at 52% 60%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 62%)',
+              filter: 'blur(52px)',
             }}
           />
           <div
             className="absolute inset-0 mix-blend-overlay opacity-[0.22]"
             style={{ backgroundImage: GRAIN }}
           />
-          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#F8FAFC] to-transparent" />
         </div>
 
         {/* Hero */}
@@ -525,18 +607,14 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </section>
 
         {/* What each engine produces — a slow horizontal band of the actual
-           output; hover or focus to pause and read */}
-        <section
-          id="engines"
-          className="relative border-t border-slate-200 bg-white overflow-hidden"
-          style={{ '--mesh-fade': '#FFFFFF' }}
-        >
+           output; pointer or focus inside eases it to a stop */}
+        <section id="engines" className="relative overflow-hidden">
           {/* grainy blob bleeding from the right, behind the heading + rocket */}
           <div className="pointer-events-none absolute -top-24 right-0 w-[74%] h-[600px]" aria-hidden="true">
             <MeshGradient origin="right" intensity={2.3} colors={['249,115,22', '124,58,237', '217,70,239']} />
           </div>
 
-          <div className="relative py-20 sm:py-28">
+          <div className="relative pt-10 sm:pt-14 pb-20 sm:pb-28">
             <div className="max-w-5xl mx-auto px-6 lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:items-start">
               <div>
                 <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
@@ -544,39 +622,19 @@ export default function LandingPage({ onPrimary, onSignIn }) {
                 </h2>
                 <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
                   Nothing leaves your workspace on its own. Each engine drafts, and you approve.
-                  Hover a card to stop and read it.
+                  Point at a card to stop the row and read it.
                 </p>
               </div>
               <RocketArt className="hidden lg:block w-48 h-44 text-slate-900/85 shrink-0 -mt-3" />
             </div>
 
-            <div className="engine-marquee relative mt-14 [mask-image:linear-gradient(to_right,transparent,#000_5%,#000_95%,transparent)]">
-              <div className="engine-marquee-track flex w-max gap-5 px-6">
-                {[...ENGINES, ...ENGINES].map(({ icon: Icon, name, tag, Artifact }, i) => (
-                  <article
-                    key={i}
-                    aria-hidden={i >= ENGINES.length}
-                    tabIndex={i < ENGINES.length ? 0 : -1}
-                    className="w-[340px] shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_14px_34px_-16px_rgba(15,23,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                  >
-                    <div className="flex items-center gap-2.5 text-slate-900">
-                      <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-                      <h3 className="text-[16px] font-medium tracking-[-0.02em]">{name}</h3>
-                    </div>
-                    <p className="mt-2 text-[13px] text-slate-600 leading-relaxed min-h-[54px]">{tag}</p>
-                    <div className="mt-3.5">
-                      <Artifact />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
+            <EngineMarquee />
           </div>
         </section>
 
         {/* Infrastructure */}
-        <section id="infra" className="border-t border-slate-200">
-          <div className="max-w-5xl mx-auto px-6 py-20 sm:py-24">
+        <section id="infra">
+          <div className="max-w-5xl mx-auto px-6 pt-8 pb-20 sm:pb-24">
             <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">The infrastructure underneath</h2>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
               {INFRA.map(({ icon: Icon, name, body }) => (
@@ -654,9 +712,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             <div className="absolute inset-0 mix-blend-overlay opacity-[0.20]" style={{ backgroundImage: GRAIN }} />
 
             <div className="relative px-6 sm:px-10 py-20 sm:py-24 text-center">
-              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-medium tracking-[-0.03em] leading-[1.04] max-w-[18ch] mx-auto">
-                <span className="text-slate-300">Turn raw signals into</span>{' '}
-                <span className="text-white">closed revenue.</span>
+              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-medium tracking-[-0.032em] leading-[1.04] max-w-[18ch] mx-auto text-white">
+                Turn raw signals into <i className="italic">closed revenue</i>.
               </h2>
               <p className="mt-6 text-[15px] sm:text-base text-slate-300/90 leading-[1.65] max-w-[52ch] mx-auto">
                 Register, answer a few questions about what you sell, and the engines start
