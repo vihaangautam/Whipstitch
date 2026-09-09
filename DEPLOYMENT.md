@@ -14,8 +14,8 @@ can start getting real usage and feedback. Not "scale" — "live and testable".
                                     │  app.whipstitch.com
                                     ▼
                     ┌───────────────────────────────┐
-                    │  Railway service               │
-                    │  Docker image (this repo)       │
+   cron-job.org ──► │  Render web service (free)     │
+   /health /10min   │  Docker image (this repo)       │
                     │  • FastAPI  (API + serves the   │
                     │    built React app, same origin)│
                     │  • alembic upgrade head on boot │
@@ -29,16 +29,23 @@ can start getting real usage and feedback. Not "scale" — "live and testable".
                   └──────────────┘   └──────────────┘
 ```
 
-**One Railway service.** The Dockerfile already builds the React app and FastAPI
+**One web service.** The Dockerfile already builds the React app and FastAPI
 serves it from `frontend/dist` at `/`, so the browser talks to one origin and
-there is no CORS or `VITE_API_URL` to wire. Keep it this way until there's a
-reason not to.
+there is no CORS or `VITE_API_URL` to wire.
+
+**Host: Render free tier** (`render.yaml` in this repo). $0. Catch: a free web
+service sleeps after 15 minutes idle and cold-starts in ~50 s — so a
+**cron-job.org** ping to `/health` every 10 minutes keeps it awake (step 5).
+One free service fits inside Render's 750 instance-hours/month.
+
+Railway is the paid alternative: `railway.json` is also in the repo. It's ~$5/mo
+(Hobby) with no sleep — swap to it if the keep-alive hack ever bites.
 
 ### What we are *not* deploying yet
 
 | Deferred | Why it's safe to skip | When to add it |
 |---|---|---|
-| **Temporal + the worker** | Every workflow entry point already has an inline-execution fallback (`app/api/v1/deals.py:203`, battlecards, meetings…). Without a worker they just run in-process. | When a single generation run gets long enough that you want it durable/retryable across restarts, or when you need cron-scheduled outbound. Then: Temporal Cloud (paid) or a self-hosted Temporal service + a second Railway service running `python -m app.worker`. |
+| **Temporal + the worker** | Every workflow entry point already has an inline-execution fallback (`app/api/v1/deals.py:203`, battlecards, meetings…). Without a worker they just run in-process. | When a single generation run gets long enough that you want it durable/retryable across restarts, or when you need cron-scheduled outbound. Then: Temporal Cloud (paid) or a self-hosted Temporal service + a second web service running `python -m app.worker`. |
 | **Redis** (optional) | Falls back to in-process locks/rate-limits. Fine for one instance. | The moment you run more than one API replica — then idempotency and rate limits must be shared. Upstash free tier covers it; wire it from day one if it's easy. |
 | **Apollo** | `MOCK_APOLLO=true`; outbound discovery falls back to free Serper hiring-signal search. | When you have paying users and want richer org data. 50 credits/month hard cap. |
 | **Split frontend on Cloudflare Pages** | Monolith works and is simpler. | If the static site needs its own release cadence or edge caching. Then set `CORS_ORIGINS` and add a `VITE_API_URL` build arg. |
@@ -49,7 +56,7 @@ reason not to.
 
 ### 1. Supabase — the database
 
-1. New project. Pick the region closest to your Railway region.
+1. New project. Pick the region closest to your Render region.
 2. Project Settings → Database → **Connection string** → **Session pooler** (port
    `5432`, not the transaction pooler on `6543` — migrations need a real session).
 3. Copy it. It looks like:
@@ -59,7 +66,7 @@ reason not to.
 
    That's your `DATABASE_URL`. TLS is added automatically for non-localhost hosts
    (`app/db/session.py`), so you do **not** need `?sslmode=` on the end.
-5. Nothing else to do here — `alembic upgrade head` on the first Railway boot
+5. Nothing else to do here — `alembic upgrade head` on the first Render boot
    creates every table.
 
 ### 2. Upstash — Redis (optional but do it)
@@ -67,33 +74,48 @@ reason not to.
 1. New Redis database, same region.
 2. Copy the **`rediss://`** connection URL (TLS). That's your `REDIS_URL`.
 
-### 3. Railway — the app
+### 3. Render — the app
 
-1. New project → Deploy from GitHub repo → pick this repo / the branch you want live.
-2. Railway auto-detects `Dockerfile` (and `railway.json` pins the health check to
-   `/health` and the start command).
-3. **Variables** — set these (see the full table below). At minimum:
-   `ENVIRONMENT=production`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET_KEY`,
-   `ENCRYPTION_MASTER_KEY`, and the three LLM keys.
-4. First deploy: watch the logs for `alembic upgrade head` → then
-   `Uvicorn running`. Hit `https://<railway-subdomain>.up.railway.app/health` —
-   expect `{"status":"healthy"}` or `"degraded"` (degraded just means Redis or
-   Temporal is absent, which is fine).
+1. Dashboard -> **New -> Blueprint** -> connect this repo. Render reads
+   `render.yaml`: one web service `whipstitch`, Docker runtime, free plan,
+   health check `/health`.
+2. Set the region to match Supabase/Upstash (edit `region:` in `render.yaml`
+   first if it isn't `singapore`).
+3. Apply. It asks for the `sync: false` env vars -> paste `DATABASE_URL`,
+   `REDIS_URL`, `JWT_SECRET_KEY`, `ENCRYPTION_MASTER_KEY`, `GEMINI_API_KEY`,
+   `GROQ_API_KEY`, `SERPER_API_KEY` (leave the optional ones blank).
+4. First deploy: watch the logs for `alembic upgrade head` -> `Uvicorn running`.
+   Hit `https://whipstitch.onrender.com/health` -> expect `{"status":"healthy"}`
+   or `"degraded"` (degraded just means Redis/Temporal absent, which is fine).
 5. Register a test account at `/` and click through the product.
 
-### 4. Cloudflare — the domain
+> Not using the Blueprint? New -> Web Service -> this repo -> Runtime **Docker**
+> -> Plan **Free** -> Health Check Path `/health`, then add the env vars by hand.
+
+### 4. cron-job.org - keep it awake
+
+Render free sleeps after 15 min idle. Fix it with a free external ping:
+
+1. cron-job.org -> Sign up -> **Create cronjob**.
+2. URL: `https://whipstitch.onrender.com/health` (your Render URL, or the
+   Cloudflare domain once step 5 is done).
+3. Schedule **every 10 minutes**, method GET. Save + enable.
+4. Done - the service now answers every request without a cold start, and
+   `/health` is cheap (one Postgres ping).
+
+### 5. Cloudflare - the domain
 
 1. Add your domain to Cloudflare (change nameservers at your registrar).
-2. Railway service → Settings → Networking → **Custom Domain** → enter
-   `app.whipstitch.com` (or the apex). Railway shows a target.
-3. In Cloudflare DNS: `CNAME  app  →  <the railway target>`, **proxied** (orange
-   cloud on). That gives you Cloudflare's TLS, CDN and DDoS in front of Railway.
-4. SSL/TLS mode → **Full (strict)**.
-5. Update `ENVIRONMENT`-adjacent vars if needed and redeploy. Done.
+2. Render service -> Settings -> **Custom Domains** -> add `app.whipstitch.com`.
+   Render shows a CNAME target.
+3. Cloudflare DNS: `CNAME  app  ->  <the render target>`, **proxied** (orange
+   cloud on) - Cloudflare TLS/CDN/DDoS in front of Render.
+4. SSL/TLS mode -> **Full (strict)**.
+5. Point the cron-job.org ping at the new domain and you're done.
 
 ---
 
-## Environment variables (Railway)
+## Environment variables (Render service → Environment tab)
 
 Generate the two secrets first:
 
@@ -120,13 +142,13 @@ python -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).deco
 | `TENANT_DEFAULT_ID` | `trifid_media` | Leave as-is. |
 | `LOG_LEVEL` | `INFO` | |
 
-`PORT` is injected by Railway — don't set it.
+`PORT` is injected by Render — don't set it.
 
 ---
 
 ## Gotchas checked / fixed in this repo
 
-- **`$PORT`** — Dockerfile `CMD` and `railway.json` both use `${PORT:-8000}`.
+- **`$PORT`** — Dockerfile `CMD` uses `${PORT:-8000}`; Render and Railway both inject `PORT`.
 - **Supabase TLS** — `app/db/session.py` adds `ssl=require` as a connect arg for
   any non-localhost Postgres host (asyncpg ignores `?sslmode=` URL params).
 - **Migrations on boot** — `app/db/migrations/env.py` now reuses the app engine
@@ -140,7 +162,7 @@ python -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).deco
 Still worth doing before you share the link widely:
 
 - [ ] Rotate `.env` locally too — it currently has the same dev secrets committed
-      in `.env.example`; make sure production values only live in Railway.
+      in `.env.example`; make sure production values only live in the Render dashboard.
 - [ ] Point a real Slack webhook or set `SLACK_WEBHOOK_URL` to a dead value so SLA
       alerts don't spam an old channel.
 - [ ] `git` — make sure `.env`, `whipstitch_local.db`, `venv/` are git-ignored
@@ -159,7 +181,7 @@ Still worth doing before you share the link widely:
    `groq/…`, not `template`.
 4. Share the link. Each new registration is an isolated tenant (workspace-scoped
    by `tenant_id`), so accounts don't see each other's data.
-5. Watch: Railway logs (structlog JSON, `correlation_id` per request), Supabase
+5. Watch: Render logs (structlog JSON, `correlation_id` per request), Supabase
    table growth, and the free-tier counters (Gemini/Groq RPM, Serper 2,500/mo).
 
 ---
@@ -167,8 +189,8 @@ Still worth doing before you share the link widely:
 ## When you outgrow the monolith
 
 - **Durable workflows** → stand up Temporal (Temporal Cloud, or a self-hosted
-  `temporalio/auto-setup` service on Railway with its own Postgres) and a second
-  Railway service: same image, `startCommand: python -m app.worker`. Set
+  `temporalio/auto-setup` service with its own Postgres) and a second
+  web service: same image, start command `python -m app.worker`. Set
   `TEMPORAL_HOST`. The API auto-switches from inline to Temporal when it can
   connect.
 - **More than one API replica** → `REDIS_URL` becomes mandatory (shared

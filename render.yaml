@@ -1,0 +1,45 @@
+# Render Blueprint — one Docker web service (FastAPI + built React, same origin).
+# Postgres is Supabase, Redis is Upstash; both live outside Render.
+#
+# Deploy: Render dashboard → New → Blueprint → point at this repo.
+# Then fill the `sync: false` vars in the service's Environment tab.
+services:
+  - type: web
+    name: whipstitch
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore          # match your Supabase / Upstash region
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: TENANT_DEFAULT_ID
+        value: trifid_media
+      - key: MOCK_APOLLO
+        value: "true"
+      # ── set these in the Render dashboard (never commit real values) ──
+      - key: DATABASE_URL          # postgresql+asyncpg://…pooler.supabase.com:5432/postgres
+        sync: false
+      - key: REDIS_URL             # rediss://…upstash.io:6379  (optional; omit for in-process fallback)
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ENCRYPTION_MASTER_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: HUBSPOT_SANDBOX_API_KEY
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
