@@ -608,18 +608,18 @@ export default function LandingPage({ onPrimary, onSignIn }) {
       <main id="top" className="relative" style={{ '--mesh-fade': '#F8FAFC' }}>
         {/* Ambient field behind hero and laptop — ends smoothly above the card containers */}
         <div className="relative">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 -top-[132px] overflow-hidden" aria-hidden="true">
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  // amber warmth behind the headline
-                  'radial-gradient(48% 20% at 50% 8%, rgba(245,158,11,0.20) 0%, rgba(245,158,11,0) 100%),' +
-                  'radial-gradient(36% 16% at 30% 12%, rgba(251,191,36,0.14) 0%, rgba(251,191,36,0) 100%),' +
+                  // amber warmth from the very top, behind the nav and the headline
+                  'radial-gradient(52% 22% at 50% 2%, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0) 100%),' +
+                  'radial-gradient(40% 18% at 32% 7%, rgba(251,191,36,0.15) 0%, rgba(251,191,36,0) 100%),' +
                   // violet + green only around the laptop, lower down
-                  'radial-gradient(42% 26% at 14% 52%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 100%),' +
-                  'radial-gradient(44% 28% at 88% 50%, rgba(139,92,246,0.19) 0%, rgba(139,92,246,0) 100%),' +
-                  'radial-gradient(50% 26% at 50% 66%, rgba(124,58,237,0.13) 0%, rgba(124,58,237,0) 100%)',
+                  'radial-gradient(42% 26% at 14% 49%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 100%),' +
+                  'radial-gradient(44% 28% at 88% 47%, rgba(139,92,246,0.19) 0%, rgba(139,92,246,0) 100%),' +
+                  'radial-gradient(50% 26% at 50% 63%, rgba(124,58,237,0.13) 0%, rgba(124,58,237,0) 100%)',
                 filter: 'blur(58px)',
               }}
             />
