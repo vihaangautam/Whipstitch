@@ -12,6 +12,7 @@ import {
   BarChart3,
   Rocket,
 } from 'lucide-react';
+import LegalDoc from './LegalDoc';
 
 /* ── Brand mark ─────────────────────────────────────────────── */
 function Mark({ className = 'w-8 h-8' }) {
@@ -36,99 +37,82 @@ const NAV = [
   { href: '#faq', label: 'Questions' },
 ];
 
-/* ── The four generation engines, each shown with its real output ── */
-function OutboundArtifact() {
+/* ── Compact, glanceable previews of what each engine hands back ── */
+function OutboundMini() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 text-[13px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="font-semibold text-slate-900">Northwind Retail</div>
-          <div className="text-xs text-slate-500">Hiring a Growth Marketing Manager · contact resolved: Priya Shah</div>
-        </div>
-        <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 shrink-0">
-          Needs review
+        <span className="font-semibold text-slate-900">Northwind Retail</span>
+        <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+          Draft ready
         </span>
       </div>
-      <div className="space-y-1.5 border-t border-slate-100 pt-3 text-slate-700 leading-relaxed">
-        <p><span className="text-slate-400">Observation.</span> You posted for a growth marketer to own paid and lifecycle — that split usually means the current mix has plateaued.</p>
-        <p><span className="text-slate-400">Link.</span> We run that exact scope as a senior pod, live in two weeks, no ramp.</p>
-        <p><span className="text-slate-400">Ask.</span> Worth 20 minutes to compare against hiring in-house?</p>
-      </div>
+      <div className="text-[10.5px] text-slate-400 mt-0.5">Priya Shah, Head of Growth</div>
+      <p className="mt-2 text-slate-600 leading-snug border-t border-slate-200/70 pt-2">
+        “You just posted for a growth marketer to own paid and lifecycle. We run
+        that exact scope as a senior pod…”
+      </p>
     </div>
   );
 }
 
-function ScorecardArtifact() {
+function ScorecardMini() {
   const boxes = [
-    ['Metrics', 13, 15], ['Economic Buyer', 6, 15], ['Decision Criteria', 8, 10], ['Decision Process', 5, 10],
-    ['Paper Process', 4, 10], ['Implicated Pain', 12, 15], ['Champion', 7, 15], ['Competition', 4, 10],
+    ['Metrics', 13, 15], ['Buyer', 6, 15], ['Criteria', 8, 10], ['Process', 5, 10],
+    ['Paper', 4, 10], ['Pain', 12, 15], ['Champion', 7, 15], ['Rival', 4, 10],
   ];
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-      <div className="flex items-center justify-between text-[13px]">
-        <span className="font-semibold text-slate-900">CloudCube — SEO retainer</span>
-        <span className="font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 text-xs shrink-0">
-          Rescue · 59 / 100
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <div className="flex items-center justify-between text-[12px]">
+        <span className="font-semibold text-slate-900">CloudCube</span>
+        <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+          Rescue · 59/100
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="mt-2 grid grid-cols-4 gap-1">
         {boxes.map(([name, s, max]) => {
           const pct = s / max;
           const tone = pct >= 0.67 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-            : pct >= 0.34 ? 'bg-amber-50 text-amber-800 border-amber-200'
+            : pct >= 0.4 ? 'bg-amber-50 text-amber-800 border-amber-200'
             : 'bg-rose-50 text-rose-800 border-rose-200';
           return (
-            <div key={name} className={`rounded-md border px-1.5 py-1 text-center ${tone}`}>
-              <div className="text-[10px] leading-tight truncate">{name}</div>
-              <div className="text-xs font-bold">{s}/{max}</div>
+            <div key={name} className={`rounded border px-1 py-1 text-center ${tone}`}>
+              <div className="text-[9px] leading-none">{name}</div>
+              <div className="text-[11px] font-bold leading-tight mt-0.5">{s}/{max}</div>
             </div>
           );
         })}
       </div>
-      <p className="text-xs text-slate-500 border-t border-slate-100 pt-2.5">
-        Economic Buyer capped — the founder signs, and you haven't spoken to them yet.
-      </p>
     </div>
   );
 }
 
-function BattlecardArtifact() {
+function BattlecardMini() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 text-[13px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
       <div className="font-semibold text-slate-900">vs. Directive Consulting</div>
-      <div className="space-y-2.5 text-slate-700 leading-relaxed">
-        <div>
-          <div className="text-xs text-slate-400 mb-0.5">The claim they make</div>
-          <p>"We're a full-service agency — one team for everything."</p>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400 mb-0.5">Ask the buyer</div>
-          <p className="text-slate-900 font-medium">"When your quarter is on the line, does a senior person review the work, or does it queue behind twenty other accounts?"</p>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400 mb-0.5">Say this</div>
-          <p className="italic">"You get a dedicated senior pod on one scope, not a slot in a factory."</p>
-        </div>
+      <div className="mt-2 border-t border-slate-200/70 pt-2">
+        <div className="text-[10px] text-slate-400">Ask the buyer</div>
+        <p className="text-slate-700 leading-snug mt-0.5">
+          “Does a senior person review the work, or does it queue behind twenty
+          other accounts?”
+        </p>
       </div>
     </div>
   );
 }
 
-function BriefingArtifact() {
+function BriefingMini() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 text-[13px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-slate-900">FinTech Scale — executive review</span>
-        <span className="text-xs text-slate-500">2 attendees</span>
+        <span className="font-semibold text-slate-900">FinTech Scale</span>
+        <span className="text-[10px] text-slate-400">Thu 10:00</span>
       </div>
-      <p className="text-slate-600 leading-relaxed">
-        Series A closed, scaling SDRs from two to eight. Goal: confirm scope and agree a next step before the founder travels.
-      </p>
-      <div className="border-t border-slate-100 pt-2.5 space-y-1.5 text-slate-700">
-        <div className="text-xs text-slate-400">Ask on this call</div>
-        <p>1. What's the fallback when Apollo rate-limits outbound?</p>
+      <div className="mt-2 border-t border-slate-200/70 pt-2 space-y-1 text-slate-600 leading-snug">
+        <p>1. Fallback when Apollo rate-limits outbound?</p>
         <p>2. Who signs off on the CAC payback threshold?</p>
-        <p>3. What breaks first if the two current reps stay two?</p>
+        <p>3. What breaks first if the two reps stay two?</p>
       </div>
     </div>
   );
@@ -138,40 +122,62 @@ const ENGINES = [
   {
     icon: Rocket,
     name: 'Outbound Queue',
-    tag: 'Companies hiring for your category, the decision-maker resolved, and a first draft written.',
-    Artifact: OutboundArtifact,
+    tag: 'A first message to a company that’s hiring in your space.',
+    Artifact: OutboundMini,
   },
   {
     icon: ShieldCheck,
     name: 'Deal Health',
-    tag: 'An eight-box MEDDPICC scorecard built from the exact quotes in your call transcript.',
-    Artifact: ScorecardArtifact,
+    tag: 'A MEDDPICC scorecard, scored from your call transcript.',
+    Artifact: ScorecardMini,
   },
   {
     icon: Swords,
     name: 'Competitor Playbooks',
-    tag: 'A battlecard per rival: the claim they make, the question that beats it, the line you say back.',
-    Artifact: BattlecardArtifact,
+    tag: 'A battlecard for every rival you lose deals to.',
+    Artifact: BattlecardMini,
   },
   {
     icon: CalendarClock,
     name: 'Call Prep',
-    tag: 'Attendee priorities, three sharp questions, recent news, and a kit your champion uses without you.',
-    Artifact: BriefingArtifact,
+    tag: 'A briefing before every meeting on your calendar.',
+    Artifact: BriefingMini,
   },
 ];
 
-/* Horizontal band of engine cards. Cruises left on its own; pointer or focus
-   inside the strip eases it to a stop; leaving eases it back up to speed. */
+function EngineCard({ icon: Icon, name, tag, Artifact, dim }) {
+  return (
+    <article
+      aria-hidden={dim}
+      tabIndex={dim ? -1 : 0}
+      className="w-[320px] shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_16px_36px_-18px_rgba(15,23,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+    >
+      <div className="flex items-center gap-2 text-slate-900">
+        <Icon className="w-[17px] h-[17px]" strokeWidth={1.75} />
+        <h3 className="text-[15px] font-bold tracking-[-0.02em]">{name}</h3>
+      </div>
+      <p className="mt-1.5 text-[12.5px] text-slate-500 leading-snug">{tag}</p>
+      <div className="mt-3">
+        <Artifact />
+      </div>
+    </article>
+  );
+}
+
+/* Horizontal band of engine cards. Cruises left forever; pointer or focus
+   inside eases it to a stop, leaving eases it back up to speed. Two identical
+   groups translated by exactly one group width, so the loop has no seam. */
 function EngineMarquee() {
   const trackRef = useRef(null);
+  const groupRef = useRef(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
     const track = trackRef.current;
-    if (!track || reduce) return;
+    const group = groupRef.current;
+    if (!track || !group || reduce) return;
 
-    const CRUISE = 40; // px/sec
+    const CRUISE = 38; // px/sec
     let x = 0;
     let speed = CRUISE;
     let target = CRUISE;
@@ -182,10 +188,10 @@ function EngineMarquee() {
       if (last == null) last = t;
       const dt = Math.min((t - last) / 1000, 0.05);
       last = t;
-      speed += (target - speed) * Math.min(dt * 2.5, 1); // ease toward target
+      speed += (target - speed) * Math.min(dt * 2.5, 1);
       x -= speed * dt;
-      const half = track.scrollWidth / 2;
-      if (half > 0 && -x >= half) x += half;
+      const period = group.offsetWidth + 20; // group width + the flex gap
+      if (period > 0 && -x >= period) x += period;
       track.style.transform = `translate3d(${x}px,0,0)`;
       raf = requestAnimationFrame(frame);
     };
@@ -193,45 +199,36 @@ function EngineMarquee() {
 
     const slow = () => { target = 0; };
     const go = () => { target = CRUISE; };
-    track.addEventListener('pointerenter', slow);
-    track.addEventListener('pointerleave', go);
-    track.addEventListener('focusin', slow);
-    track.addEventListener('focusout', go);
+    for (const [ev, fn] of [['pointerenter', slow], ['pointerleave', go], ['focusin', slow], ['focusout', go]]) {
+      track.addEventListener(ev, fn);
+    }
     return () => {
       cancelAnimationFrame(raf);
-      track.removeEventListener('pointerenter', slow);
-      track.removeEventListener('pointerleave', go);
-      track.removeEventListener('focusin', slow);
-      track.removeEventListener('focusout', go);
+      for (const [ev, fn] of [['pointerenter', slow], ['pointerleave', go], ['focusin', slow], ['focusout', go]]) {
+        track.removeEventListener(ev, fn);
+      }
     };
   }, [reduce]);
 
+  if (reduce) {
+    return (
+      <div className="mt-12 overflow-x-auto">
+        <div className="flex w-max gap-5 px-6">
+          {ENGINES.map((e) => <EngineCard key={e.name} {...e} />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`relative mt-14 ${
-        reduce
-          ? 'overflow-x-auto'
-          : '[mask-image:linear-gradient(to_right,transparent,#000_5%,#000_95%,transparent)]'
-      }`}
-    >
-      <div ref={trackRef} className="flex w-max gap-5 px-6">
-        {[...ENGINES, ...ENGINES].map(({ icon: Icon, name, tag, Artifact }, i) => (
-          <article
-            key={i}
-            aria-hidden={i >= ENGINES.length}
-            tabIndex={i < ENGINES.length ? 0 : -1}
-            className="w-[340px] shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_16px_36px_-18px_rgba(15,23,42,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-          >
-            <div className="flex items-center gap-2.5 text-slate-900">
-              <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-              <h3 className="text-[16px] font-bold tracking-[-0.02em]">{name}</h3>
-            </div>
-            <p className="mt-2 text-[13px] text-slate-600 leading-relaxed min-h-[54px]">{tag}</p>
-            <div className="mt-3.5">
-              <Artifact />
-            </div>
-          </article>
-        ))}
+    <div className="relative mt-12 [mask-image:linear-gradient(to_right,transparent,#000_4%,#000_96%,transparent)]">
+      <div ref={trackRef} className="flex w-max gap-5 px-6 will-change-transform">
+        <div ref={groupRef} className="flex gap-5 shrink-0">
+          {ENGINES.map((e) => <EngineCard key={e.name} {...e} />)}
+        </div>
+        <div className="flex gap-5 shrink-0" aria-hidden="true">
+          {ENGINES.map((e) => <EngineCard key={`${e.name}-dup`} {...e} dim />)}
+        </div>
       </div>
     </div>
   );
@@ -463,6 +460,7 @@ function LaptopMock() {
 export default function LandingPage({ onPrimary, onSignIn }) {
   const [openFaq, setOpenFaq] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [doc, setDoc] = useState(null);
   const reduce = useReducedMotion();
   const primary = onPrimary || (() => {});
   const signIn = onSignIn || primary;
@@ -475,6 +473,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
   }, []);
 
   const rise = reduce ? {} : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
+
+  if (doc) return <LegalDoc slug={doc} onBack={() => setDoc(null)} />;
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-900 font-sans">
@@ -587,9 +587,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
               <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
                 Four engines that produce <span className="font-extrabold">work you can send</span>.
               </h2>
-              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[46ch]">
-                Nothing leaves your workspace on its own. Each engine drafts, and you approve.
-                Point at a card to stop the row and read it.
+              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[42ch]">
+                Every engine drafts. You review, then it goes out. Hover the row to pause it.
               </p>
             </div>
 
@@ -703,52 +702,69 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-14">
-          <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
-            <div>
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="grid grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-x-8 gap-y-12">
+            {/* Brand */}
+            <div className="col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2.5">
                 <Mark className="w-7 h-7" />
-                <span className="font-semibold text-slate-900">Whipstitch</span>
+                <span className="font-extrabold text-slate-900">Whipstitch</span>
               </div>
-              <p className="mt-3 text-sm text-slate-500 leading-relaxed max-w-[32ch]">
-                The sales work between a signal and a booked call, generated and staged for your review.
+              <p className="mt-3 text-[13px] text-slate-500 leading-relaxed max-w-[34ch]">
+                The sales work between a signal and a booked call — generated, and
+                staged for your review.
               </p>
-            </div>
-            {[
-              ['What it produces', [
-                ['Outbound Queue', '#engines'],
-                ['Deal Health', '#engines'],
-                ['Competitor Playbooks', '#engines'],
-                ['Call Prep', '#engines'],
-              ]],
-              ['Under the hood', [
-                ['Logic & ICP Studio', '#infra'],
-                ['Inbound Pipeline', '#infra'],
-                ['BYOK Vault', '#infra'],
-                ['Pipeline Analytics', '#infra'],
-              ]],
-              ['More', [
-                ['API docs', '/docs'],
-                ['Questions', '#faq'],
-              ]],
-            ].map(([heading, links]) => (
-              <div key={heading}>
-                <div className="text-[13px] font-semibold text-slate-900">{heading}</div>
-                <ul className="mt-3 space-y-2 text-sm text-slate-500">
-                  {links.map(([label, href]) => (
-                    <li key={label}>
-                      <a href={href} className="hover:text-slate-900 transition-colors">{label}</a>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-4 inline-flex items-center gap-2 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-full px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Workflow engine operational
               </div>
-            ))}
+            </div>
+
+            {/* What it produces */}
+            <div>
+              <div className="text-[12px] font-bold uppercase tracking-wider text-slate-900">What it produces</div>
+              <ul className="mt-4 space-y-2.5 text-[13px] text-slate-500">
+                {['Outbound Queue', 'Deal Health', 'Competitor Playbooks', 'Call Prep'].map((l) => (
+                  <li key={l}><a href="#engines" className="hover:text-slate-900 transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Under the hood — mono */}
+            <div>
+              <div className="text-[12px] font-bold uppercase tracking-wider text-slate-900">Under the hood</div>
+              <ul className="mt-4 space-y-2.5 text-[12px] font-mono text-slate-500">
+                <li><a href="#infra" className="hover:text-slate-900 transition-colors">ICP &amp; logic studio</a></li>
+                <li><a href="#infra" className="hover:text-slate-900 transition-colors">Gemini + Groq router</a></li>
+                <li><a href="#infra" className="hover:text-slate-900 transition-colors">Redis idempotency lock</a></li>
+                <li><a href="#infra" className="hover:text-slate-900 transition-colors">AES-256 key vault</a></li>
+                <li><a href="/docs" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">API docs</a></li>
+              </ul>
+            </div>
+
+            {/* Start card */}
+            <div className="col-span-2 lg:col-span-1">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[13px] font-bold text-slate-900">Set up a workspace</div>
+                <p className="mt-1 text-[12px] text-slate-500 leading-snug">
+                  A few questions about what you sell, then the engines run against your ICP.
+                </p>
+                <button
+                  onClick={primary}
+                  className="mt-3 w-full bg-slate-900 hover:bg-slate-800 text-white text-[12px] font-semibold py-2 rounded-lg transition-colors"
+                >
+                  Get started
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-            <span>© {new Date().getFullYear()} Whipstitch</span>
+
+          <div className="mt-14 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-slate-400">
+            <span>© {new Date().getFullYear()} Whipstitch. All rights reserved.</span>
             <div className="flex items-center gap-5">
-              <button onClick={signIn} className="hover:text-slate-700 transition-colors">Sign in</button>
-              <button onClick={primary} className="hover:text-slate-700 transition-colors">Get started</button>
+              <button onClick={() => setDoc('privacy')} className="hover:text-slate-700 transition-colors">Privacy Policy</button>
+              <button onClick={() => setDoc('terms')} className="hover:text-slate-700 transition-colors">Terms of Service</button>
+              <button onClick={() => setDoc('security')} className="hover:text-slate-700 transition-colors">Security Architecture</button>
             </div>
           </div>
         </div>
