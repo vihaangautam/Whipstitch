@@ -224,7 +224,7 @@ function EngineMarquee() {
           >
             <div className="flex items-center gap-2.5 text-slate-900">
               <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-              <h3 className="text-[16px] font-medium tracking-[-0.02em]">{name}</h3>
+              <h3 className="text-[16px] font-bold tracking-[-0.02em]">{name}</h3>
             </div>
             <p className="mt-2 text-[13px] text-slate-600 leading-relaxed min-h-[54px]">{tag}</p>
             <div className="mt-3.5">
@@ -477,7 +477,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
   const rise = reduce ? {} : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 
   return (
-    <div className="w-full bg-[#F8FAFC] text-slate-900 font-geist">
+    <div className="w-full bg-[#F8FAFC] text-slate-900 font-sans">
       {/* Nav — floating pill, always solid, as on the reference sites */}
       <div className="sticky top-4 z-40 px-4">
         <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${
@@ -485,7 +485,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         }`}>
           <a href="#top" className="flex items-center gap-2.5">
             <Mark className="w-8 h-8" />
-            <span className="text-[17px] font-semibold tracking-[-0.02em]">Whipstitch</span>
+            <span className="text-[17px] font-extrabold tracking-[-0.02em]">Whipstitch</span>
           </a>
           <div className="hidden md:flex items-center gap-9 text-[14px] text-slate-600">
             {NAV.map((n) => (
@@ -541,9 +541,10 @@ export default function LandingPage({ onPrimary, onSignIn }) {
           <motion.h1
             {...rise}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            className="font-display font-medium tracking-[-0.032em] leading-[1.02] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
+            className="font-display font-light tracking-[-0.035em] leading-[1.04] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
           >
-            The sales work between a <i className="italic">signal</i> and a <i className="italic">booked call</i>.
+            The sales work between a <span className="font-extrabold">signal</span> and a{' '}
+            <span className="font-extrabold">booked call</span>.
           </motion.h1>
           <motion.p
             {...rise}
@@ -583,8 +584,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         <section id="engines" className="relative z-10 overflow-x-clip">
           <div className="relative pt-10 sm:pt-14 pb-20 sm:pb-28">
             <div className="max-w-2xl mx-auto px-6 text-center">
-              <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">
-                Four engines that produce work you can send.
+              <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
+                Four engines that produce <span className="font-extrabold">work you can send</span>.
               </h2>
               <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[46ch]">
                 Nothing leaves your workspace on its own. Each engine drafts, and you approve.
@@ -600,7 +601,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* Infrastructure */}
         <section id="infra">
           <div className="max-w-5xl mx-auto px-6 pt-8 pb-20 sm:pb-24">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">The infrastructure underneath</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">The <span className="font-extrabold">infrastructure</span> underneath</h2>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
               {INFRA.map(({ icon: Icon, name, body }) => (
                 <div key={name} className="flex gap-3.5">
@@ -618,7 +619,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* Architecture — prose, dark */}
         <section className="bg-slate-900 text-white">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-28 space-y-6">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">Sales AI can't fail silently.</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">Sales AI can't <span className="font-extrabold">fail silently</span>.</h2>
             <p className="text-slate-300 leading-relaxed text-[15px]">
               Whipstitch runs its multi-step work as durable Temporal workflows. If a provider rate-limits
               in the middle of enrichment, execution resumes on a fallback rather than leaving a deal
@@ -639,7 +640,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         {/* FAQ */}
         <section id="faq" className="border-t border-slate-200">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-24">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] mb-10">Questions</h2>
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08] mb-10">Common <span className="font-extrabold">questions</span></h2>
             <div className="divide-y divide-slate-200 border-t border-slate-200">
               {FAQS.map((f, i) => {
                 const open = openFaq === i;
@@ -677,8 +678,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             <div className="absolute inset-0 mix-blend-overlay opacity-[0.20]" style={{ backgroundImage: GRAIN }} />
 
             <div className="relative px-6 sm:px-10 py-20 sm:py-24 text-center">
-              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-medium tracking-[-0.032em] leading-[1.04] max-w-[18ch] mx-auto text-white">
-                Turn raw signals into <i className="italic">closed revenue</i>.
+              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-light tracking-[-0.035em] leading-[1.06] max-w-[18ch] mx-auto text-white">
+                Turn raw signals into <span className="font-extrabold">closed revenue</span>.
               </h2>
               <p className="mt-6 text-[15px] sm:text-base text-slate-300/90 leading-[1.65] max-w-[52ch] mx-auto">
                 Register, answer a few questions about what you sell, and the engines start

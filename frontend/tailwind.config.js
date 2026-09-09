@@ -67,10 +67,8 @@ export default {
       fontFamily: {
         sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
-        // Marketing pages: Familjen Grotesk sets headlines, Geist sets body.
-        display: ["'Familjen Grotesk'", "Geist", "system-ui", "sans-serif"],
-        geist: ["Geist", "system-ui", "sans-serif"],
-        mono: ["'Geist Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
+        display: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
         'card': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
