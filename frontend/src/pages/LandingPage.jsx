@@ -434,7 +434,7 @@ function ScreenMock() {
             </div>
             <div className="col-span-5 rounded-md border border-slate-200 bg-white p-2.5">
               <div className="text-[9.5px] font-semibold text-slate-900 mb-1.5">Live event stream</div>
-              <div className="space-y-[3px] text-[8.5px] font-mono leading-tight">
+              <div className="space-y-[3px] text-[8.5px] leading-tight">
                 <div className="text-emerald-700">webhook parsed — northwind retail</div>
                 <div className="text-slate-500">redis lock acquired · idem key ok</div>
                 <div className="text-slate-500">waterfall → tier 1, drafting outreach</div>
@@ -536,7 +536,7 @@ function LaptopMock() {
           transition={{ duration: 0.7, delay: reduce ? 0 : 0.45, ease }}
           className="absolute top-[24%] -left-[3%] lg:-left-[8%] w-[248px] lg:w-[300px] rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_-14px_rgba(15,23,42,0.3)] hidden md:block"
         >
-          <div className="text-[11px] font-mono text-slate-400">call prep</div>
+          <div className="text-[11px] text-slate-400">call prep</div>
           <div className="text-[13px] font-semibold text-slate-900 mt-1">FinTech Scale, Thursday 10:00</div>
           <p className="text-[12px] text-slate-600 leading-relaxed mt-1.5">
             Series A closed, scaling 2 to 8 SDRs. Ask who signs off on the CAC payback threshold.
@@ -548,7 +548,7 @@ function LaptopMock() {
           transition={{ duration: 0.7, delay: reduce ? 0 : 0.6, ease }}
           className="absolute top-[10%] -right-[3%] lg:-right-[7%] w-[248px] lg:w-[292px] rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_-14px_rgba(15,23,42,0.3)] hidden md:block"
         >
-          <div className="text-[11px] font-mono text-slate-400">deal health</div>
+          <div className="text-[11px] text-slate-400">deal health</div>
           <div className="text-[13px] font-semibold text-slate-900 mt-1">CloudCube dropped to 59</div>
           <p className="text-[12px] text-slate-600 leading-relaxed mt-1.5">
             Economic Buyer capped at 6/15 — the founder signs, and no one has spoken to them.
@@ -789,7 +789,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
                   Sign in
                 </button>
               </div>
-              <p className="mt-8 font-mono text-[11px] sm:text-xs text-white/45">
+              <p className="mt-8 text-[12px] text-white/50">
                 No credit card. Use the free model tiers, or bring your own keys. Cancel anytime.
               </p>
             </div>
@@ -830,7 +830,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             {/* Under the hood — mono */}
             <div>
               <div className="text-[12px] font-bold uppercase tracking-wider text-slate-900">Under the hood</div>
-              <ul className="mt-4 space-y-2.5 text-[12px] font-mono text-slate-500">
+              <ul className="mt-4 space-y-2.5 text-[13px] text-slate-500">
                 <li><a href="#infra" className="hover:text-slate-900 transition-colors">ICP &amp; logic studio</a></li>
                 <li><a href="#infra" className="hover:text-slate-900 transition-colors">Gemini + Groq router</a></li>
                 <li><a href="#infra" className="hover:text-slate-900 transition-colors">Redis idempotency lock</a></li>

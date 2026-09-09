@@ -68,7 +68,7 @@ export default {
         sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
         display: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
+        mono: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
       },
       boxShadow: {
         'card': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
