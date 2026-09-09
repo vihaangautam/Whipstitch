@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import MeshGradient from '../components/MeshGradient';
 import {
   ArrowRight,
   ChevronDown,
@@ -387,26 +386,23 @@ function LaptopMock() {
 
   return (
     <div className="relative pb-28 sm:pb-40">
-      {/* perspective grid floor — full-bleed, the laptop stands on it. Fades out
-         on every side so it dissolves into the page with no hard edge. */}
-      <div className="pointer-events-none absolute inset-x-[-50vw] bottom-0 top-[38%] overflow-hidden" aria-hidden="true">
+      {/* perspective grid floor — full-bleed, the laptop stands on it. Faded with
+         a mask only (no solid fills) so the ambient field shows through it and
+         there is no dividing line. */}
+      <div className="pointer-events-none absolute inset-x-[-50vw] bottom-0 top-[14%]" aria-hidden="true">
         <div
           className="absolute inset-0 origin-bottom"
           style={{
             transform: 'perspective(560px) rotateX(60deg)',
             backgroundSize: '46px 46px',
             backgroundImage:
-              'linear-gradient(to right, rgba(15,23,42,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.14) 1px, transparent 1px)',
+              'linear-gradient(to right, rgba(15,23,42,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.12) 1px, transparent 1px)',
             maskImage:
-              'radial-gradient(ellipse 95% 75% at 50% 0%, #000 20%, transparent 68%)',
+              'radial-gradient(ellipse 70% 92% at 50% 0%, #000 0%, transparent 74%)',
             WebkitMaskImage:
-              'radial-gradient(ellipse 95% 75% at 50% 0%, #000 20%, transparent 68%)',
+              'radial-gradient(ellipse 70% 92% at 50% 0%, #000 0%, transparent 74%)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#F8FAFC]" />
-        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-[#F8FAFC] from-25% via-[#F8FAFC]/80 to-transparent" />
-        <div className="absolute inset-y-0 left-0 w-[38%] bg-gradient-to-r from-[#F8FAFC] to-transparent" />
-        <div className="absolute inset-y-0 right-0 w-[38%] bg-gradient-to-l from-[#F8FAFC] to-transparent" />
       </div>
 
       <div className="relative mx-auto w-[88%] max-w-[980px]">
@@ -482,17 +478,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
   return (
     <div className="w-full bg-[#F8FAFC] text-slate-900 font-geist">
-      {/* Announcement bar */}
-      <div className="bg-slate-900 text-slate-300 text-[12.5px]">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-2.5 text-center">
-          <span className="text-white font-medium">Free-tier Gemini and Groq are included.</span>
-          <span>Add your own keys for zero markup.</span>
-          <a href="#faq" className="text-emerald-400 hover:text-emerald-300 font-medium">How the models work</a>
-        </div>
-      </div>
-
       {/* Nav — floating pill, always solid, as on the reference sites */}
-      <div className="sticky top-4 z-40 px-4 mt-4">
+      <div className="sticky top-4 z-40 px-4">
         <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${
           scrolled ? 'glass-panel shadow-[0_8px_30px_-12px_rgba(15,23,42,0.18)]' : 'shadow-[0_2px_14px_-8px_rgba(15,23,42,0.14)]'
         }`}>
@@ -517,25 +504,35 @@ export default function LandingPage({ onPrimary, onSignIn }) {
       </div>
 
       <main id="top" className="relative" style={{ '--mesh-fade': '#F8FAFC' }}>
-        {/* Ambient aura behind the hero + product shot. One centred radial that
-           fades to transparent on every side (per landingmockup.html) so it
-           blends the whole upper page with no seam. Grain keeps it from looking
-           like a plain gradient. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1500px] flex justify-center overflow-hidden" aria-hidden="true">
+       {/* One continuous ambient field behind the hero, the product shot and the
+          engine row — a single set of blobs that all fade to transparent, so the
+          three sections read as one surface with no dividing line anywhere. */}
+       <div className="relative">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
           <div
-            className="w-[1180px] max-w-[160vw] h-[860px] -mt-24 rounded-[50%]"
+            className="absolute inset-0"
             style={{
               background:
-                'radial-gradient(circle at 38% 30%, rgba(139,92,246,0.28) 0%, rgba(139,92,246,0) 60%),' +
-                'radial-gradient(circle at 66% 24%, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0) 58%),' +
-                'radial-gradient(circle at 52% 60%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 62%)',
-              filter: 'blur(52px)',
+                // hero glow, top
+                'radial-gradient(40% 24% at 34% 7%, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 100%),' +
+                'radial-gradient(38% 22% at 66% 5%, rgba(245,158,11,0.24) 0%, rgba(245,158,11,0) 100%),' +
+                'radial-gradient(44% 24% at 52% 20%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 100%),' +
+                // mid — keeps colour continuous through the laptop band, no dead zone
+                'radial-gradient(46% 26% at 22% 46%, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0) 100%),' +
+                'radial-gradient(42% 24% at 84% 50%, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0) 100%),' +
+                // lower — warm wash behind the engine row
+                'radial-gradient(40% 24% at 90% 74%, rgba(245,158,11,0.16) 0%, rgba(245,158,11,0) 100%),' +
+                'radial-gradient(44% 26% at 76% 90%, rgba(139,92,246,0.17) 0%, rgba(139,92,246,0) 100%),' +
+                'radial-gradient(34% 20% at 98% 96%, rgba(217,70,239,0.12) 0%, rgba(217,70,239,0) 100%)',
+              filter: 'blur(58px)',
             }}
           />
           <div
-            className="absolute inset-0 mix-blend-overlay opacity-[0.22]"
+            className="absolute inset-0 mix-blend-overlay opacity-[0.2]"
             style={{ backgroundImage: GRAIN }}
           />
+          {/* dissolve into the plain page just before the infrastructure section */}
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#F8FAFC]" />
         </div>
 
         {/* Hero */}
@@ -583,18 +580,13 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
         {/* What each engine produces — a slow horizontal band of the actual
            output; pointer or focus inside eases it to a stop */}
-        <section id="engines" className="relative overflow-x-clip">
-          {/* grainy blob bleeding from the right, behind the heading */}
-          <div className="pointer-events-none absolute -top-16 right-0 w-[76%] h-[620px]" aria-hidden="true">
-            <MeshGradient origin="right" intensity={1.6} colors={['249,115,22', '124,58,237', '217,70,239']} />
-          </div>
-
+        <section id="engines" className="relative z-10 overflow-x-clip">
           <div className="relative pt-10 sm:pt-14 pb-20 sm:pb-28">
-            <div className="max-w-5xl mx-auto px-6">
-              <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06] max-w-3xl">
+            <div className="max-w-2xl mx-auto px-6 text-center">
+              <h2 className="font-display text-[2rem] sm:text-[3rem] font-medium tracking-[-0.028em] leading-[1.06]">
                 Four engines that produce work you can send.
               </h2>
-              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] max-w-[54ch]">
+              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[46ch]">
                 Nothing leaves your workspace on its own. Each engine drafts, and you approve.
                 Point at a card to stop the row and read it.
               </p>
@@ -603,6 +595,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             <EngineMarquee />
           </div>
         </section>
+       </div>
 
         {/* Infrastructure */}
         <section id="infra">
