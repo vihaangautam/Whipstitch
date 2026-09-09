@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight,
@@ -33,6 +33,7 @@ const GRAIN =
 
 const NAV = [
   { href: '#engines', label: 'What it produces' },
+  { href: '#suite', label: 'A closer look' },
   { href: '#infra', label: 'Under the hood' },
   { href: '#faq', label: 'Questions' },
 ];
@@ -40,7 +41,7 @@ const NAV = [
 /* ── Compact, glanceable previews of what each engine hands back ── */
 function OutboundMini() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px]">
       <div className="flex items-center justify-between">
         <span className="font-semibold text-slate-900">Northwind Retail</span>
         <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
@@ -62,7 +63,7 @@ function ScorecardMini() {
     ['Paper', 4, 10], ['Pain', 12, 15], ['Champion', 7, 15], ['Rival', 4, 10],
   ];
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
       <div className="flex items-center justify-between text-[12px]">
         <span className="font-semibold text-slate-900">CloudCube</span>
         <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
@@ -89,11 +90,11 @@ function ScorecardMini() {
 
 function BattlecardMini() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px]">
       <div className="font-semibold text-slate-900">vs. Directive Consulting</div>
       <div className="mt-2 border-t border-slate-200/70 pt-2">
-        <div className="text-[10px] text-slate-400">Ask the buyer</div>
-        <p className="text-slate-700 leading-snug mt-0.5">
+        <div className="text-[10.5px] text-slate-400">The question to ask</div>
+        <p className="text-slate-700 leading-snug mt-1">
           “Does a senior person review the work, or does it queue behind twenty
           other accounts?”
         </p>
@@ -104,12 +105,12 @@ function BattlecardMini() {
 
 function BriefingMini() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-[12px]">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-[12px]">
       <div className="flex items-center justify-between">
         <span className="font-semibold text-slate-900">FinTech Scale</span>
-        <span className="text-[10px] text-slate-400">Thu 10:00</span>
+        <span className="text-[10.5px] text-slate-400">Thu 10:00</span>
       </div>
-      <div className="mt-2 border-t border-slate-200/70 pt-2 space-y-1 text-slate-600 leading-snug">
+      <div className="mt-2 border-t border-slate-200/70 pt-2 space-y-1 text-slate-600 leading-snug text-[11.5px]">
         <p>1. Fallback when Apollo rate-limits outbound?</p>
         <p>2. Who signs off on the CAC payback threshold?</p>
         <p>3. What breaks first if the two reps stay two?</p>
@@ -122,115 +123,180 @@ const ENGINES = [
   {
     icon: Rocket,
     name: 'Outbound Queue',
-    tag: 'A first message to a company that’s hiring in your space.',
+    tag: 'A first message to a company that just started hiring in your category.',
     Artifact: OutboundMini,
   },
   {
     icon: ShieldCheck,
     name: 'Deal Health',
-    tag: 'A MEDDPICC scorecard, scored from your call transcript.',
+    tag: 'A MEDDPICC scorecard, scored from what the buyer actually said.',
     Artifact: ScorecardMini,
   },
   {
     icon: Swords,
     name: 'Competitor Playbooks',
-    tag: 'A battlecard for every rival you lose deals to.',
+    tag: 'A battlecard for each rival you keep losing to.',
     Artifact: BattlecardMini,
   },
   {
     icon: CalendarClock,
     name: 'Call Prep',
-    tag: 'A briefing before every meeting on your calendar.',
+    tag: 'A briefing for every meeting on your calendar.',
     Artifact: BriefingMini,
   },
 ];
 
-function EngineCard({ icon: Icon, name, tag, Artifact, dim }) {
+function EngineCard({ icon: Icon, name, tag, Artifact }) {
   return (
-    <article
-      aria-hidden={dim}
-      tabIndex={dim ? -1 : 0}
-      className="w-[320px] shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_16px_36px_-18px_rgba(15,23,42,0.16)] outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-    >
-      <div className="flex items-center gap-2 text-slate-900">
-        <Icon className="w-[17px] h-[17px]" strokeWidth={1.75} />
-        <h3 className="text-[15px] font-bold tracking-[-0.02em]">{name}</h3>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <div className="flex items-center gap-2.5 text-slate-900">
+        <Icon className="w-[18px] h-[18px] text-slate-500" strokeWidth={1.75} />
+        <h3 className="text-[16px] font-bold tracking-[-0.02em]">{name}</h3>
       </div>
-      <p className="mt-1.5 text-[12.5px] text-slate-500 leading-snug">{tag}</p>
-      <div className="mt-3">
+      <p className="mt-2 text-[13px] text-slate-600 leading-snug">{tag}</p>
+      <div className="mt-4">
         <Artifact />
       </div>
-    </article>
+    </div>
   );
 }
 
-/* Horizontal band of engine cards. Cruises left forever; pointer or focus
-   inside eases it to a stop, leaving eases it back up to speed. Two identical
-   groups translated by exactly one group width, so the loop has no seam. */
-function EngineMarquee() {
-  const trackRef = useRef(null);
-  const groupRef = useRef(null);
-  const reduce = useReducedMotion();
-
-  useEffect(() => {
-    const track = trackRef.current;
-    const group = groupRef.current;
-    if (!track || !group || reduce) return;
-
-    const CRUISE = 38; // px/sec
-    let x = 0;
-    let speed = CRUISE;
-    let target = CRUISE;
-    let last = null;
-    let raf = 0;
-
-    const frame = (t) => {
-      if (last == null) last = t;
-      const dt = Math.min((t - last) / 1000, 0.05);
-      last = t;
-      speed += (target - speed) * Math.min(dt * 2.5, 1);
-      x -= speed * dt;
-      const period = group.offsetWidth + 20; // group width + the flex gap
-      if (period > 0 && -x >= period) x += period;
-      track.style.transform = `translate3d(${x}px,0,0)`;
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-
-    const slow = () => { target = 0; };
-    const go = () => { target = CRUISE; };
-    for (const [ev, fn] of [['pointerenter', slow], ['pointerleave', go], ['focusin', slow], ['focusout', go]]) {
-      track.addEventListener(ev, fn);
-    }
-    return () => {
-      cancelAnimationFrame(raf);
-      for (const [ev, fn] of [['pointerenter', slow], ['pointerleave', go], ['focusin', slow], ['focusout', go]]) {
-        track.removeEventListener(ev, fn);
-      }
-    };
-  }, [reduce]);
-
-  if (reduce) {
-    return (
-      <div className="mt-12 overflow-x-auto">
-        <div className="flex w-max gap-5 px-6">
-          {ENGINES.map((e) => <EngineCard key={e.name} {...e} />)}
-        </div>
-      </div>
-    );
-  }
-
+/* Static 2x2 grid — a visitor scans all four in one glance. */
+function EngineGrid() {
   return (
-    <div className="relative mt-12 [mask-image:linear-gradient(to_right,transparent,#000_4%,#000_96%,transparent)]">
-      <div ref={trackRef} className="flex w-max gap-5 px-6 will-change-transform">
-        <div ref={groupRef} className="flex gap-5 shrink-0">
-          {ENGINES.map((e) => <EngineCard key={e.name} {...e} />)}
+    <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto px-6">
+      {ENGINES.map((e) => (
+        <EngineCard key={e.name} {...e} />
+      ))}
+    </div>
+  );
+}
+
+/* ── A closer look: two deep-dives in the Inner Labs register —
+   one real product surface per row, plain prose beside it, nothing else. ── */
+function ScorecardPanel() {
+  const boxes = [
+    ['Metrics', 13, 15], ['Economic Buyer', 6, 15], ['Decision Criteria', 8, 10], ['Decision Process', 5, 10],
+    ['Paper Process', 4, 10], ['Identified Pain', 12, 15], ['Champion', 7, 15], ['Competition', 4, 10],
+  ];
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_40px_-20px_rgba(15,23,42,0.16)]">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div className="text-[15px] font-bold text-slate-900">CloudCube</div>
+          <div className="text-[12px] text-slate-500">SEO retainer · scored from the Mar 14 call</div>
         </div>
-        <div className="flex gap-5 shrink-0" aria-hidden="true">
-          {ENGINES.map((e) => <EngineCard key={`${e.name}-dup`} {...e} dim />)}
+        <span className="text-[12px] font-semibold text-amber-700">Rescue · 59 / 100</span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {boxes.map(([name, s, max]) => {
+          const pct = s / max;
+          const tone = pct >= 0.67 ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            : pct >= 0.4 ? 'border-amber-200 bg-amber-50 text-amber-800'
+            : 'border-rose-200 bg-rose-50 text-rose-800';
+          return (
+            <div key={name} className={`rounded-lg border px-2.5 py-2 ${tone}`}>
+              <div className="text-[11px] leading-tight">{name}</div>
+              <div className="text-[15px] font-bold mt-0.5">{s}<span className="text-[11px] font-medium opacity-60"> / {max}</span></div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-3">
+        <p className="text-[13px] text-slate-700 leading-relaxed">
+          “The VP is on board, but the CFO signs and that goes to the board on the 18th.”
+        </p>
+        <p className="mt-1.5 text-[11.5px] text-slate-500">
+          Economic Buyer stays at 6/15 until you have spoken to the CFO — a positive line from the VP can't raise it.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BattlecardPanel() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_40px_-20px_rgba(15,23,42,0.16)]">
+      <div className="text-[15px] font-bold text-slate-900">vs. Directive Consulting</div>
+      <div className="text-[12px] text-slate-500">Identified from your profile as a rival you lose to</div>
+
+      <div className="mt-4 space-y-4 text-[13px] leading-relaxed">
+        <div>
+          <div className="text-[12px] text-slate-400">What they tell the buyer</div>
+          <p className="mt-1 text-slate-700">“We're full-service — one team handles everything.”</p>
+        </div>
+        <div>
+          <div className="text-[12px] text-slate-400">The question that exposes it</div>
+          <p className="mt-1 font-medium text-slate-900">
+            “When your quarter is on the line, does a senior person review the work,
+            or does it queue behind twenty other accounts?”
+          </p>
+        </div>
+        <div>
+          <div className="text-[12px] text-slate-400">Your line back</div>
+          <p className="mt-1 text-slate-700">“One senior pod, one scope — not a slot in a factory.”</p>
         </div>
       </div>
     </div>
+  );
+}
+
+function ProductionSuite() {
+  const rows = [
+    {
+      Panel: ScorecardPanel,
+      name: 'Deal Health',
+      heading: 'A scorecard that won’t flatter you.',
+      body: [
+        'Paste a call recording. Whipstitch reads it and fills in an eight-box MEDDPICC scorecard, and every box moves only on something the buyer actually said — a verbatim line you can click through to.',
+        'Enthusiasm in a demo doesn’t count. Economic Buyer and Champion stay capped until you have real access, so a deal that looks warm on the surface still reads as the rescue it is.',
+      ],
+    },
+    {
+      Panel: BattlecardPanel,
+      name: 'Competitor Playbooks',
+      heading: 'Know the counter before they bring it up.',
+      body: [
+        'Whipstitch reads your company profile, works out who you actually lose deals to, and writes a battlecard for each one.',
+        'Not a feature grid — the claim the rival makes, the question that turns it against them, and a line you can say back. Written for the deal in front of you, not a category.',
+      ],
+    },
+  ];
+
+  return (
+    <section id="suite" className="scroll-mt-24 w-full py-20 sm:py-28">
+      <div className="max-w-5xl mx-auto px-6">
+        <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.1] max-w-[20ch]">
+          The two you’ll use on <span className="font-extrabold">every deal</span>.
+        </h2>
+
+        <div className="mt-16 sm:mt-20 space-y-16 sm:space-y-24">
+          {rows.map(({ Panel, name, heading, body }, i) => (
+            <div
+              key={name}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center"
+            >
+              <div className={i % 2 ? 'lg:order-2' : ''}>
+                <div className="text-[13px] font-semibold text-slate-500">{name}</div>
+                <h3 className="mt-2 font-display text-[1.6rem] sm:text-[2rem] font-light tracking-[-0.025em] leading-[1.15]">
+                  {heading}
+                </h3>
+                <div className="mt-4 space-y-3 max-w-[46ch]">
+                  {body.map((p, j) => (
+                    <p key={j} className="text-[15px] text-slate-600 leading-relaxed">{p}</p>
+                  ))}
+                </div>
+              </div>
+              <div className={i % 2 ? 'lg:order-1' : ''}>
+                <Panel />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -238,33 +304,33 @@ const INFRA = [
   { icon: SlidersHorizontal, name: 'Logic & ICP Studio', body: 'One place to set your offering, industries, geographies and buyer titles. Every engine reads from it.' },
   { icon: Inbox, name: 'Inbound Pipeline', body: 'Webhook ingestion behind a Redis lock, then a provider waterfall ending in a drafted reply.' },
   { icon: KeyRound, name: 'BYOK Vault', body: 'Your Gemini, Groq, Serper, Apollo and HubSpot keys, encrypted at rest, decrypted only mid-workflow.' },
-  { icon: BarChart3, name: 'Pipeline Analytics', body: 'Conversion funnel, SLA compliance, and where the enrichment waterfall drops leads.' },
+  { icon: BarChart3, name: 'Pipeline Analytics', body: 'Where accounts convert, where they stall, and where enrichment drops a lead before you see it.' },
 ];
 
 const FAQS = [
   { q: 'Which models run the generation?', a: 'Gemini Flash and Groq by default, with a deterministic template as a last resort so nothing ever comes back empty. Add your own keys in the vault to use them instead — nothing is resold or marked up.' },
   { q: 'What does it cost to try?', a: 'Nothing. The free tiers of Gemini, Groq and Serper cover generation and research. Outbound falls back to free hiring-signal discovery when there is no Apollo key. Apollo org search and HubSpot writes need your own keys.' },
   { q: 'How does the scorecard avoid false optimism?', a: 'A box only moves when there is a verbatim buyer quote behind it. Demo enthusiasm and polite curiosity are explicitly barred from raising a score, and Economic Buyer and Champion stay capped until direct access is confirmed.' },
-  { q: 'Which transcript formats work?', a: 'Pasted text, WebVTT and SRT subtitle files, Word documents, and PDFs.' },
+  { q: 'Which call recording formats work?', a: 'Pasted text, WebVTT and SRT subtitle files, Word documents, and PDFs.' },
   { q: 'Is my data used for training?', a: 'No. Each workspace is an isolated tenant, and conversation data is never sent to a model for training.' },
 ];
 
 /* ── The app itself, rendered on the laptop screen ──────────────
    Deliberately dense: this is a working dashboard, not a diagram. */
 function ScreenMock() {
-  const nav = ['Dashboard', 'Inbound', 'Outbound', 'Deal Health', 'Playbooks', 'Call Prep', 'Analytics'];
+  const nav = ['Dashboard', 'Accounts', 'Outbound', 'Deal Health', 'Playbooks', 'Call Prep'];
   const kpis = [
-    ['Inbound this week', '142', '+18 vs last week', 'text-slate-900'],
-    ['SLA compliance', '100%', '0 breaches', 'text-emerald-600'],
-    ['Avg lead score', '84', 'Tier 1 threshold 70', 'text-slate-900'],
-    ['Outbound staged', '18', 'awaiting your review', 'text-slate-900'],
+    ['Accounts surfaced', '9', 'this week', 'text-slate-900'],
+    ['Deals scored', '4', 'from call recordings', 'text-slate-900'],
+    ['Drafts to review', '6', 'waiting on you', 'text-amber-600'],
+    ['Next meeting', 'Thu 10:00', 'FinTech Scale', 'text-slate-900'],
   ];
   const rows = [
-    ['Northwind Retail', 'Priya Shah · Head of Growth', 'Tier 1', '91', 'emerald'],
-    ['CloudCube', 'Marcus Reid · VP Marketing', 'Tier 1', '87', 'emerald'],
-    ['FinTech Scale', 'Ana Duarte · Founder', 'Tier 2', '74', 'slate'],
-    ['Harborline Logistics', 'Sam Okonkwo · RevOps', 'Tier 2', '68', 'slate'],
-    ['Bright Meridian', 'Lena Fischer · CMO', 'Tier 3', '52', 'slate'],
+    ['Northwind Retail', 'Priya Shah · Head of Growth', 'Strong', '91', 'emerald'],
+    ['CloudCube', 'Marcus Reid · VP Marketing', 'Strong', '87', 'emerald'],
+    ['FinTech Scale', 'Ana Duarte · Founder', 'Good', '74', 'slate'],
+    ['Harborline Logistics', 'Sam Okonkwo · RevOps', 'Good', '68', 'slate'],
+    ['Bright Meridian', 'Lena Fischer · CMO', 'Weak', '52', 'slate'],
   ];
   return (
     <div className="bg-[#F8FAFC] text-left select-none flex h-full font-sans">
@@ -278,9 +344,8 @@ function ScreenMock() {
           {nav.map((n, i) => (
             <div
               key={n}
-              className={`px-1.5 py-1 rounded text-[9.5px] ${
-                i === 0 ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-500'
-              }`}
+              className={`px-1.5 py-1 rounded text-[9.5px] ${i === 0 ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-500'
+                }`}
             >
               {n}
             </div>
@@ -333,7 +398,7 @@ function ScreenMock() {
               <div className="space-y-[3px] text-[8.5px] font-mono leading-tight">
                 <div className="text-emerald-700">webhook parsed — northwind retail</div>
                 <div className="text-slate-500">redis lock acquired · idem key ok</div>
-                <div className="text-slate-500">waterfall → tier 1, drafting outreach</div>
+                <div className="text-slate-500">waterfall → strong match, drafting outreach</div>
                 <div className="text-slate-500">battlecard generated · 3 rivals</div>
                 <div className="text-slate-500">meddpicc scored · 59/100 rescue</div>
                 <div className="text-slate-400">staged for review</div>
@@ -344,7 +409,7 @@ function ScreenMock() {
           <div className="rounded-md border border-slate-200 bg-white">
             <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100">
               <span className="text-[9.5px] font-semibold text-slate-900">Outbound queue</span>
-              <span className="text-[8px] text-slate-400">18 staged · you approve before send</span>
+              <span className="text-[8px] text-slate-400">6 staged · you approve before send</span>
             </div>
             {rows.map(([co, person, tier, score, tone]) => (
               <div key={co} className="flex items-center gap-2 px-2.5 py-[5px] border-b border-slate-50 last:border-0">
@@ -353,9 +418,8 @@ function ScreenMock() {
                 <span className="text-[8.5px] text-slate-500 flex-1 truncate">{person}</span>
                 <span className="text-[8px] text-slate-400 w-9">{tier}</span>
                 <span
-                  className={`text-[8.5px] font-bold w-6 text-right ${
-                    tone === 'emerald' ? 'text-emerald-600' : 'text-slate-500'
-                  }`}
+                  className={`text-[8.5px] font-bold w-6 text-right ${tone === 'emerald' ? 'text-emerald-600' : 'text-slate-500'
+                    }`}
                 >
                   {score}
                 </span>
@@ -386,18 +450,18 @@ function LaptopMock() {
       {/* perspective grid floor — full-bleed, the laptop stands on it. Faded with
          a mask only (no solid fills) so the ambient field shows through it and
          there is no dividing line. */}
-      <div className="pointer-events-none absolute inset-x-[-50vw] bottom-0 top-[14%]" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-x-[-50vw] bottom-[-24px] sm:bottom-[-40px] top-[8%]" aria-hidden="true">
         <div
           className="absolute inset-0 origin-bottom"
           style={{
-            transform: 'perspective(560px) rotateX(60deg)',
-            backgroundSize: '46px 46px',
+            transform: 'perspective(620px) rotateX(58deg)',
+            backgroundSize: '68px 68px',
             backgroundImage:
-              'linear-gradient(to right, rgba(15,23,42,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.12) 1px, transparent 1px)',
+              'linear-gradient(to right, rgba(15,23,42,0.15) 1.2px, transparent 1.2px), linear-gradient(to bottom, rgba(15,23,42,0.15) 1.2px, transparent 1.2px)',
             maskImage:
-              'radial-gradient(ellipse 70% 92% at 50% 0%, #000 0%, transparent 74%)',
+              'radial-gradient(ellipse 84% 94% at 50% 18%, #000 0%, rgba(0,0,0,0.8) 46%, transparent 84%)',
             WebkitMaskImage:
-              'radial-gradient(ellipse 70% 92% at 50% 0%, #000 0%, transparent 74%)',
+              'radial-gradient(ellipse 84% 94% at 50% 18%, #000 0%, rgba(0,0,0,0.8) 46%, transparent 84%)',
           }}
         />
       </div>
@@ -433,10 +497,10 @@ function LaptopMock() {
           transition={{ duration: 0.7, delay: reduce ? 0 : 0.45, ease }}
           className="absolute top-[24%] -left-[3%] lg:-left-[8%] w-[248px] lg:w-[300px] rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_-14px_rgba(15,23,42,0.3)] hidden md:block"
         >
-          <div className="text-[11px] font-mono text-slate-400">call prep</div>
+          <div className="text-[11px] text-slate-400">Call prep</div>
           <div className="text-[13px] font-semibold text-slate-900 mt-1">FinTech Scale, Thursday 10:00</div>
           <p className="text-[12px] text-slate-600 leading-relaxed mt-1.5">
-            Series A closed, scaling 2 to 8 SDRs. Ask who signs off on the CAC payback threshold.
+            Ana runs sales herself. Ask who else needs to see the price before she can sign.
           </p>
         </motion.div>
 
@@ -445,7 +509,7 @@ function LaptopMock() {
           transition={{ duration: 0.7, delay: reduce ? 0 : 0.6, ease }}
           className="absolute top-[10%] -right-[3%] lg:-right-[7%] w-[248px] lg:w-[292px] rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_20px_50px_-14px_rgba(15,23,42,0.3)] hidden md:block"
         >
-          <div className="text-[11px] font-mono text-slate-400">deal health</div>
+          <div className="text-[11px] text-slate-400">Deal health</div>
           <div className="text-[13px] font-semibold text-slate-900 mt-1">CloudCube dropped to 59</div>
           <p className="text-[12px] text-slate-600 leading-relaxed mt-1.5">
             Economic Buyer capped at 6/15 — the founder signs, and no one has spoken to them.
@@ -462,7 +526,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
   const [scrolled, setScrolled] = useState(false);
   const [doc, setDoc] = useState(null);
   const reduce = useReducedMotion();
-  const primary = onPrimary || (() => {});
+  const primary = onPrimary || (() => { });
   const signIn = onSignIn || primary;
 
   useEffect(() => {
@@ -480,14 +544,13 @@ export default function LandingPage({ onPrimary, onSignIn }) {
     <div className="w-full bg-[#F8FAFC] text-slate-900 font-sans">
       {/* Nav — floating pill, always solid, as on the reference sites */}
       <div className="sticky top-4 z-40 px-4">
-        <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${
-          scrolled ? 'glass-panel shadow-[0_8px_30px_-12px_rgba(15,23,42,0.18)]' : 'shadow-[0_2px_14px_-8px_rgba(15,23,42,0.14)]'
-        }`}>
+        <nav className={`max-w-6xl mx-auto rounded-full border border-slate-200/90 bg-white/90 px-5 sm:px-6 py-3 flex items-center justify-between transition-shadow ${scrolled ? 'glass-panel shadow-[0_8px_30px_-12px_rgba(15,23,42,0.18)]' : 'shadow-[0_2px_14px_-8px_rgba(15,23,42,0.14)]'
+          }`}>
           <a href="#top" className="flex items-center gap-2.5">
             <Mark className="w-8 h-8" />
             <span className="text-[17px] font-extrabold tracking-[-0.02em]">Whipstitch</span>
           </a>
-          <div className="hidden md:flex items-center gap-9 text-[14px] text-slate-600">
+          <div className="hidden md:flex items-center gap-5 lg:gap-8 text-[14px] text-slate-600 whitespace-nowrap">
             {NAV.map((n) => (
               <a key={n.href} href={n.href} className="hover:text-slate-900 transition-colors">{n.label}</a>
             ))}
@@ -504,103 +567,95 @@ export default function LandingPage({ onPrimary, onSignIn }) {
       </div>
 
       <main id="top" className="relative" style={{ '--mesh-fade': '#F8FAFC' }}>
-       {/* One continuous ambient field behind the hero, the product shot and the
-          engine row — a single set of blobs that all fade to transparent, so the
-          three sections read as one surface with no dividing line anywhere. */}
-       <div className="relative">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                // hero glow, top
-                'radial-gradient(40% 24% at 34% 7%, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 100%),' +
-                'radial-gradient(38% 22% at 66% 5%, rgba(245,158,11,0.24) 0%, rgba(245,158,11,0) 100%),' +
-                'radial-gradient(44% 24% at 52% 20%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 100%),' +
-                // mid — keeps colour continuous through the laptop band, no dead zone
-                'radial-gradient(46% 26% at 22% 46%, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0) 100%),' +
-                'radial-gradient(42% 24% at 84% 50%, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0) 100%),' +
-                // lower — warm wash behind the engine row
-                'radial-gradient(40% 24% at 90% 74%, rgba(245,158,11,0.16) 0%, rgba(245,158,11,0) 100%),' +
-                'radial-gradient(44% 26% at 76% 90%, rgba(139,92,246,0.17) 0%, rgba(139,92,246,0) 100%),' +
-                'radial-gradient(34% 20% at 98% 96%, rgba(217,70,239,0.12) 0%, rgba(217,70,239,0) 100%)',
-              filter: 'blur(58px)',
-            }}
-          />
-          <div
-            className="absolute inset-0 mix-blend-overlay opacity-[0.2]"
-            style={{ backgroundImage: GRAIN }}
-          />
-          {/* dissolve into the plain page just before the infrastructure section */}
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#F8FAFC]" />
+        {/* Ambient field behind hero and laptop — ends smoothly above the card containers */}
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  // hero glow, top
+                  'radial-gradient(40% 24% at 34% 7%, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 100%),' +
+                  'radial-gradient(38% 22% at 66% 5%, rgba(245,158,11,0.24) 0%, rgba(245,158,11,0) 100%),' +
+                  'radial-gradient(44% 24% at 52% 20%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0) 100%),' +
+                  // mid — keeps colour continuous through the laptop band
+                  'radial-gradient(46% 26% at 22% 54%, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0) 100%),' +
+                  'radial-gradient(42% 24% at 84% 58%, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0) 100%)',
+                filter: 'blur(58px)',
+              }}
+            />
+            <div
+              className="absolute inset-0 mix-blend-overlay opacity-[0.2]"
+              style={{ backgroundImage: GRAIN }}
+            />
+            {/* dissolve into the plain page smoothly under the laptop */}
+            <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-[#F8FAFC]" />
+          </div>
+
+          {/* Hero */}
+          <section className="relative z-10">
+            <div className="max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
+              <motion.h1
+                {...rise}
+                transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+                className="font-display font-light tracking-[-0.035em] leading-[1.04] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
+              >
+                The sales <span className="font-extrabold italic">research team</span> you don't have.
+              </motion.h1>
+              <motion.p
+                {...rise}
+                transition={{ duration: 0.65, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-7 text-[17px] sm:text-[19px] text-slate-600 leading-[1.6] mx-auto max-w-[54ch]"
+              >
+                Tell Whipstitch what you sell and who buys it. It finds companies hiring in your category,
+                drafts the first message, scores your deals from call recordings, and briefs you before each
+                meeting. You approve everything.
+              </motion.p>
+              <motion.div
+                {...rise}
+                transition={{ duration: 0.65, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-10 flex flex-wrap items-center justify-center gap-3"
+              >
+                <button onClick={primary} className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-colors group">
+                  Get started
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+                <a href="#engines" className="text-[15px] font-medium text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-7 py-3.5 rounded-full transition-colors">
+                  See what it produces
+                </a>
+              </motion.div>
+              <motion.p {...rise} transition={{ duration: 0.65, delay: 0.24 }} className="mt-7 text-[13px] text-slate-500">
+                No credit card. Use the free model tiers, or bring your own keys.
+              </motion.p>
+            </div>
+          </section>
+
+          {/* Laptop */}
+          <section className="relative z-10 px-6 overflow-x-clip">
+            <LaptopMock />
+          </section>
         </div>
 
-        {/* Hero */}
-        <section className="relative z-10">
-          <div className="max-w-4xl mx-auto px-6 pt-20 sm:pt-28 pb-14 text-center">
-          <motion.h1
-            {...rise}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            className="font-display font-light tracking-[-0.035em] leading-[1.04] text-[2.9rem] sm:text-[4rem] lg:text-[4.5rem]"
-          >
-            The sales work between a <span className="font-extrabold">signal</span> and a{' '}
-            <span className="font-extrabold">booked call</span>.
-          </motion.h1>
-          <motion.p
-            {...rise}
-            transition={{ duration: 0.65, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 text-[17px] sm:text-[19px] text-slate-600 leading-[1.6] mx-auto max-w-[52ch]"
-          >
-            Set up your workspace once. Whipstitch then finds accounts hiring for your category,
-            scores your deals from call transcripts, writes battlecards for the rivals you lose to,
-            and briefs you before every meeting.
-          </motion.p>
-          <motion.div
-            {...rise}
-            transition={{ duration: 0.65, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-10 flex flex-wrap items-center justify-center gap-3"
-          >
-            <button onClick={primary} className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-colors group">
-              Get started
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-            <a href="#engines" className="text-[15px] font-medium text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-7 py-3.5 rounded-full transition-colors">
-              See what it produces
-            </a>
-          </motion.div>
-          <motion.p {...rise} transition={{ duration: 0.65, delay: 0.24 }} className="mt-7 text-[13px] text-slate-500">
-            Free-tier AI included. No credit card. Bring your own keys.
-          </motion.p>
+        {/* What each engine produces */}
+        <section id="engines" className="scroll-mt-24 w-full pt-16 sm:pt-24 pb-16 sm:pb-24">
+          <div className="max-w-2xl mx-auto px-6 text-center">
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
+              It drafts. <span className="font-extrabold">You</span> send.
+            </h2>
+            <p className="mt-4 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[48ch]">
+              Four things Whipstitch produces from your setup. Nothing leaves your workspace until you approve it.
+            </p>
           </div>
-        </section>
 
-        {/* Laptop */}
-        <section className="relative z-10 px-6 overflow-x-clip">
-          <LaptopMock />
+          <EngineGrid />
         </section>
-
-        {/* What each engine produces — a slow horizontal band of the actual
-           output; pointer or focus inside eases it to a stop */}
-        <section id="engines" className="relative z-10 overflow-x-clip">
-          <div className="relative pt-10 sm:pt-14 pb-20 sm:pb-28">
-            <div className="max-w-2xl mx-auto px-6 text-center">
-              <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
-                Four engines that produce <span className="font-extrabold">work you can send</span>.
-              </h2>
-              <p className="mt-5 text-[17px] text-slate-600 leading-[1.6] mx-auto max-w-[42ch]">
-                Every engine drafts. You review, then it goes out. Hover the row to pause it.
-              </p>
-            </div>
-
-            <EngineMarquee />
-          </div>
-        </section>
-       </div>
 
         {/* Infrastructure */}
-        <section id="infra">
-          <div className="max-w-5xl mx-auto px-6 pt-8 pb-20 sm:pb-24">
-            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">The <span className="font-extrabold">infrastructure</span> underneath</h2>
+        <section id="infra" className="scroll-mt-24 w-full py-16 sm:py-24">
+          <div className="max-w-5xl mx-auto px-6">
+            <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08]">
+              The <span className="font-extrabold">infrastructure</span> underneath
+            </h2>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9">
               {INFRA.map(({ icon: Icon, name, body }) => (
                 <div key={name} className="flex gap-3.5">
@@ -614,6 +669,9 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             </div>
           </div>
         </section>
+
+        {/* Production Suite — Inner Labs-style executive capability bento */}
+        <ProductionSuite />
 
         {/* Architecture — prose, dark */}
         <section className="bg-slate-900 text-white">
@@ -637,7 +695,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="border-t border-slate-200">
+        <section id="faq" className="scroll-mt-24 border-t border-slate-200">
           <div className="max-w-3xl mx-auto px-6 py-20 sm:py-24">
             <h2 className="font-display text-[2rem] sm:text-[3rem] font-light tracking-[-0.03em] leading-[1.08] mb-10">Common <span className="font-extrabold">questions</span></h2>
             <div className="divide-y divide-slate-200 border-t border-slate-200">
@@ -677,12 +735,12 @@ export default function LandingPage({ onPrimary, onSignIn }) {
             <div className="absolute inset-0 mix-blend-overlay opacity-[0.20]" style={{ backgroundImage: GRAIN }} />
 
             <div className="relative px-6 sm:px-10 py-20 sm:py-24 text-center">
-              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-light tracking-[-0.035em] leading-[1.06] max-w-[18ch] mx-auto text-white">
-                Turn raw signals into <span className="font-extrabold">closed revenue</span>.
+              <h2 className="font-display text-[2.1rem] sm:text-[3.25rem] font-light tracking-[-0.035em] leading-[1.08] max-w-[20ch] mx-auto text-white">
+                See what the engines produce against your <span className="font-extrabold">own ICP</span>.
               </h2>
-              <p className="mt-6 text-[15px] sm:text-base text-slate-300/90 leading-[1.65] max-w-[52ch] mx-auto">
-                Register, answer a few questions about what you sell, and the engines start
-                producing against your ICP — outbound, scorecards, battlecards and briefings.
+              <p className="mt-6 text-[15px] sm:text-base text-slate-300/90 leading-[1.65] max-w-[50ch] mx-auto">
+                Set up a workspace — a few questions about what you sell — and the engines
+                run: outbound, scorecards, battlecards, briefings.
               </p>
               <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button onClick={primary} className="w-full sm:w-auto bg-white text-slate-900 font-semibold px-7 py-3.5 rounded-full hover:bg-slate-100 transition-colors text-sm">
@@ -692,8 +750,8 @@ export default function LandingPage({ onPrimary, onSignIn }) {
                   Sign in
                 </button>
               </div>
-              <p className="mt-8 font-mono text-[11px] sm:text-xs text-white/45">
-                No token markup. Free-tier AI included. Cancel anytime.
+              <p className="mt-8 text-[12px] text-white/50">
+                No credit card. Use the free model tiers, or bring your own keys. Cancel anytime.
               </p>
             </div>
           </div>
@@ -711,7 +769,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
                 <span className="font-extrabold text-slate-900">Whipstitch</span>
               </div>
               <p className="mt-3 text-[13px] text-slate-500 leading-relaxed max-w-[34ch]">
-                The sales work between a signal and a booked call — generated, and
+                The sales research team you don't have — generated, and
                 staged for your review.
               </p>
               <div className="mt-4 inline-flex items-center gap-2 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-full px-2.5 py-1">
@@ -722,7 +780,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
             {/* What it produces */}
             <div>
-              <div className="text-[12px] font-bold uppercase tracking-wider text-slate-900">What it produces</div>
+              <div className="text-[13px] font-semibold text-slate-900">What it produces</div>
               <ul className="mt-4 space-y-2.5 text-[13px] text-slate-500">
                 {['Outbound Queue', 'Deal Health', 'Competitor Playbooks', 'Call Prep'].map((l) => (
                   <li key={l}><a href="#engines" className="hover:text-slate-900 transition-colors">{l}</a></li>
@@ -732,7 +790,7 @@ export default function LandingPage({ onPrimary, onSignIn }) {
 
             {/* Under the hood — mono */}
             <div>
-              <div className="text-[12px] font-bold uppercase tracking-wider text-slate-900">Under the hood</div>
+              <div className="text-[13px] font-semibold text-slate-900">Under the hood</div>
               <ul className="mt-4 space-y-2.5 text-[12px] font-mono text-slate-500">
                 <li><a href="#infra" className="hover:text-slate-900 transition-colors">ICP &amp; logic studio</a></li>
                 <li><a href="#infra" className="hover:text-slate-900 transition-colors">Gemini + Groq router</a></li>
