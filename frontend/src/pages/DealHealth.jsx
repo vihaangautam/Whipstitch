@@ -144,6 +144,7 @@ export default function DealHealth({ currentTenant }) {
 
   const loadScorecard = async (dealId) => {
     setIsLoading(true);
+    setScorecard(null); // drop the previous deal's scorecard so it can't flash under the new deal's header
     const data = await fetchMedpiccScorecard(dealId);
     setScorecard(data);
     if (data?.follow_up_email) {
@@ -580,20 +581,47 @@ export default function DealHealth({ currentTenant }) {
     setDiscoveredCandidate(null);
   };
 
-  // Pipeline Stepper metadata
-  const pipelineStages = [
-    { id: 1, name: 'Discovery & Needs', status: 'complete', exit: 'Business problem, brand goals, and estimated budget confirmed.' },
-    { id: 2, name: 'Scope & Pitch', status: 'complete', exit: 'Target deliverables, creator count, and ROAS expectations agreed.' },
-    { id: 3, name: 'Solution Validation', status: 'active', exit: 'Founder / Commercial decision-maker confirms proposal and locks SOW with 50% advance terms.' },
-    { id: 4, name: 'SOW & 50% Advance', status: 'upcoming', exit: 'SOW signed, GST verified, and 50% advance invoice released by client accounts.' },
-    { id: 5, name: 'Closed Won', status: 'upcoming', exit: 'Project onboarding kicked off and creative production started.' },
+  // Pipeline Stepper metadata. Position is inferred from the deal's MEDDPICC
+  // disposition — the backend has no discrete pipeline-stage field once a
+  // diagnostic has run.
+  // ponytail: category→stage heuristic; wire to a real deal.stage field if one lands.
+  const PIPELINE_STAGES = [
+    { name: 'Discovery & Needs', exit: 'Business problem, brand goals, and estimated budget confirmed.' },
+    { name: 'Scope & Pitch', exit: 'Target deliverables, creator count, and ROAS expectations agreed.' },
+    { name: 'Solution Validation', exit: 'Founder / Commercial decision-maker confirms proposal and locks SOW with 50% advance terms.' },
+    { name: 'SOW & 50% Advance', exit: 'SOW signed, GST verified, and 50% advance invoice released by client accounts.' },
+    { name: 'Closed Won', exit: 'Project onboarding kicked off and creative production started.' },
   ];
+  const activeStageIdx = { Disqualify: 0, Nurture: 1, Rescue: 2, Advance: 3 }[scorecard?.deal_category] ?? 0;
+  const pipelineStages = PIPELINE_STAGES.map((s, i) => ({
+    id: i + 1,
+    name: s.name,
+    exit: s.exit,
+    status: i < activeStageIdx ? 'complete' : i === activeStageIdx ? 'active' : 'upcoming',
+  }));
+  const activeStage = pipelineStages[activeStageIdx];
+
+  // Win benchmark: deals scoring at/above this close materially more often.
+  const WIN_BENCHMARK = 72;
+  const blockerCount = scorecard?.top_blocking_boxes?.length || 0;
+  const TRAJECTORY = {
+    Advance: { label: 'On Track', cls: 'bg-emerald-100 text-emerald-900 border-emerald-300', dot: 'bg-emerald-500' },
+    Rescue: { label: 'At Risk', cls: 'bg-amber-100 text-amber-900 border-amber-300', dot: 'bg-amber-500' },
+    Nurture: { label: 'Slow', cls: 'bg-slate-100 text-slate-700 border-slate-300', dot: 'bg-slate-400' },
+    Disqualify: { label: 'Off Track', cls: 'bg-rose-100 text-rose-900 border-rose-300', dot: 'bg-rose-500' },
+  };
+  const trajectory = TRAJECTORY[scorecard?.deal_category] || TRAJECTORY.Nurture;
 
   const hasDeals = deals.length > 0;
 
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
-      {!hasDeals && !isLoading ? (
+      {isLoading && !hasDeals ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-16 shadow-card flex flex-col items-center justify-center text-center gap-3">
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          <p className="text-xs text-slate-500">Loading deals…</p>
+        </div>
+      ) : !hasDeals ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 shadow-card flex flex-col items-center text-center gap-3">
           <div className="p-3 rounded-xl bg-slate-900 text-white">
             <Building2 className="w-6 h-6 text-emerald-400" />
@@ -720,6 +748,40 @@ export default function DealHealth({ currentTenant }) {
         </div>
       </div>
 
+      {!scorecard ? (
+        (isLoading || isDiagnosing) ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 shadow-card flex flex-col items-center text-center gap-3">
+            <div className="p-3 rounded-xl bg-slate-900 text-white">
+              <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">
+              {isDiagnosing ? 'Reading the call and scoring the deal…' : 'Loading deal health…'}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              {isDiagnosing
+                ? 'This runs the 8-box MEDDPICC diagnostic against the transcript. It usually takes under a minute.'
+                : 'Fetching the latest MEDDPICC diagnostic for this deal.'}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 shadow-card flex flex-col items-center text-center gap-3">
+            <div className="p-3 rounded-xl bg-slate-900 text-white">
+              <FileText className="w-6 h-6 text-emerald-400" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">
+              {`${selectedDeal?.deal_name || 'This deal'} hasn't been diagnosed yet`}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              Upload a call transcript to generate the health score, the blockers, and a follow-up email — all from what the buyer actually said.
+            </p>
+            <button onClick={() => setShowUploadModal(true)} className="btn-primary px-4 py-2 text-xs mt-1">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Call</span>
+            </button>
+          </div>
+        )
+      ) : (
+      <>
       {/* ─── 2. 5-STAGE PIPELINE STEPPER ─── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-card">
         <div className="flex items-center justify-between mb-3">
@@ -738,7 +800,7 @@ export default function DealHealth({ currentTenant }) {
             />
           </div>
           <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            Current: Stage 3 &bull; Solution Validation
+            Current: Stage {activeStage.id} &bull; {activeStage.name}
           </span>
         </div>
 
@@ -797,7 +859,11 @@ export default function DealHealth({ currentTenant }) {
           >
             <ShieldAlert className="w-4 h-4 text-amber-600" />
             <span>2. Critical Gaps & Power Map</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">2 Gaps</span>
+            {blockerCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">
+                {blockerCount} Gap{blockerCount !== 1 ? 's' : ''}
+              </span>
+            )}
           </button>
 
           <button
@@ -836,12 +902,12 @@ export default function DealHealth({ currentTenant }) {
                     />
                   </div>
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200">
-                    {scorecard?.deal_category || 'Rescue'}
+                    {scorecard.deal_category}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono">
-                    {scorecard?.overall_score ?? 68}
+                    {scorecard.overall_score}
                   </span>
                   <span className="text-slate-400 font-semibold text-sm">/ 100</span>
                 </div>
@@ -861,20 +927,20 @@ export default function DealHealth({ currentTenant }) {
                 </div>
                 <div className="space-y-1.5 mt-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0 whitespace-nowrap shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      At Risk
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border shrink-0 whitespace-nowrap shadow-2xs ${trajectory.cls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${trajectory.dot}`}></span>
+                      {trajectory.label}
                     </span>
                     <span className="text-xs font-bold text-slate-800">
-                      {currentTier.includes("Tier 1") ? "Founder Sign-Off Pending" : "Budget Signer Pending"}
+                      {blockerCount > 0 ? `${scorecard.top_blocking_boxes[0]} unconfirmed` : 'No hard blockers'}
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-600 flex items-center gap-1.5 pt-0.5">
-                    <span className="text-slate-400 font-medium">Next Gate:</span>
-                    <strong className="text-slate-700 font-semibold">
-                      {currentTier.includes("Tier 1") ? "50% Advance & SOW Lock" : "PO Release & Finance Approval"}
-                    </strong>
-                  </div>
+                  {scorecard.next_best_action && (
+                    <div className="text-[11px] text-slate-600 flex items-start gap-1.5 pt-0.5">
+                      <span className="text-slate-400 font-medium shrink-0">Next move:</span>
+                      <strong className="text-slate-700 font-semibold">{scorecard.next_best_action}</strong>
+                    </div>
+                  )}
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium">
                   #1 blocker to unlock before this deal can close
@@ -893,7 +959,8 @@ export default function DealHealth({ currentTenant }) {
                     />
                   </span>
                   <span className="text-slate-500 font-medium text-[11px]">
-                    Current: <strong className="text-slate-900">{scorecard?.overall_score ?? 68}</strong> &bull; Target: <strong className="text-emerald-800">72</strong> (-4 pts)
+                    Current: <strong className="text-slate-900">{scorecard.overall_score}</strong> &bull; Target: <strong className="text-emerald-800">{WIN_BENCHMARK}</strong>
+                    {' '}({scorecard.overall_score - WIN_BENCHMARK >= 0 ? '+' : ''}{scorecard.overall_score - WIN_BENCHMARK} pts)
                   </span>
                 </div>
 
@@ -901,19 +968,19 @@ export default function DealHealth({ currentTenant }) {
                 <div className="relative w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-slate-900 rounded-full transition-all duration-500"
-                    style={{ width: '68%' }}
+                    style={{ width: `${Math.min(Math.max(scorecard.overall_score, 0), 100)}%` }}
                   />
-                  {/* Target Marker at 72% */}
+                  {/* Target Marker */}
                   <div
                     className="absolute top-0 bottom-0 w-1 bg-emerald-600"
-                    style={{ left: '72%' }}
-                    title="Target for winning deals (72)"
+                    style={{ left: `${WIN_BENCHMARK}%` }}
+                    title={`Target for winning deals (${WIN_BENCHMARK})`}
                   />
                 </div>
 
                 <div className="flex justify-between text-[10px] text-slate-400">
                   <span>0 (Early Stage)</span>
-                  <span className="text-emerald-800 font-semibold">72 Average for Winning Deals</span>
+                  <span className="text-emerald-800 font-semibold">{WIN_BENCHMARK} Average for Winning Deals</span>
                   <span>100 (Closed Won)</span>
                 </div>
                 <div className="text-[10px] text-slate-400 italic text-right pt-0.5">
@@ -1294,6 +1361,8 @@ export default function DealHealth({ currentTenant }) {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
       </>
       )}
