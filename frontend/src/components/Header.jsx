@@ -206,13 +206,6 @@ export default function Header({
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={() => setCurrentView('landing')}
-                className="text-xs text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-2.5 py-1 hover:bg-slate-50 transition"
-              >
-                Landing
-              </button>
             </>
           ) : (
             <div className="flex items-center gap-3">

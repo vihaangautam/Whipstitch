@@ -28,4 +28,5 @@ COPY --from=frontend /fe/dist ./frontend/dist
 EXPOSE 8000
 
 # App container runs migrations then serves; worker container overrides `command`.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# $PORT is provided by Railway/Render; falls back to 8000 for local `docker run`.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

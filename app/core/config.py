@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     API_KEY: str = "whipstitch-dev-key-12345"
     TENANT_DEFAULT_ID: str = "trifid_media"
 
+    # Comma-separated list of allowed browser origins for the API. Empty = same-origin
+    # only (the monolith deploy where FastAPI serves the built frontend). Set this when
+    # the frontend is hosted on a different domain (e.g. Cloudflare Pages).
+    CORS_ORIGINS: str = ""
+
     # Database
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432

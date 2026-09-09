@@ -180,7 +180,11 @@ async def login(
 async def demo_login(
     session: AsyncSession = Depends(get_db_session),
 ):
-    """Instant 1-click login as the pre-configured Sales Representative (Alex Morgan)."""
+    """Instant 1-click login as the pre-configured Sales Representative (Alex Morgan).
+    Disabled in production so real deployments only get real, registered accounts."""
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     demo_email = "rep@trifidmedia.in"
     res = await session.execute(select(User).where(User.email == demo_email))
     user = res.scalar_one_or_none()

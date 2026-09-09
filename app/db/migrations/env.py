@@ -1,9 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 from alembic import context
-from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.db.models import Base
@@ -37,20 +35,28 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Reuse the app engine so TLS/connect_args (Supabase et al.) and the
+    # Postgres→SQLite fallback behave exactly as they do at runtime.
+    from app.db.session import pg_engine
 
-    async with connectable.connect() as connection:
+    async with pg_engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    try:
+        asyncio.run(run_async_migrations())
+    except Exception as exc:  # managed Postgres unreachable → fall back to the local SQLite file
+        from app.core.logging import get_logger
+        from app.db.session import sqlite_engine
+
+        get_logger(__name__).warning("alembic_pg_unreachable_using_sqlite", error=str(exc))
+
+        async def _sqlite():
+            async with sqlite_engine.connect() as connection:
+                await connection.run_sync(do_run_migrations)
+
+        asyncio.run(_sqlite())
 
 
 if context.is_offline_mode():

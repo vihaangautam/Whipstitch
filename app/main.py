@@ -26,10 +26,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Auth is Bearer-token in a header, not cookies, so credentials aren't needed and
+# a wildcard origin is safe. When CORS_ORIGINS is set (split frontend/API hosting)
+# lock the API down to exactly those origins.
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
