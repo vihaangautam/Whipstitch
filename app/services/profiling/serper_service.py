@@ -27,6 +27,28 @@ _ATS_GENERIC_SEGMENTS = {
 }
 _DOMAIN_TLDS = ("com", "io", "co", "ai", "in")
 
+# A company whose own posting is "we're hiring a recruiter/talent role" is not a hiring-signal
+# lead — it's a job board / HR-tech / staffing vendor whose entire business is jobs, so it
+# always outranks real operating companies in a "<role> job <ATS>" search. Filtered by name
+# since that's resolved for every candidate; false positives (a genuine company that happens
+# to have "job"/"talent" in its name) are rare and cheap to Reject manually on the card.
+_NOISE_COMPANY_RE = re.compile(
+    r"\b(jobs?|careers?|recruit(?:ing|er)?|staffing|talent|hiring|remote\s*work)\b", re.I
+)
+# Job-board brand names are usually compounds ("Jobgether", "Jobstreet", "Jobvite") that don't
+# trip the word-boundary check above — catch those by prefix instead.
+_NOISE_COMPANY_PREFIX_RE = re.compile(r"^(job|career|recruit|staffing|talent|hire|remote)", re.I)
+
+
+def _is_noise_company(name: str, domain: str) -> bool:
+    domain_root = re.sub(r"[^a-z0-9]", "", domain.lower().split(".")[0])
+    return bool(
+        _NOISE_COMPANY_RE.search(name)
+        or _NOISE_COMPANY_RE.search(domain)
+        or _NOISE_COMPANY_PREFIX_RE.match(name.strip())
+        or _NOISE_COMPANY_PREFIX_RE.match(domain_root)
+    )
+
 
 def _ats_company_slug(link: str) -> Optional[str]:
     """boards.greenhouse.io/acme/jobs/123 -> 'acme'. Returns None for non-ATS or generic pages."""
@@ -216,11 +238,14 @@ class SerperService:
                 if domain in seen:
                     continue
                 seen.add(domain)
+                name = _company_from_title(item.get("title", ""), slug)
+                if _is_noise_company(name, domain):
+                    continue
                 blob = (item.get("title", "") + " " + item.get("snippet", "")).lower()
                 geo_hit = next((g for g in geos if g.lower() in blob), None)
                 out.append(
                     {
-                        "name": _company_from_title(item.get("title", ""), slug),
+                        "name": name,
                         "domain": domain,
                         "industry": None,
                         "hiring_signal": {

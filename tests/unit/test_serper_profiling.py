@@ -56,6 +56,28 @@ async def test_discover_via_hiring_signals_parses_job_board_results():
 
 
 @pytest.mark.asyncio
+async def test_discover_via_hiring_signals_filters_job_board_noise():
+    # A job board's own internal hiring is not a "this company needs our product" signal —
+    # it's just a company whose entire business is jobs. Regression for Jobgether/Remote.com
+    # showing up as prospects.
+    serp = [
+        {"title": "Head of Marketing at Jobgether", "link": "https://boards.greenhouse.io/jobgether/jobs/1"},
+        {"title": "Head of Marketing - Northwind Retail", "link": "https://jobs.lever.co/northwind/xyz"},
+        {"title": "Talent Acquisition Lead at Remote", "link": "https://boards.greenhouse.io/remote/jobs/2"},
+    ]
+    with patch.object(SerperService, "_organic", new=AsyncMock(return_value=serp)), patch(
+        "app.services.profiling.serper_service._resolve_company_domain",
+        new=AsyncMock(side_effect=lambda s: f"{s}.com" if s != "remote" else "remotecom.com"),
+    ):
+        out = await SerperService(api_key="live-key").discover_via_hiring_signals(
+            ["Head of Marketing"], ["US"], limit=5
+        )
+
+    domains = {c["domain"] for c in out}
+    assert domains == {"northwind.com"}
+
+
+@pytest.mark.asyncio
 async def test_discover_via_hiring_signals_needs_trigger_roles():
     out = await SerperService(api_key="live-key").discover_via_hiring_signals([], ["US"])
     assert out == []

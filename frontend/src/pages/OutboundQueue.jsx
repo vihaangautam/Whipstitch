@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Rocket, CheckCircle2, XCircle, RefreshCw, Building2, User, Linkedin, Globe, Sparkles, Briefcase } from 'lucide-react';
 import { fetchOutboundProspects, triggerOutboundBatch, approveOutboundProspect } from '../api';
+import MarkdownLite from '../components/MarkdownLite';
 
 const CONFIDENCE_BADGE = {
   verified: { label: 'Verified', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
@@ -189,11 +190,11 @@ export default function OutboundQueue({ currentTenant, onTriggerSuccess }) {
 
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
                     <div className="text-xs text-slate-400 font-semibold">Research Findings</div>
-                    <p className="text-slate-700 leading-relaxed text-xs sm:text-sm">
-                      {p.fit_markdown || (
-                        <span className="text-slate-400">No research findings yet for this account.</span>
-                      )}
-                    </p>
+                    {p.fit_markdown ? (
+                      <MarkdownLite text={p.fit_markdown} className="text-xs sm:text-sm leading-relaxed" />
+                    ) : (
+                      <p className="text-slate-400 text-xs sm:text-sm">No research findings yet for this account.</p>
+                    )}
                   </div>
                 </div>
               </div>
