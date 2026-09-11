@@ -1,5 +1,5 @@
 from fastapi import APIRouter, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from redis.asyncio import Redis
 from sqlalchemy import text
 from temporalio.client import Client
@@ -10,6 +10,15 @@ from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+@router.get("/ping", summary="Minimal keep-alive ping", include_in_schema=False)
+async def ping():
+    """A handful of bytes, nothing else — for uptime pingers (cron-job.org etc).
+    Some of them abort with "output too large" on anything bigger than a trivial
+    body, per their own docs: output as little as possible. /health still does
+    the real Postgres/Redis/Temporal diagnostic for humans and dashboards."""
+    return PlainTextResponse("ok")
 
 
 @router.get("/health", summary="Service Liveness and Health Check")
