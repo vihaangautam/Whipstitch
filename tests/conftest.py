@@ -9,7 +9,18 @@ from sqlalchemy import delete, select
 
 from app.core.config import settings
 from app.core.security import create_access_token, hash_password
-from app.db.models import Deal, LeadEvent, Tenant, User
+from app.db.models import (
+    BuyingCommitteeMember,
+    Deal,
+    DealDiagnostic,
+    LeadEvent,
+    Meeting,
+    OutboundProspect,
+    Tenant,
+    TenantBattlecard,
+    User,
+    UserAPIKey,
+)
 from app.db.session import AsyncSessionLocal
 from app.main import app
 
@@ -71,6 +82,12 @@ async def workspace_factory():
                     config={"onboarded": True, "icp_criteria": {}},
                 )
             )
+            # Flush before adding rows that reference this tenant: no ORM relationship is
+            # declared between Tenant and Deal/LeadEvent, so SQLAlchemy has no dependency
+            # to sort by and can emit the child INSERT first. Postgres rejects that on the
+            # foreign key; SQLite doesn't enforce it and silently accepts the orphan.
+            await session.flush()
+
             session.add(
                 User(
                     id=user_uuid,
@@ -136,10 +153,22 @@ async def workspace_factory():
 
     yield _make
 
+    # Children first: Postgres enforces the foreign keys back to tenants, so deleting the
+    # tenant while anything still references it aborts the whole teardown.
+    child_models = (
+        BuyingCommitteeMember,
+        DealDiagnostic,
+        UserAPIKey,
+        Meeting,
+        TenantBattlecard,
+        OutboundProspect,
+        LeadEvent,
+        Deal,
+    )
     async with AsyncSessionLocal() as session:
         for ws in created:
-            await session.execute(delete(LeadEvent).where(LeadEvent.tenant_id == ws.tenant_id))
-            await session.execute(delete(Deal).where(Deal.tenant_id == ws.tenant_id))
+            for model in child_models:
+                await session.execute(delete(model).where(model.tenant_id == ws.tenant_id))
             await session.execute(delete(User).where(User.id == ws.user_id))
             await session.execute(delete(Tenant).where(Tenant.id == ws.tenant_id))
         await session.commit()

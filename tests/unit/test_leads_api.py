@@ -1,21 +1,18 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.main import app
-
-client = TestClient(app)
 
 
-def test_leads_list_unauthorized():
-    response = client.get("/v1/leads?tenant_id=trifid_media")
+@pytest.mark.asyncio
+async def test_leads_list_unauthorized(async_client):
+    response = await async_client.get("/v1/leads")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_leads_list_mocked():
+async def test_leads_list_mocked(async_client):
     mock_tenant = MagicMock()
     mock_tenant.id = uuid.uuid4()
 
@@ -53,8 +50,8 @@ async def test_leads_list_mocked():
     mock_ctx.__aexit__ = AsyncMock(return_value=None)
 
     with patch("app.api.v1.leads.AsyncSessionLocal", return_value=mock_ctx):
-        response = client.get(
-            "/v1/leads?tenant_id=trifid_media",
+        response = await async_client.get(
+            "/v1/leads",
             headers={"X-API-Key": settings.API_KEY},
         )
         assert response.status_code == 200
