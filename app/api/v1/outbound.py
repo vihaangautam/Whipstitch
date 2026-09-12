@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
-from temporalio.client import Client
 
 from app.api.deps import resolve_tenant
+from app.core.temporal_client import get_temporal_client
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.models import CRMSyncRecord, OutboundProspect, Tenant
@@ -31,55 +31,64 @@ async def trigger_outbound_prospecting(
 
     workflow_id = f"outbound-wf-{tenant.tenant_key}-{uuid.uuid4().hex[:8]}"
 
-    try:
-        temporal_client = await Client.connect(settings.TEMPORAL_HOST)
-        await temporal_client.start_workflow(
-            "OutboundProspectingWorkflow",
-            args=[tenant.tenant_key, payload.batch_size],
-            id=workflow_id,
-            task_queue=settings.TEMPORAL_TASK_QUEUE,
-        )
-        logger.info("outbound_workflow_started", workflow_id=workflow_id)
-    except Exception as e:
-        logger.warning("temporal_connection_warning_offline_running_direct", error=str(e))
-        from app.activities.outbound_activity import (
-            discover_decision_maker_activity,
-            discover_prospects_activity,
-            disqualify_prospect_gate_activity,
-            qualify_outbound_prospect_activity,
-            research_prospect_activity,
-            stage_prospect_in_crm_activity,
-        )
-
+    temporal_client = await get_temporal_client()
+    if temporal_client:
         try:
-            discovered = await discover_prospects_activity(tenant.tenant_key, payload.batch_size)
-            for p in discovered:
-                p_id = p["prospect_id"]
-                c_name = p["company_name"]
-                dom = p["domain"]
-                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom, tenant.tenant_key)
-                if not icp_res.get("is_viable_prospect", True):
-                    continue
-                dm_res = await discover_decision_maker_activity(
-                    p_id, c_name, dom, None, tenant.tenant_key
-                )
-                res_data = await research_prospect_activity(
-                    p_id, c_name, dom, "ugc creator marketing roas product features"
-                )
-                qual_data = await qualify_outbound_prospect_activity(
-                    p_id, tenant.tenant_key, c_name, dom, res_data
-                )
-                prospect_dict = {
-                    "prospect_id": p_id,
-                    "company_name": c_name,
-                    "domain": dom,
-                    "decision_maker": dm_res,
-                }
-                await stage_prospect_in_crm_activity(
-                    p_id, tenant.tenant_key, prospect_dict, qual_data
-                )
-        except Exception as act_err:
-            logger.error("outbound_direct_fallback_error", error=str(act_err))
+            await temporal_client.start_workflow(
+                "OutboundProspectingWorkflow",
+                args=[tenant.tenant_key, payload.batch_size],
+                id=workflow_id,
+                task_queue=settings.TEMPORAL_TASK_QUEUE,
+            )
+            logger.info("outbound_workflow_started", workflow_id=workflow_id)
+            return TriggerOutboundResponse(
+                workflow_id=workflow_id,
+                status="triggered",
+                prospects_targeted=payload.batch_size,
+                message=f"Outbound prospecting workflow successfully initiated for tenant '{tenant.tenant_key}'",
+            )
+        except Exception as e:
+            logger.warning("temporal_start_workflow_failed_running_direct", error=str(e))
+
+    # No worker reachable, or start_workflow itself failed — run the same activities inline.
+    from app.activities.outbound_activity import (
+        discover_decision_maker_activity,
+        discover_prospects_activity,
+        disqualify_prospect_gate_activity,
+        qualify_outbound_prospect_activity,
+        research_prospect_activity,
+        stage_prospect_in_crm_activity,
+    )
+
+    try:
+        discovered = await discover_prospects_activity(tenant.tenant_key, payload.batch_size)
+        for p in discovered:
+            p_id = p["prospect_id"]
+            c_name = p["company_name"]
+            dom = p["domain"]
+            icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom, tenant.tenant_key)
+            if not icp_res.get("is_viable_prospect", True):
+                continue
+            dm_res = await discover_decision_maker_activity(
+                p_id, c_name, dom, None, tenant.tenant_key
+            )
+            res_data = await research_prospect_activity(
+                p_id, c_name, dom, "ugc creator marketing roas product features"
+            )
+            qual_data = await qualify_outbound_prospect_activity(
+                p_id, tenant.tenant_key, c_name, dom, res_data
+            )
+            prospect_dict = {
+                "prospect_id": p_id,
+                "company_name": c_name,
+                "domain": dom,
+                "decision_maker": dm_res,
+            }
+            await stage_prospect_in_crm_activity(
+                p_id, tenant.tenant_key, prospect_dict, qual_data
+            )
+    except Exception as act_err:
+        logger.error("outbound_direct_fallback_error", error=str(act_err))
 
     return TriggerOutboundResponse(
         workflow_id=workflow_id,

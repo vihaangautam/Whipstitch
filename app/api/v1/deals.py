@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from temporalio.client import Client
 
 from app.api.deps import resolve_tenant
+from app.core.temporal_client import get_temporal_client
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.models import Deal, DealDiagnostic, EvidenceQuote, MEDPICCScore, Tenant
@@ -195,55 +195,54 @@ async def trigger_diagnose_workflow(
         "preferred_model": payload.preferred_model,
     }
 
-    try:
-        temporal_client = await Client.connect(
-            settings.TEMPORAL_HOST,
-            namespace=settings.TEMPORAL_NAMESPACE,
-        )
-        handle = await temporal_client.start_workflow(
-            DealDiagnosticWorkflow.run,
-            wf_payload,
-            id=workflow_id,
-            task_queue=settings.TEMPORAL_TASK_QUEUE,
-        )
-        logger.info("medpicc_workflow_scheduled", workflow_id=workflow_id, deal_id=deal_id)
-        return {
-            "workflow_id": workflow_id,
-            "status": "scheduled",
-            "deal_id": deal_id,
-            "message": "MEDDPICC Deal Diagnostic workflow triggered successfully.",
-        }
-    except Exception as e:
-        logger.warning("temporal_start_failed_running_direct_activity", error=str(e))
-        # Direct execution fallback for local test/dev without active worker
-        from app.activities.deal_diagnostic_activity import extract_medpicc_scores_activity, update_crm_deal_stage_activity, render_medpicc_pdf_activity
+    temporal_client = await get_temporal_client()
+    if temporal_client:
+        try:
+            await temporal_client.start_workflow(
+                DealDiagnosticWorkflow.run,
+                wf_payload,
+                id=workflow_id,
+                task_queue=settings.TEMPORAL_TASK_QUEUE,
+            )
+            logger.info("medpicc_workflow_scheduled", workflow_id=workflow_id, deal_id=deal_id)
+            return {
+                "workflow_id": workflow_id,
+                "status": "scheduled",
+                "deal_id": deal_id,
+                "message": "MEDDPICC Deal Diagnostic workflow triggered successfully.",
+            }
+        except Exception as e:
+            logger.warning("temporal_start_workflow_failed_running_direct", error=str(e))
 
-        score_res = await extract_medpicc_scores_activity(
-            deal_id=str(deal.id),
-            tenant_id=tenant.tenant_key,
-            deal_name=deal.deal_name,
-            company_name=deal.company_name,
-            transcript_text=text_to_analyze,
-            deal_context=payload.deal_context,
-            preferred_model=payload.preferred_model,
-        )
-        diag_id = score_res["diagnostic_id"]
-        qual_data = score_res["qualification_model"]
+    # Direct execution fallback: no worker reachable, or start_workflow itself failed
+    from app.activities.deal_diagnostic_activity import extract_medpicc_scores_activity, update_crm_deal_stage_activity, render_medpicc_pdf_activity
 
-        await update_crm_deal_stage_activity(str(deal.id), tenant.tenant_key, deal.company_name, qual_data)
-        pdf_res = await render_medpicc_pdf_activity(
-            str(deal.id), diag_id, deal.deal_name, deal.company_name, qual_data, score_res["model_used"]
-        )
+    score_res = await extract_medpicc_scores_activity(
+        deal_id=str(deal.id),
+        tenant_id=tenant.tenant_key,
+        deal_name=deal.deal_name,
+        company_name=deal.company_name,
+        transcript_text=text_to_analyze,
+        deal_context=payload.deal_context,
+        preferred_model=payload.preferred_model,
+    )
+    diag_id = score_res["diagnostic_id"]
+    qual_data = score_res["qualification_model"]
 
-        return {
-            "workflow_id": "direct-execution",
-            "status": "completed",
-            "deal_id": deal_id,
-            "diagnostic_id": diag_id,
-            "overall_score": qual_data.get("overall_qualification_score_0_100"),
-            "deal_category": qual_data.get("deal_category"),
-            "report_path": pdf_res.get("report_path"),
-        }
+    await update_crm_deal_stage_activity(str(deal.id), tenant.tenant_key, deal.company_name, qual_data)
+    pdf_res = await render_medpicc_pdf_activity(
+        str(deal.id), diag_id, deal.deal_name, deal.company_name, qual_data, score_res["model_used"]
+    )
+
+    return {
+        "workflow_id": "direct-execution",
+        "status": "completed",
+        "deal_id": deal_id,
+        "diagnostic_id": diag_id,
+        "overall_score": qual_data.get("overall_qualification_score_0_100"),
+        "deal_category": qual_data.get("deal_category"),
+        "report_path": pdf_res.get("report_path"),
+    }
 
 
 @router.get("/{deal_id}/medpicc", response_model=DealDiagnosticResponse)

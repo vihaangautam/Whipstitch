@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.api.deps import resolve_tenant
+from app.core.temporal_client import get_temporal_client
 from app.core.logging import get_logger
 from app.db.models import Meeting, Tenant
 from app.db.session import AsyncSessionLocal
@@ -232,21 +233,21 @@ async def trigger_meeting_prep(meeting_id: str, tenant: Tenant = Depends(resolve
     worker is reachable, otherwise runs the same activities inline."""
     await _get_meeting(meeting_id, tenant)  # 404 early if missing or not ours
 
-    try:
-        from temporalio.client import Client
-        from app.core.config import settings
+    from app.core.config import settings
 
-        client = await Client.connect(settings.TEMPORAL_HOST, namespace=settings.TEMPORAL_NAMESPACE)
-        await client.start_workflow(
-            "MeetingPrepWorkflow",
-            {"meeting_id": meeting_id},
-            id=f"meeting-prep-{meeting_id}",
-            task_queue=settings.TEMPORAL_TASK_QUEUE,
-        )
-        logger.info("meeting_prep_workflow_started", meeting_id=meeting_id)
-        return {"meeting_id": meeting_id, "status": "scheduled", "message": "Meeting prep workflow started."}
-    except Exception as e:
-        logger.warning("temporal_unavailable_running_meeting_prep_inline", error=str(e))
+    temporal_client = await get_temporal_client()
+    if temporal_client:
+        try:
+            await temporal_client.start_workflow(
+                "MeetingPrepWorkflow",
+                {"meeting_id": meeting_id},
+                id=f"meeting-prep-{meeting_id}",
+                task_queue=settings.TEMPORAL_TASK_QUEUE,
+            )
+            logger.info("meeting_prep_workflow_started", meeting_id=meeting_id)
+            return {"meeting_id": meeting_id, "status": "scheduled", "message": "Meeting prep workflow started."}
+        except Exception as e:
+            logger.warning("temporal_start_workflow_failed_running_meeting_prep_inline", error=str(e))
 
     await get_pre_call_briefing(meeting_id)
     await get_champion_selling_kit(meeting_id)

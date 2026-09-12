@@ -51,7 +51,13 @@ class IdempotencyManager:
     async def _get_redis(self) -> Redis:
         if self.redis_client:
             return self.redis_client
-        return Redis.from_url(settings.REDIS_URL, decode_responses=True, socket_timeout=2.0)
+        # socket_connect_timeout bounds the initial TCP handshake specifically — measured at
+        # 2.0s per call (matching socket_timeout) against an unreachable host before this was
+        # set, and the ingest path opens two of these per request, so an unreachable Redis
+        # cost every webhook 4+ seconds even with the process-local fallback in place below.
+        return Redis.from_url(
+            settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5, socket_timeout=2.0
+        )
 
     async def acquire_lock_or_get_cached(
         self, tenant_id: str, idempotency_key: str, ttl_seconds: int = 86400

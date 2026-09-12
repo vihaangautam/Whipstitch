@@ -1,9 +1,9 @@
 import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy import select
-from temporalio.client import Client
 
 from app.api.deps import resolve_ingest_tenant, resolve_tenant
+from app.core.temporal_client import get_temporal_client
 from app.core.config import settings
 from app.core.idempotency import IdempotencyManager, derive_idempotency_key
 from app.core.logging import bind_correlation_id, get_logger
@@ -95,26 +95,26 @@ async def ingest_lead_event(
         },
     )
 
-    # Trigger Temporal workflow async
-    try:
-        temporal_client = await Client.connect(
-            settings.TEMPORAL_HOST, namespace=settings.TEMPORAL_NAMESPACE
-        )
-        await temporal_client.start_workflow(
-            "WhipstitchLeadWorkflow",
-            {
-                "event_id": event_id,
-                "tenant_id": tenant_key,
-                "email": payload.email,
-                "company_name": payload.company_name,
-                "idempotency_key": idempotency_key,
-            },
-            id=f"inbound-lead-{event_id}",
-            task_queue=settings.TEMPORAL_TASK_QUEUE,
-        )
-        logger.info("temporal_workflow_started", workflow_id=f"inbound-lead-{event_id}")
-    except Exception as e:
-        logger.warning("temporal_start_workflow_skipped_or_failed", error=str(e))
+    # Trigger Temporal workflow async, bounded so an absent worker costs milliseconds
+    # rather than the ~6s an unbounded Client.connect() takes to time out.
+    temporal_client = await get_temporal_client()
+    if temporal_client:
+        try:
+            await temporal_client.start_workflow(
+                "WhipstitchLeadWorkflow",
+                {
+                    "event_id": event_id,
+                    "tenant_id": tenant_key,
+                    "email": payload.email,
+                    "company_name": payload.company_name,
+                    "idempotency_key": idempotency_key,
+                },
+                id=f"inbound-lead-{event_id}",
+                task_queue=settings.TEMPORAL_TASK_QUEUE,
+            )
+            logger.info("temporal_workflow_started", workflow_id=f"inbound-lead-{event_id}")
+        except Exception as e:
+            logger.warning("temporal_start_workflow_failed", error=str(e))
 
     return IngestEventResponse(
         event_id=event_id,

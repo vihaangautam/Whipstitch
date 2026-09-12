@@ -2,10 +2,10 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse, PlainTextResponse
 from redis.asyncio import Redis
 from sqlalchemy import text
-from temporalio.client import Client
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.temporal_client import get_temporal_client
 from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
@@ -39,7 +39,7 @@ async def health_check():
         db_ok = False
 
     try:
-        redis_client = Redis.from_url(settings.REDIS_URL, socket_timeout=2.0)
+        redis_client = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=0.5, socket_timeout=2.0)
         await redis_client.ping()
         await redis_client.aclose()
         services["redis"] = "ok"
@@ -47,11 +47,9 @@ async def health_check():
         logger.warning("health_check_redis_unavailable", error=str(e))
         services["redis"] = "unavailable (using in-memory fallback)"
 
-    try:
-        await Client.connect(settings.TEMPORAL_HOST, namespace=settings.TEMPORAL_NAMESPACE)
+    if await get_temporal_client() is not None:
         services["temporal"] = "ok"
-    except Exception as e:
-        logger.warning("health_check_temporal_unavailable", error=str(e))
+    else:
         services["temporal"] = "unavailable (running workflows inline)"
 
     if not db_ok:

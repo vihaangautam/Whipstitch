@@ -18,11 +18,16 @@ export const options = {
   },
 };
 
+// BASE_URL / API_KEY are overridable via -e so this can target a real ingest key
+// (per-tenant, as the actual product uses) instead of only the shared default-tenant key.
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
+const API_KEY = __ENV.API_KEY || 'whipstitch-dev-key-12345';
+
 export default function () {
-  const url = 'http://localhost:8000/v1/events/ingest';
+  const url = `${BASE_URL}/v1/events/ingest`;
   const payload = JSON.stringify({
-    tenant_id: 'trifid_media',
-    email: `lead_${__VU}_${__ITER}@loadtestbrand.com`,
+    tenant_id: 'trifid_media', // ignored by the server — tenant comes from the X-API-Key
+    email: `lead_${__VU}_${__ITER}_${Date.now()}@loadtestbrand.com`,
     company_name: `LoadTest Brand ${__VU}`,
     raw_payload: { campaign: 'k6_burst_2026' },
   });
@@ -30,7 +35,7 @@ export default function () {
   const params = {
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': 'whipstitch-dev-key-12345',
+      'X-API-Key': API_KEY,
     },
   };
 

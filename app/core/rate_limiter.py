@@ -55,7 +55,7 @@ class TokenBucketRateLimiter:
     async def _get_redis(self) -> Redis:
         if self.redis_client:
             return self.redis_client
-        return Redis.from_url(settings.REDIS_URL, decode_responses=True, socket_timeout=2.0)
+        return Redis.from_url(settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5, socket_timeout=2.0)
 
     async def acquire_token(
         self,
