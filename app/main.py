@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.core.observability import RequestObservabilityMiddleware, metrics_response
 
 logger = get_logger(__name__)
 
@@ -37,6 +38,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestObservabilityMiddleware)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return metrics_response()
 
 import os
 from fastapi.responses import FileResponse

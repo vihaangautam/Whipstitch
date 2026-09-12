@@ -47,6 +47,9 @@ def get_logger(name: str = "whipstitch"):
 
 
 def bind_correlation_id(correlation_id: str):
-    """Binds correlation_id (lead_id or run_id) to logger context."""
-    structlog.contextvars.clear_contextvars()
+    """Binds correlation_id (lead_id or run_id) to logger context.
+
+    Only sets this one key — not clear_contextvars(), which would also wipe the
+    request_id RequestObservabilityMiddleware binds for the whole HTTP request.
+    """
     structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
