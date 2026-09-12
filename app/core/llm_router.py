@@ -321,13 +321,22 @@ class MultiLLMRouter:
         if gemini_key:
             try:
                 model_name = preferred_model if preferred_model and "gemini" in preferred_model else GEMINI_MODEL
-                async with httpx.AsyncClient(timeout=30.0) as client:
+                # "gemini-flash-latest" is a thinking model: found via the eval harness that on a
+                # schema-heavy prompt (the 8-box MEDDPICC schema) it spent 6,600+ tokens on internal
+                # reasoning alone, regularly exceeding a 30s timeout — an httpx.ReadTimeout with no
+                # message, which silently fell through this whole cascade to the deterministic mock.
+                # thinkingBudget=0 turns that off: same schema, 9s instead of timing out, no quality
+                # loss observed on the golden cases (see tests/evals/test_medpicc_eval.py).
+                async with httpx.AsyncClient(timeout=45.0) as client:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
                     payload = {
                         "contents": [
                             {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}
                         ],
-                        "generationConfig": {"response_mime_type": "application/json"},
+                        "generationConfig": {
+                            "response_mime_type": "application/json",
+                            "thinkingConfig": {"thinkingBudget": 0},
+                        },
                     }
                     resp = await client.post(url, json=payload)
                     if resp.status_code != 200:
@@ -368,6 +377,13 @@ class MultiLLMRouter:
                                 {"role": "user", "content": user_prompt},
                             ],
                             "response_format": {"type": "json_object"},
+                            # No max_tokens meant Groq's own default ceiling, well under what an
+                            # 8-box MEDDPICC response needs — found via the eval harness as a
+                            # response truncated mid-object, failing Pydantic validation on the
+                            # fields that would have come after the cut (closure_likelihood,
+                            # seller_summary, value_selling_boxes). Gemini's real output for the
+                            # same schema ran ~2,800 tokens; this leaves real headroom.
+                            "max_tokens": 8192,
                         },
                     )
                     if resp.status_code != 200:
@@ -407,6 +423,7 @@ class MultiLLMRouter:
                                 {"role": "user", "content": user_prompt},
                             ],
                             "response_format": {"type": "json_object"},
+                            "max_tokens": 8192,  # same truncation risk as Groq above
                         },
                     )
                     if resp.status_code == 200:
