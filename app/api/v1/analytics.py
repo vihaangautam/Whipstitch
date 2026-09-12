@@ -1,12 +1,11 @@
 """Pipeline Analytics API Router with 100% dynamic database queries."""
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Security, status
-from fastapi.security import APIKeyHeader
+from typing import List
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, func, select
 
+from app.api.deps import resolve_tenant
 from app.core.apollo_budget import ApolloBudgetGuard
-from app.core.config import settings
 from app.core.idempotency import IdempotencyManager
 from app.core.logging import get_logger
 from app.db.models import (
@@ -27,32 +26,17 @@ from app.db.session import AsyncSessionLocal
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/analytics", tags=["Pipeline Analytics"])
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-async def verify_api_key(api_key: Optional[str] = Security(api_key_header)):
-    if not api_key or api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
-    return api_key
-
-
 @router.get("/summary", response_model=dict)
 async def get_analytics_summary(
-    tenant_id: str = "trifid_media",
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Returns high-level KPI card summary metrics dynamically computed from the database."""
+    tenant_id = tenant.tenant_key
     budget_guard = ApolloBudgetGuard()
     credits_used = await budget_guard.get_monthly_usage(tenant_id)
 
     async with AsyncSessionLocal() as session:
-        # 1. Resolve tenant
-        t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        tenant_uuid = tenant.id if tenant else None
+        tenant_uuid = tenant.id
 
         # 2. Total inbound leads for this tenant
         if tenant_uuid:
@@ -114,9 +98,8 @@ async def get_analytics_summary(
 
 @router.get("/leads-over-time", response_model=dict)
 async def get_leads_over_time(
-    tenant_id: str = "trifid_media",
     days: int = Query(default=7, ge=1, le=30),
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Returns dynamic time-series lead volume dataset from actual database records."""
     today = datetime.now(timezone.utc).date()
@@ -127,8 +110,6 @@ async def get_leads_over_time(
     outbound_counts = [0] * days
 
     async with AsyncSessionLocal() as session:
-        t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = t_res.scalar_one_or_none()
         if tenant:
             start_date = datetime.combine(day_list[0], datetime.min.time(), tzinfo=timezone.utc)
 
@@ -181,14 +162,12 @@ async def get_leads_over_time(
 
 @router.get("/pipeline", response_model=dict)
 async def get_pipeline_analytics(
-    tenant_id: str = "trifid_media",
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Computes comprehensive pipeline conversion funnel and provider distribution from live database records."""
+    tenant_id = tenant.tenant_key
     async with AsyncSessionLocal() as session:
-        t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        tenant_uuid = tenant.id if tenant else None
+        tenant_uuid = tenant.id
 
         total_inbound = 0
         total_enriched = 0
@@ -305,9 +284,8 @@ async def get_pipeline_analytics(
 
 @router.get("/audit-logs", response_model=List[dict])
 async def get_audit_logs(
-    tenant_id: str = "trifid_media",
     limit: int = Query(default=10, ge=1, le=50),
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Returns recent live execution audit logs from the database."""
     async with AsyncSessionLocal() as session:

@@ -2,10 +2,11 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from app.api.deps import resolve_tenant
 from app.db.models import Deal, OutboundProspect, Tenant
 from app.db.session import AsyncSessionLocal
 from app.models.battlecard_schemas import AccountSignal
@@ -23,11 +24,9 @@ class SignalIngestRequest(BaseModel):
     headline: str
     snippet: str
     source: str = "Manual Telemetry Ingest"
-    tenant_id: str = "default"
 
 
 class SignalScanRequest(BaseModel):
-    tenant_id: str
     accounts: Optional[List[str]] = None
 
 
@@ -58,40 +57,42 @@ async def _tenant_accounts(tenant_key: str) -> List[str]:
 
 @router.get("", response_model=List[AccountSignal])
 async def list_signals(
-    tenant_id: str = Query(default="default"),
     account_name: Optional[str] = Query(default=None),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Lists the tenant's real-time revenue signals."""
-    return signal_agent.list_signals(tenant_id=tenant_id, account_name=account_name)
+    return signal_agent.list_signals(tenant_id=tenant.tenant_key, account_name=account_name)
 
 
 @router.post("/scan", response_model=List[AccountSignal])
-async def scan_signals(payload: SignalScanRequest):
+async def scan_signals(payload: SignalScanRequest, tenant: Tenant = Depends(resolve_tenant)):
     """Sweeps the tenant's accounts (outbound prospects + deals, or an explicit list) for
     fresh company news and classifies each into a canonical revenue signal."""
-    accounts = payload.accounts or await _tenant_accounts(payload.tenant_id)
+    tenant_key = tenant.tenant_key
+    accounts = payload.accounts or await _tenant_accounts(tenant_key)
     if not accounts:
         return []
-    signals = await signal_agent.scan_tenant_signals(payload.tenant_id, accounts, SerperService())
-    logger.info("signals_scanned tenant=%s accounts=%d signals=%d", payload.tenant_id, len(accounts), len(signals))
+    signals = await signal_agent.scan_tenant_signals(tenant_key, accounts, SerperService())
+    logger.info("signals_scanned tenant=%s accounts=%d signals=%d", tenant_key, len(accounts), len(signals))
     return signals
 
 
 @router.post("/ingest", response_model=AccountSignal, status_code=status.HTTP_201_CREATED)
-async def ingest_signal(payload: SignalIngestRequest):
+async def ingest_signal(payload: SignalIngestRequest, tenant: Tenant = Depends(resolve_tenant)):
     """Classifies an incoming market event into 1 of the canonical revenue signals."""
     return signal_agent.classify_signal(
         account_name=payload.account_name,
         headline=payload.headline,
         snippet=payload.snippet,
         source=payload.source,
-        tenant_id=payload.tenant_id,
+        tenant_id=tenant.tenant_key,
     )
 
 
 @router.get("/account/{account_name}/score", response_model=AccountOpportunityScoreResponse)
-async def get_account_opportunity_score(account_name: str, tenant_id: str = Query(default="default")):
+async def get_account_opportunity_score(account_name: str, tenant: Tenant = Depends(resolve_tenant)):
     """Aggregate opportunity viability score (0-100) from the account's active signals."""
+    tenant_id = tenant.tenant_key
     signals = signal_agent.list_signals(tenant_id=tenant_id, account_name=account_name)
     return AccountOpportunityScoreResponse(
         account_name=account_name,

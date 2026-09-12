@@ -29,6 +29,10 @@ class Tenant(Base):
     name = Column(String(255), nullable=False)
     config = Column(JSONB, nullable=False, default=dict)
     is_active = Column(Boolean, default=True, nullable=False)
+    # SHA-256 of this tenant's webhook ingest key. Machine callers (marketing webhooks) have no
+    # user session, so this is what identifies which tenant an inbound event belongs to —
+    # never a tenant_id supplied in the request body.
+    ingest_key_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     lead_events = relationship("LeadEvent", back_populates="tenant", cascade="all, delete-orphan")

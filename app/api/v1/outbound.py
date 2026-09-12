@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Security, status
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from temporalio.client import Client
 
+from app.api.deps import resolve_tenant
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.models import CRMSyncRecord, OutboundProspect, Tenant
@@ -21,43 +21,21 @@ from app.models.schemas import (
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/outbound", tags=["Outbound Prospecting"])
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-async def verify_api_key(api_key: Optional[str] = Security(api_key_header)):
-    if not api_key or api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
-    return api_key
-
-
 @router.post("/trigger", response_model=TriggerOutboundResponse)
 async def trigger_outbound_prospecting(
     payload: TriggerOutboundRequest,
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
-    """Triggers signal-based outbound prospecting workflow for a tenant."""
-    logger.info("outbound_prospecting_triggered", tenant_id=payload.tenant_id, batch_size=payload.batch_size)
+    """Triggers signal-based outbound prospecting workflow for the caller's workspace."""
+    logger.info("outbound_prospecting_triggered", tenant_id=tenant.tenant_key, batch_size=payload.batch_size)
 
-    # Validate tenant
-    async with AsyncSessionLocal() as session:
-        res = await session.execute(select(Tenant).where(Tenant.tenant_key == payload.tenant_id))
-        tenant = res.scalar_one_or_none()
-        if not tenant:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tenant '{payload.tenant_id}' not found",
-            )
-
-    workflow_id = f"outbound-wf-{payload.tenant_id}-{uuid.uuid4().hex[:8]}"
+    workflow_id = f"outbound-wf-{tenant.tenant_key}-{uuid.uuid4().hex[:8]}"
 
     try:
         temporal_client = await Client.connect(settings.TEMPORAL_HOST)
         await temporal_client.start_workflow(
             "OutboundProspectingWorkflow",
-            args=[payload.tenant_id, payload.batch_size],
+            args=[tenant.tenant_key, payload.batch_size],
             id=workflow_id,
             task_queue=settings.TEMPORAL_TASK_QUEUE,
         )
@@ -74,22 +52,22 @@ async def trigger_outbound_prospecting(
         )
 
         try:
-            discovered = await discover_prospects_activity(payload.tenant_id, payload.batch_size)
+            discovered = await discover_prospects_activity(tenant.tenant_key, payload.batch_size)
             for p in discovered:
                 p_id = p["prospect_id"]
                 c_name = p["company_name"]
                 dom = p["domain"]
-                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom, payload.tenant_id)
+                icp_res = await disqualify_prospect_gate_activity(p_id, c_name, dom, tenant.tenant_key)
                 if not icp_res.get("is_viable_prospect", True):
                     continue
                 dm_res = await discover_decision_maker_activity(
-                    p_id, c_name, dom, None, payload.tenant_id
+                    p_id, c_name, dom, None, tenant.tenant_key
                 )
                 res_data = await research_prospect_activity(
                     p_id, c_name, dom, "ugc creator marketing roas product features"
                 )
                 qual_data = await qualify_outbound_prospect_activity(
-                    p_id, payload.tenant_id, c_name, dom, res_data
+                    p_id, tenant.tenant_key, c_name, dom, res_data
                 )
                 prospect_dict = {
                     "prospect_id": p_id,
@@ -98,7 +76,7 @@ async def trigger_outbound_prospecting(
                     "decision_maker": dm_res,
                 }
                 await stage_prospect_in_crm_activity(
-                    p_id, payload.tenant_id, prospect_dict, qual_data
+                    p_id, tenant.tenant_key, prospect_dict, qual_data
                 )
         except Exception as act_err:
             logger.error("outbound_direct_fallback_error", error=str(act_err))
@@ -107,25 +85,20 @@ async def trigger_outbound_prospecting(
         workflow_id=workflow_id,
         status="triggered",
         prospects_targeted=payload.batch_size,
-        message=f"Outbound prospecting workflow successfully initiated for tenant '{payload.tenant_id}'",
+        message=f"Outbound prospecting workflow successfully initiated for tenant '{tenant.tenant_key}'",
     )
 
 
 @router.get("/prospects", response_model=List[OutboundProspectResponse])
 async def list_outbound_prospects(
-    tenant_id: str = "trifid_media",
     status_filter: Optional[str] = Query(default=None, alias="status"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Retrieves paginated outbound prospects for review/approval."""
+    tenant_id = tenant.tenant_key
     async with AsyncSessionLocal() as session:
-        tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = tenant_res.scalar_one_or_none()
-        if not tenant:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-
         query = select(OutboundProspect).where(OutboundProspect.tenant_id == tenant.id)
         if status_filter:
             query = query.where(OutboundProspect.scrape_status == status_filter)
@@ -160,7 +133,7 @@ async def list_outbound_prospects(
 async def approve_or_reject_prospect(
     prospect_id: str,
     payload: ApproveProspectRequest,
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Human-in-the-loop: Approve or Reject a staged prospect."""
     try:
@@ -169,7 +142,11 @@ async def approve_or_reject_prospect(
         raise HTTPException(status_code=400, detail="Invalid prospect_id UUID")
 
     async with AsyncSessionLocal() as session:
-        res = await session.execute(select(OutboundProspect).where(OutboundProspect.id == p_uuid))
+        res = await session.execute(
+            select(OutboundProspect).where(
+                OutboundProspect.id == p_uuid, OutboundProspect.tenant_id == tenant.id
+            )
+        )
         prospect = res.scalar_one_or_none()
         if not prospect:
             raise HTTPException(status_code=404, detail="Prospect not found")

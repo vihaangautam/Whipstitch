@@ -1,12 +1,12 @@
 """BYOK Settings API Router for managing user/tenant API keys securely."""
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Security, status
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, Depends, HTTPException, status
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import generate_ingest_key, hash_ingest_key, resolve_tenant
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.vault import key_vault
@@ -17,37 +17,13 @@ from app.models.medpicc_schemas import APIKeyInfoResponse, SaveAPIKeyRequest, Te
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/settings", tags=["BYOK Settings"])
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-async def verify_api_key(api_key: Optional[str] = Security(api_key_header)):
-    if not api_key or api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
-    return api_key
-
-
 @router.post("/api-keys", response_model=APIKeyInfoResponse, status_code=status.HTTP_201_CREATED)
 async def save_api_key(
     payload: SaveAPIKeyRequest,
     session: AsyncSession = Depends(get_db_session),
-    api_key_hdr: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
-    """Encrypts and securely stores or updates a provider API key."""
-    # Resolve tenant, creating it if this is the first time we've seen it —
-    # minting a random UUID here would orphan the key: it FK-violates on
-    # Postgres, and even where the DB doesn't enforce the FK, list_api_keys
-    # can never find it again since it looks up by tenant_key, not this UUID.
-    tenant_res = await session.execute(
-        select(Tenant).where(Tenant.tenant_key == payload.tenant_id)
-    )
-    tenant = tenant_res.scalar_one_or_none()
-    if not tenant:
-        tenant = Tenant(id=uuid.uuid4(), tenant_key=payload.tenant_id, name=payload.tenant_id)
-        session.add(tenant)
-        await session.flush()
+    """Encrypts and securely stores or updates a provider API key for the caller's workspace."""
     tenant_uuid = tenant.id
 
     encrypted = key_vault.encrypt_key(payload.api_key)
@@ -79,7 +55,7 @@ async def save_api_key(
         session.add(key_record)
 
     await session.commit()
-    logger.info("api_key_saved_encrypted", tenant_id=payload.tenant_id, provider=payload.provider, masked=masked)
+    logger.info("api_key_saved_encrypted", tenant_id=tenant.tenant_key, provider=payload.provider, masked=masked)
 
     return APIKeyInfoResponse(
         id=str(key_record.id),
@@ -92,17 +68,11 @@ async def save_api_key(
 
 @router.get("/api-keys", response_model=List[APIKeyInfoResponse])
 async def list_api_keys(
-    tenant_id: str = "trifid_media",
     session: AsyncSession = Depends(get_db_session),
-    api_key_hdr: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Lists configured provider keys with masked values (never returns plaintext)."""
-    tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-    tenant = tenant_res.scalar_one_or_none()
-    tenant_uuid = tenant.id if tenant else None
-
-    if not tenant_uuid:
-        return []
+    tenant_uuid = tenant.id
 
     res = await session.execute(
         select(UserAPIKey).where(
@@ -127,16 +97,10 @@ async def list_api_keys(
 @router.delete("/api-keys/{provider}", status_code=status.HTTP_200_OK)
 async def delete_api_key(
     provider: str,
-    tenant_id: str = "trifid_media",
     session: AsyncSession = Depends(get_db_session),
-    api_key_hdr: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Revokes / deactivates a configured API key."""
-    tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-    tenant = tenant_res.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
     res = await session.execute(
         select(UserAPIKey).where(
             UserAPIKey.tenant_id == tenant.id,
@@ -149,7 +113,7 @@ async def delete_api_key(
 
     key_entry.is_active = False
     await session.commit()
-    logger.info("api_key_revoked", tenant_id=tenant_id, provider=provider)
+    logger.info("api_key_revoked", tenant_id=tenant.tenant_key, provider=provider)
     return {"status": "revoked", "provider": provider, "message": f"Successfully revoked {provider} key."}
 
 
@@ -197,7 +161,7 @@ async def _run_provider_test(provider: str, clean_key: str) -> TestKeyResponse:
 @router.post("/api-keys/test", response_model=TestKeyResponse)
 async def test_api_key_connectivity(
     payload: TestAPIKeyRequest,
-    api_key_hdr: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Tests connectivity for a freshly-typed API key, without persisting it.
     Takes the key in the request body, never as a query param — query strings end up
@@ -208,18 +172,12 @@ async def test_api_key_connectivity(
 @router.post("/api-keys/{provider}/test-stored", response_model=TestKeyResponse)
 async def test_stored_api_key(
     provider: str,
-    tenant_id: str = "trifid_media",
     session: AsyncSession = Depends(get_db_session),
-    api_key_hdr: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Tests the key already saved for this provider by decrypting it server-side.
     Use this for 'Test Ping' on an already-configured key — the plaintext never has to
     round-trip through the browser again, unlike re-submitting a freshly typed key."""
-    tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-    tenant = tenant_res.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
     res = await session.execute(
         select(UserAPIKey).where(
             UserAPIKey.tenant_id == tenant.id,
@@ -237,3 +195,32 @@ async def test_stored_api_key(
         return TestKeyResponse(provider=provider, valid=False, message=str(e))
 
     return await _run_provider_test(provider, decrypted)
+
+
+@router.post("/ingest-key/rotate", status_code=status.HTTP_200_OK)
+async def rotate_ingest_key(
+    session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
+):
+    """Issues a fresh webhook ingest key for this workspace, returning it exactly once.
+
+    Only the SHA-256 digest is stored, so a lost key can be replaced but never recovered —
+    the same reason password hashes aren't reversible. Rotating immediately invalidates
+    whatever key the tenant's webhook provider was using.
+    """
+    raw_key = generate_ingest_key()
+
+    res = await session.execute(select(Tenant).where(Tenant.id == tenant.id))
+    row = res.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    row.ingest_key_hash = hash_ingest_key(raw_key)
+    await session.commit()
+
+    logger.info("ingest_key_rotated", tenant_id=tenant.tenant_key)
+    return {
+        "tenant_id": tenant.tenant_key,
+        "ingest_key": raw_key,
+        "message": "Store this now — it is shown once and cannot be retrieved later.",
+    }

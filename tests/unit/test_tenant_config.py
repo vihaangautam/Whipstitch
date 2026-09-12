@@ -1,6 +1,10 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+"""Tenant ICP/SLA configuration routes.
+
+Written against real rows rather than a mocked session: the config read now comes from the
+caller's authenticated workspace, so a test that mocks only the write path would compare a
+mocked write against a real read and prove nothing.
+"""
 import pytest
-from app.db.models import Tenant
 
 
 @pytest.mark.asyncio
@@ -13,8 +17,8 @@ async def test_tenant_config_unauthorized(async_client):
 
 
 @pytest.mark.asyncio
-async def test_update_and_get_tenant_config_mocked(async_client):
-    headers = {"X-API-Key": "whipstitch-dev-key-12345"}
+async def test_update_and_get_tenant_config(async_client, workspace_factory):
+    ws = await workspace_factory("config")
 
     payload = {
         "enrichment_waterfall_order": ["hunter", "apollo", "llm_fallback"],
@@ -29,38 +33,61 @@ async def test_update_and_get_tenant_config_mocked(async_client):
         "sla_window_minutes": 10,
     }
 
-    mock_tenant = Tenant(
-        tenant_key="test_tenant_001",
-        name="Test Tenant",
-        config=payload,
+    post_resp = await async_client.post(
+        f"/v1/tenants/{ws.tenant_key}/config",
+        json=payload,
+        headers=ws.headers,
+    )
+    assert post_resp.status_code == 200
+    assert post_resp.json()["enrichment_waterfall_order"] == ["hunter", "apollo", "llm_fallback"]
+
+    get_resp = await async_client.get(
+        f"/v1/tenants/{ws.tenant_key}/config",
+        headers=ws.headers,
+    )
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert data["enrichment_waterfall_order"] == ["hunter", "apollo", "llm_fallback"]
+    assert data["sla_window_minutes"] == 10
+    assert data["icp_criteria"]["target_industries"] == ["Fintech", "SaaS"]
+
+
+@pytest.mark.asyncio
+async def test_config_update_preserves_onboarding_fields(async_client, workspace_factory):
+    """A full-schema POST carries defaults for every field; it must not wipe values the
+    onboarding wizard set but this form doesn't edit."""
+    ws = await workspace_factory("preserve")
+
+    await async_client.post(
+        "/v1/auth/onboarding",
+        headers=ws.headers,
+        json={
+            "company_description": "We sell cold chain logistics.",
+            "offering": "Refrigerated fleet retainers.",
+            "target_industries": ["FMCG"],
+            "geographies": ["India"],
+            "target_decision_maker_roles": ["Head of Supply Chain"],
+            "trigger_roles": ["Procurement Lead"],
+            "employee_count_min": 20,
+            "employee_count_max": 200,
+        },
     )
 
-    mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = mock_tenant
-    mock_session.execute.return_value = mock_result
+    await async_client.post(
+        f"/v1/tenants/{ws.tenant_key}/config",
+        headers=ws.headers,
+        json={
+            "enrichment_waterfall_order": ["apollo"],
+            "icp_criteria": {"employee_count_min": 30},
+            "bm25_query_terms": "cold chain",
+            "target_decision_maker_roles": [],
+            "routing_matrix": {},
+            "sla_window_minutes": 15,
+        },
+    )
 
-    # Mock async context manager for AsyncSessionLocal()
-    mock_session_ctx = MagicMock()
-    mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
+    me = await async_client.get("/v1/auth/me", headers=ws.headers)
+    assert me.json()["onboarded"] is True
 
-    with patch("app.api.tenant.AsyncSessionLocal", return_value=mock_session_ctx):
-        # Post update
-        post_resp = await async_client.post(
-            "/v1/tenants/test_tenant_001/config",
-            json=payload,
-            headers=headers,
-        )
-        assert post_resp.status_code == 200
-        data = post_resp.json()
-        assert data["enrichment_waterfall_order"] == ["hunter", "apollo", "llm_fallback"]
-
-        # Get config
-        get_resp = await async_client.get(
-            "/v1/tenants/test_tenant_001/config",
-            headers=headers,
-        )
-        assert get_resp.status_code == 200
-        get_data = get_resp.json()
-        assert get_data["enrichment_waterfall_order"] == ["hunter", "apollo", "llm_fallback"]
+    cfg = await async_client.get(f"/v1/tenants/{ws.tenant_key}/config", headers=ws.headers)
+    assert cfg.json()["trigger_roles"] == ["Procurement Lead"]

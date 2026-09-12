@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import resolve_tenant
 from app.db.models import BuyingCommitteeMember, Deal, Tenant
 from app.db.session import get_db_session
 from app.services.committee.committee_service import committee_service
@@ -35,13 +36,29 @@ class AutoFindRequest(BaseModel):
     domain: Optional[str] = None
 
 
+async def _owned_deal(session: AsyncSession, deal_id: str, tenant: Tenant) -> Deal:
+    """Committee routes are nested under a deal, so the deal must belong to the caller."""
+    try:
+        deal_uuid = uuid.UUID(deal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deal_id UUID format")
+    res = await session.execute(
+        select(Deal).where(Deal.id == deal_uuid, Deal.tenant_id == tenant.id)
+    )
+    deal = res.scalar_one_or_none()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return deal
+
+
 @router.get("", response_model=List[CommitteeMemberSchema])
 async def get_committee_members(
     deal_id: str,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Lists all confirmed buying committee members for a deal."""
-    deal_uuid = uuid.UUID(deal_id)
+    deal_uuid = (await _owned_deal(session, deal_id, tenant)).id
     res = await session.execute(
         select(BuyingCommitteeMember).where(BuyingCommitteeMember.deal_id == deal_uuid)
     )
@@ -67,12 +84,12 @@ async def add_committee_member(
     deal_id: str,
     payload: CommitteeMemberSchema,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Adds or updates a buying committee member for the deal."""
-    deal_uuid = uuid.UUID(deal_id)
-    deal_res = await session.execute(select(Deal).where(Deal.id == deal_uuid))
-    deal = deal_res.scalar_one_or_none()
-    tenant_uuid = deal.tenant_id if deal else uuid.uuid4()
+    deal = await _owned_deal(session, deal_id, tenant)
+    deal_uuid = deal.id
+    tenant_uuid = deal.tenant_id
 
     member = BuyingCommitteeMember(
         id=uuid.uuid4(),
@@ -105,14 +122,13 @@ async def auto_find_committee_candidate(
     deal_id: str,
     payload: AutoFindRequest,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Discovers and resolves a candidate executive for a missing role."""
-    deal_uuid = uuid.UUID(deal_id)
-    deal_res = await session.execute(select(Deal).where(Deal.id == deal_uuid))
-    deal = deal_res.scalar_one_or_none()
+    deal = await _owned_deal(session, deal_id, tenant)
 
-    company_name = payload.company_name or (deal.company_name if deal else "")
-    domain = payload.domain or (deal.domain if deal else "")
+    company_name = payload.company_name or deal.company_name or ""
+    domain = payload.domain or deal.domain or ""
 
     candidate = await committee_service.auto_find_candidate(
         company_name=company_name,
@@ -133,8 +149,13 @@ async def stream_committee_discovery(
     role_tag: str = Query("Budget Owner", description="Target missing committee role"),
     company_name: str = Query(""),
     domain: str = Query(""),
+    session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Streams real-time agent execution events as candidate executives are discovered and verified."""
+    # Checked before the stream opens: once the generator starts yielding the request-scoped
+    # session is no longer safe to use, and an unauthorized stream would already be in flight.
+    await _owned_deal(session, deal_id, tenant)
 
     async def event_generator():
         # Step 1: Gap Evaluation

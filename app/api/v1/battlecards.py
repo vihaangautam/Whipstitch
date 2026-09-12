@@ -2,10 +2,11 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from app.api.deps import resolve_tenant
 from app.db.models import Tenant, TenantBattlecard
 from app.db.session import AsyncSessionLocal
 from app.models.battlecard_schemas import CompetitorBattlecard, GenerateBattlecardRequest
@@ -19,7 +20,6 @@ orchestrator = BlackboardBattlecardOrchestrator()
 
 
 class AutoGenerateRequest(BaseModel):
-    tenant_id: str
     competitors: Optional[List[str]] = None  # optional explicit override
 
 
@@ -35,13 +35,9 @@ async def _persist_card(tenant_uuid, card: CompetitorBattlecard, generated_by: s
 
 
 @router.get("", response_model=List[CompetitorBattlecard])
-async def list_battlecards(tenant_id: str = Query(default="trifid_media")):
+async def list_battlecards(tenant: Tenant = Depends(resolve_tenant)):
     """Lists the tenant's generated competitor battlecards (empty until auto-generate is run)."""
     async with AsyncSessionLocal() as session:
-        t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        if not tenant:
-            return []
         rows = await session.execute(
             select(TenantBattlecard)
             .where(TenantBattlecard.tenant_id == tenant.id)
@@ -51,13 +47,9 @@ async def list_battlecards(tenant_id: str = Query(default="trifid_media")):
 
 
 @router.get("/{competitor_id}", response_model=CompetitorBattlecard)
-async def get_battlecard(competitor_id: str, tenant_id: str = Query(default="trifid_media")):
+async def get_battlecard(competitor_id: str, tenant: Tenant = Depends(resolve_tenant)):
     """Retrieves one persisted battlecard for the tenant."""
     async with AsyncSessionLocal() as session:
-        t_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = t_res.scalar_one_or_none()
-        if not tenant:
-            raise HTTPException(status_code=404, detail="Tenant not found")
         row = await session.execute(
             select(TenantBattlecard).where(
                 TenantBattlecard.tenant_id == tenant.id,
@@ -71,10 +63,14 @@ async def get_battlecard(competitor_id: str, tenant_id: str = Query(default="tri
 
 
 @router.post("/auto-generate", response_model=List[CompetitorBattlecard], status_code=status.HTTP_201_CREATED)
-async def auto_generate_battlecards(payload: AutoGenerateRequest):
+async def auto_generate_battlecards(
+    payload: AutoGenerateRequest,
+    tenant: Tenant = Depends(resolve_tenant),
+):
     """Identifies the tenant's likely competitors from their company profile and synthesises
     a battlecard for each via the multi-LLM router (template fallback if no provider)."""
-    tenant_uuid, ctx = await _load_tenant_context(payload.tenant_id)
+    tenant_key = tenant.tenant_key
+    tenant_uuid, ctx = await _load_tenant_context(tenant_key)
 
     if not ctx.offering and not ctx.company_description:
         raise HTTPException(
@@ -83,20 +79,23 @@ async def auto_generate_battlecards(payload: AutoGenerateRequest):
         )
 
     competitors = payload.competitors or await orchestrator.identify_competitors(ctx)
-    logger.info("auto_generate_battlecards tenant=%s competitors=%s", payload.tenant_id, competitors)
+    logger.info("auto_generate_battlecards tenant=%s competitors=%s", tenant_key, competitors)
 
     cards: List[CompetitorBattlecard] = []
     for name in competitors[:4]:
-        card, generated_by, model = await orchestrator.generate_battlecard(name, ctx, payload.tenant_id)
+        card, generated_by, model = await orchestrator.generate_battlecard(name, ctx, tenant_key)
         await _persist_card(tenant_uuid, card, generated_by, model)
         cards.append(card)
     return cards
 
 
 @router.post("/generate", response_model=CompetitorBattlecard, status_code=status.HTTP_201_CREATED)
-async def generate_battlecard(payload: GenerateBattlecardRequest):
+async def generate_battlecard(
+    payload: GenerateBattlecardRequest,
+    tenant: Tenant = Depends(resolve_tenant),
+):
     """Generates and persists a battlecard for one named competitor, using tenant context."""
-    tenant_key = getattr(payload, "tenant_id", None) or "trifid_media"
+    tenant_key = tenant.tenant_key
     tenant_uuid, ctx = await _load_tenant_context(tenant_key)
 
     if payload.tenant_offering:

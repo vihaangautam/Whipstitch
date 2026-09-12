@@ -1,11 +1,10 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Security, status
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.core.config import settings
+from app.api.deps import resolve_tenant
 from app.core.logging import get_logger
 from app.db.models import CRMSyncRecord, EnrichmentResult, LeadEvent, LLMQualification, Tenant
 from app.db.session import AsyncSessionLocal
@@ -13,34 +12,17 @@ from app.db.session import AsyncSessionLocal
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/leads", tags=["Inbound Leads"])
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-async def verify_api_key(api_key: Optional[str] = Security(api_key_header)):
-    if not api_key or api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
-    return api_key
-
 
 @router.get("", response_model=List[dict])
 async def list_inbound_leads(
-    tenant_id: str = "trifid_media",
     search: Optional[str] = Query(default=None, description="Search company name or email"),
     status_filter: Optional[str] = Query(default=None, alias="status"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Retrieves paginated inbound leads for the dashboard table."""
     async with AsyncSessionLocal() as session:
-        tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-        tenant = tenant_res.scalar_one_or_none()
-        if not tenant:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-
         query = select(LeadEvent).where(LeadEvent.tenant_id == tenant.id)
         if status_filter:
             query = query.where(LeadEvent.status == status_filter)
@@ -71,7 +53,7 @@ async def list_inbound_leads(
             leads_out.append(
                 {
                     "id": str(l.id),
-                    "tenant_id": tenant_id,
+                    "tenant_id": tenant.tenant_key,
                     "email": l.email,
                     "company_name": l.company_name,
                     "status": l.status,
@@ -88,7 +70,7 @@ async def list_inbound_leads(
 @router.get("/{lead_id}", response_model=dict)
 async def get_inbound_lead_detail(
     lead_id: str,
-    api_key: str = Security(verify_api_key),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Retrieves full detail payload for slide-over detail drawer."""
     try:
@@ -97,7 +79,11 @@ async def get_inbound_lead_detail(
         raise HTTPException(status_code=400, detail="Invalid lead_id UUID format")
 
     async with AsyncSessionLocal() as session:
-        lead_res = await session.execute(select(LeadEvent).where(LeadEvent.id == l_uuid))
+        # Scoped by tenant, not just id: looking a lead up by UUID alone lets any
+        # authenticated caller read another workspace's lead.
+        lead_res = await session.execute(
+            select(LeadEvent).where(LeadEvent.id == l_uuid, LeadEvent.tenant_id == tenant.id)
+        )
         lead = lead_res.scalar_one_or_none()
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found")

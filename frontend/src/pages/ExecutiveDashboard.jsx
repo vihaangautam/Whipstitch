@@ -161,7 +161,7 @@ export default function ExecutiveDashboard({ summaryData, currentTenant, onNavig
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Executive Dashboard</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Pipeline telemetry and opportunity tracking for <span className="text-slate-900 font-semibold">{currentTenant === 'trifid_media' ? 'Trifid Media' : 'Acme Global'}</span>
+            Pipeline telemetry and opportunity tracking for <span className="text-slate-900 font-semibold capitalize">{(currentTenant || '').replace(/_/g, ' ') || 'your workspace'}</span>
           </p>
         </div>
 

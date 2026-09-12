@@ -21,7 +21,8 @@ import {
   saveAPIKey,
   deleteAPIKey,
   testAPIKeyConnection,
-  testStoredAPIKey
+  testStoredAPIKey,
+  rotateIngestKey
 } from '../api';
 
 const PROVIDER_METADATA = [
@@ -105,6 +106,31 @@ export default function BYOKSettings({ currentTenant }) {
   const [testResults, setTestResults] = useState({});
   const [preferredModel, setPreferredModel] = useState('gemini-2.0-flash');
   const [isLoading, setIsLoading] = useState(false);
+  const [ingestKey, setIngestKey] = useState(null);
+  const [isRotating, setIsRotating] = useState(false);
+  const [confirmRotate, setConfirmRotate] = useState(false);
+  const [ingestKeyError, setIngestKeyError] = useState(null);
+
+  // Rotating invalidates whatever key the tenant's webhook provider is using, so the second
+  // press is a deliberate confirm. Inline rather than window.confirm(): a native dialog
+  // blocks the whole renderer until dismissed.
+  const handleRotateIngestKey = async () => {
+    if (ingestKey && !confirmRotate) {
+      setConfirmRotate(true);
+      return;
+    }
+    setConfirmRotate(false);
+    setIngestKeyError(null);
+    setIsRotating(true);
+    try {
+      const res = await rotateIngestKey();
+      setIngestKey(res.ingest_key);
+    } catch (err) {
+      setIngestKeyError(err.message);
+    } finally {
+      setIsRotating(false);
+    }
+  };
 
   const loadKeys = async () => {
     setIsLoading(true);
@@ -189,6 +215,62 @@ export default function BYOKSettings({ currentTenant }) {
         <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
           <strong className="text-slate-900 font-semibold">Zero Platform Markup Guarantee:</strong> When you provide your own API keys, Whipstitch orchestrates LLM, enrichment, and CRM requests without charging platform credits. All keys are encrypted at rest with a master Fernet key and decrypted in memory only during activity execution.
         </div>
+      </div>
+
+      {/* Webhook Ingest Key */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-card space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-slate-600" />
+              Webhook Ingest Key
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
+              Your form or CRM sends inbound leads with this key in the <code className="text-slate-700">X-API-Key</code> header.
+              It identifies your workspace, so leads can never land in — or be read from — someone else's.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRotateIngestKey}
+            disabled={isRotating}
+            className="btn-secondary text-xs sm:text-sm py-2 px-4 shrink-0 disabled:opacity-40"
+          >
+            {isRotating
+              ? 'Generating…'
+              : confirmRotate
+                ? 'Click again to replace'
+                : ingestKey
+                  ? 'Rotate Key'
+                  : 'Generate Key'}
+          </button>
+        </div>
+
+        {ingestKeyError && (
+          <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
+            Could not generate ingest key: {ingestKeyError}
+          </div>
+        )}
+
+        {ingestKey && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+            <div className="text-xs font-semibold text-amber-900">
+              Copy this now — only its hash is stored, so it cannot be shown again.
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-white border border-amber-200 rounded px-2.5 py-2 text-slate-800 break-all">
+                {ingestKey}
+              </code>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(ingestKey)}
+                className="btn-secondary text-xs py-2 px-3 shrink-0"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Global Model Preference Selection */}

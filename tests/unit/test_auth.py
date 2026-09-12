@@ -152,10 +152,9 @@ async def test_new_workspace_requires_onboarding_then_completes():
         me = await client.get("/v1/auth/me", headers=auth)
         assert me.json()["onboarded"] is True
 
-        from app.core.config import settings
         cfg = await client.get(
             f"/v1/tenants/{me.json()['tenant_id']}/config",
-            headers={"X-API-Key": settings.API_KEY},
+            headers=auth,
         )
         assert cfg.status_code == 200
         assert cfg.json()["trigger_roles"] == ["Sales Operations Manager", "RevOps Analyst"]

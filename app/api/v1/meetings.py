@@ -2,9 +2,10 @@
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
+from app.api.deps import resolve_tenant
 from app.core.logging import get_logger
 from app.db.models import Meeting, Tenant
 from app.db.session import AsyncSessionLocal
@@ -50,13 +51,15 @@ async def _tenant_uuid(tenant_key: str) -> Optional[uuid.UUID]:
         return t.id if t else None
 
 
-async def _get_meeting(meeting_id: str) -> Meeting:
+async def _get_meeting(meeting_id: str, tenant: Tenant) -> Meeting:
     try:
         m_uuid = uuid.UUID(meeting_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Meeting not found")
     async with AsyncSessionLocal() as session:
-        res = await session.execute(select(Meeting).where(Meeting.id == m_uuid))
+        res = await session.execute(
+            select(Meeting).where(Meeting.id == m_uuid, Meeting.tenant_id == tenant.id)
+        )
         meeting = res.scalar_one_or_none()
     if not meeting:
         raise HTTPException(status_code=404, detail=f"Meeting {meeting_id} not found")
@@ -84,11 +87,9 @@ def _to_response(m: Meeting) -> MeetingResponse:
 
 
 @router.get("", response_model=List[MeetingResponse])
-async def list_meetings(tenant_id: str = Query(default="trifid_media")):
+async def list_meetings(tenant: Tenant = Depends(resolve_tenant)):
     """Lists the tenant's meetings. Empty until the rep schedules one."""
-    t_uuid = await _tenant_uuid(tenant_id)
-    if not t_uuid:
-        return []
+    t_uuid = tenant.id
     async with AsyncSessionLocal() as session:
         res = await session.execute(
             select(Meeting).where(Meeting.tenant_id == t_uuid).order_by(Meeting.created_at.desc())
@@ -97,11 +98,9 @@ async def list_meetings(tenant_id: str = Query(default="trifid_media")):
 
 
 @router.post("", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
-async def create_meeting(payload: MeetingCreateRequest, tenant_id: str = Query(default="trifid_media")):
+async def create_meeting(payload: MeetingCreateRequest, tenant: Tenant = Depends(resolve_tenant)):
     """Creates a real meeting from rep-entered prospect details and resolves attendee profiles."""
-    t_uuid = await _tenant_uuid(tenant_id)
-    if not t_uuid:
-        raise HTTPException(status_code=404, detail=f"Tenant '{tenant_id}' not found")
+    t_uuid = tenant.id
 
     track = payload.tenant_track or "Service / Retainer"
     tier = payload.buyer_tier or "Tier 1: Founder-Led SMB"
@@ -193,9 +192,9 @@ async def _cache_meeting_field(meeting_id: uuid.UUID, field: str, payload: dict)
 
 
 @router.get("/{meeting_id}/briefing", response_model=PreCallBriefing)
-async def get_pre_call_briefing(meeting_id: str):
+async def get_pre_call_briefing(meeting_id: str, tenant: Tenant = Depends(resolve_tenant)):
     """AI pre-call briefing grounded in the meeting's real attendees + live Serper signals."""
-    meeting = await _get_meeting(meeting_id)
+    meeting = await _get_meeting(meeting_id, tenant)
     attendees = [MeetingAttendee(**a) for a in (meeting.attendees_json or [])]
     signals_data = await serper_service.search_company_signals(meeting.company_name)
     signals = [
@@ -214,9 +213,9 @@ async def get_pre_call_briefing(meeting_id: str):
 
 
 @router.get("/{meeting_id}/champion-kit", response_model=ChampionSellingKit)
-async def get_champion_selling_kit(meeting_id: str):
+async def get_champion_selling_kit(meeting_id: str, tenant: Tenant = Depends(resolve_tenant)):
     """AI 7-filter champion internal-selling kit for this meeting."""
-    meeting = await _get_meeting(meeting_id)
+    meeting = await _get_meeting(meeting_id, tenant)
     kit = await build_champion_kit(
         tenant_id=str(meeting.tenant_id),
         meeting=_meeting_dict(meeting),
@@ -228,10 +227,10 @@ async def get_champion_selling_kit(meeting_id: str):
 
 
 @router.post("/{meeting_id}/prep")
-async def trigger_meeting_prep(meeting_id: str):
+async def trigger_meeting_prep(meeting_id: str, tenant: Tenant = Depends(resolve_tenant)):
     """Regenerates briefing + champion kit. Uses the Temporal MeetingPrepWorkflow when a
     worker is reachable, otherwise runs the same activities inline."""
-    await _get_meeting(meeting_id)  # 404 early if missing
+    await _get_meeting(meeting_id, tenant)  # 404 early if missing or not ours
 
     try:
         from temporalio.client import Client

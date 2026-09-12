@@ -8,6 +8,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
+from app.api.deps import resolve_tenant
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.models import Deal, DealDiagnostic, EvidenceQuote, MEDPICCScore, Tenant
@@ -26,15 +27,35 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/deals", tags=["Deal Intelligence & MEDDPICC"])
 
 
+async def _get_owned_deal(session: AsyncSession, deal_id: str, tenant: Tenant) -> Deal:
+    """Loads a deal that belongs to the caller's workspace, or 404s.
+
+    Deals carry call transcripts and buyer evidence quotes — the most sensitive data in the
+    product — so every /{deal_id} route must match on tenant, not just the UUID. A bare
+    `Deal.id == ...` lookup is a cross-tenant read for anyone who can guess or leak an id.
+    """
+    try:
+        deal_uuid = uuid.UUID(deal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deal_id UUID format")
+
+    res = await session.execute(
+        select(Deal).where(Deal.id == deal_uuid, Deal.tenant_id == tenant.id)
+    )
+    deal = res.scalar_one_or_none()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return deal
+
+
 @router.post("", response_model=DealResponse, status_code=status.HTTP_201_CREATED)
 async def create_deal(
     payload: CreateDealRequest,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Creates a new deal record for qualification tracking."""
-    tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == payload.tenant_id))
-    tenant = tenant_res.scalar_one_or_none()
-    tenant_uuid = tenant.id if tenant else uuid.uuid4()
+    tenant_uuid = tenant.id
 
     deal = Deal(
         id=uuid.uuid4(),
@@ -52,7 +73,7 @@ async def create_deal(
 
     return DealResponse(
         id=str(deal.id),
-        tenant_id=payload.tenant_id,
+        tenant_id=tenant.tenant_key,
         deal_name=deal.deal_name,
         company_name=deal.company_name,
         domain=deal.domain,
@@ -65,14 +86,11 @@ async def create_deal(
 
 @router.get("", response_model=List[DealResponse])
 async def list_deals(
-    tenant_id: str = "trifid_media",
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Lists all active deals with their latest MEDDPICC diagnostic score and stage."""
-    tenant_res = await session.execute(select(Tenant).where(Tenant.tenant_key == tenant_id))
-    tenant = tenant_res.scalar_one_or_none()
-    if not tenant:
-        return []
+    tenant_id = tenant.tenant_key
 
     deals_res = await session.execute(
         select(Deal).where(Deal.tenant_id == tenant.id).order_by(desc(Deal.created_at))
@@ -115,12 +133,10 @@ async def upload_transcript(
     file: Optional[UploadFile] = File(None),
     raw_text: Optional[str] = Form(None),
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Uploads a transcript via file upload (.txt, .vtt, .srt, .docx, .pdf) or raw text."""
-    deal_res = await session.execute(select(Deal).where(Deal.id == uuid.UUID(deal_id)))
-    deal = deal_res.scalar_one_or_none()
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
+    deal = await _get_owned_deal(session, deal_id, tenant)
 
     if file:
         content_bytes = await file.read()
@@ -150,12 +166,10 @@ async def trigger_diagnose_workflow(
     deal_id: str,
     payload: TriggerDiagnoseRequest,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Triggers the DealDiagnosticWorkflow in Temporal or local fallback."""
-    deal_res = await session.execute(select(Deal).where(Deal.id == uuid.UUID(deal_id)))
-    deal = deal_res.scalar_one_or_none()
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
+    deal = await _get_owned_deal(session, deal_id, tenant)
 
     text_to_analyze = payload.transcript_text or (payload.deal_context or {}).get("transcript_text", "")
     if not text_to_analyze:
@@ -173,7 +187,7 @@ async def trigger_diagnose_workflow(
 
     wf_payload = {
         "deal_id": str(deal.id),
-        "tenant_id": payload.tenant_id,
+        "tenant_id": tenant.tenant_key,
         "deal_name": deal.deal_name,
         "company_name": deal.company_name,
         "transcript_text": text_to_analyze,
@@ -206,7 +220,7 @@ async def trigger_diagnose_workflow(
 
         score_res = await extract_medpicc_scores_activity(
             deal_id=str(deal.id),
-            tenant_id=payload.tenant_id,
+            tenant_id=tenant.tenant_key,
             deal_name=deal.deal_name,
             company_name=deal.company_name,
             transcript_text=text_to_analyze,
@@ -216,7 +230,7 @@ async def trigger_diagnose_workflow(
         diag_id = score_res["diagnostic_id"]
         qual_data = score_res["qualification_model"]
 
-        await update_crm_deal_stage_activity(str(deal.id), payload.tenant_id, deal.company_name, qual_data)
+        await update_crm_deal_stage_activity(str(deal.id), tenant.tenant_key, deal.company_name, qual_data)
         pdf_res = await render_medpicc_pdf_activity(
             str(deal.id), diag_id, deal.deal_name, deal.company_name, qual_data, score_res["model_used"]
         )
@@ -236,9 +250,10 @@ async def trigger_diagnose_workflow(
 async def get_medpicc_scorecard(
     deal_id: str,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Retrieves the latest parsed MEDDPICC scorecard, verbatim evidence quotes, and coaching questions."""
-    deal_uuid = uuid.UUID(deal_id)
+    deal_uuid = (await _get_owned_deal(session, deal_id, tenant)).id
     diag_res = await session.execute(
         select(DealDiagnostic)
         .where(DealDiagnostic.deal_id == deal_uuid)
@@ -310,9 +325,10 @@ async def get_medpicc_scorecard(
 async def download_medpicc_pdf(
     deal_id: str,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Downloads the compiled MEDDPICC diagnostic report (PDF or rendered HTML)."""
-    deal_uuid = uuid.UUID(deal_id)
+    deal_uuid = (await _get_owned_deal(session, deal_id, tenant)).id
     diag_res = await session.execute(
         select(DealDiagnostic)
         .where(DealDiagnostic.deal_id == deal_uuid)
@@ -335,9 +351,10 @@ async def download_medpicc_pdf(
 async def get_follow_up_email(
     deal_id: str,
     session: AsyncSession = Depends(get_db_session),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
     """Retrieves the auto-drafted follow-up email targeting the weakest MEDDPICC box."""
-    deal_uuid = uuid.UUID(deal_id)
+    deal_uuid = (await _get_owned_deal(session, deal_id, tenant)).id
     diag_res = await session.execute(
         select(DealDiagnostic)
         .where(DealDiagnostic.deal_id == deal_uuid)

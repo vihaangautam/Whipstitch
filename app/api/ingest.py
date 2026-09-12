@@ -1,8 +1,9 @@
 import uuid
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy import select
 from temporalio.client import Client
 
+from app.api.deps import resolve_ingest_tenant, resolve_tenant
 from app.core.config import settings
 from app.core.idempotency import IdempotencyManager, derive_idempotency_key
 from app.core.logging import bind_correlation_id, get_logger
@@ -23,13 +24,12 @@ logger = get_logger(__name__)
 async def ingest_lead_event(
     payload: IngestEventRequest,
     response: Response,
-    x_api_key: str = Header(..., alias="X-API-Key"),
+    tenant: Tenant = Depends(resolve_ingest_tenant),
 ):
-    if x_api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
+    # The owning workspace comes from the presented ingest key, never from payload.tenant_id —
+    # otherwise any caller could file leads into (and read cached state from) another tenant.
+    tenant_key = tenant.tenant_key
+    tenant_uuid = tenant.id
 
     # Derive or accept idempotency key
     idempotency_key = derive_idempotency_key(
@@ -39,14 +39,14 @@ async def ingest_lead_event(
     # Atomic Idempotency Lock Check
     idempotency_mgr = IdempotencyManager()
     is_acquired, cached_state = await idempotency_mgr.acquire_lock_or_get_cached(
-        payload.tenant_id, idempotency_key
+        tenant_key, idempotency_key
     )
 
     if not is_acquired:
         response.status_code = status.HTTP_202_ACCEPTED
         logger.info(
             "ingest_event_duplicate_accepted",
-            tenant_id=payload.tenant_id,
+            tenant_id=tenant_key,
             idempotency_key=idempotency_key,
         )
         return IngestEventResponse(
@@ -61,48 +61,17 @@ async def ingest_lead_event(
 
     logger.info(
         "ingest_event_received",
-        tenant_id=payload.tenant_id,
+        tenant_id=tenant_key,
         email=payload.email,
         company_name=payload.company_name,
         idempotency_key=idempotency_key,
     )
 
     async with AsyncSessionLocal() as session:
-        # Check tenant exists or create default seed tenant
-        result = await session.execute(
-            select(Tenant).where(Tenant.tenant_key == payload.tenant_id)
-        )
-        tenant = result.scalar_one_or_none()
-
-        if not tenant:
-            tenant = Tenant(
-                tenant_key=payload.tenant_id,
-                name="Trifid Media" if payload.tenant_id == "trifid_media" else payload.tenant_id,
-                config={
-                    "enrichment_waterfall_order": [
-                        "apollo",
-                        "people_data_labs",
-                        "hunter",
-                        "diffbot",
-                        "crawl4ai",
-                        "llm_fallback",
-                    ],
-                    "icp_criteria": {
-                        "target_industries": ["D2C", "E-commerce", "Lifestyle", "Consumer Tech"],
-                        "employee_count_min": 50,
-                        "employee_count_max": 500,
-                    },
-                    "bm25_query_terms": "product features value proposition pricing clients creator roster",
-                    "sla_window_minutes": 15,
-                },
-            )
-            session.add(tenant)
-            await session.flush()
-
         # Write lead_events record
         lead_event = LeadEvent(
             id=uuid.UUID(event_id),
-            tenant_id=tenant.id,
+            tenant_id=tenant_uuid,
             idempotency_key=idempotency_key,
             source="inbound_webhook",
             email=payload.email,
@@ -115,11 +84,11 @@ async def ingest_lead_event(
 
     # Store initial cached state for idempotency duplicate queries
     await idempotency_mgr.set_cached_state(
-        payload.tenant_id,
+        tenant_key,
         idempotency_key,
         {
             "event_id": event_id,
-            "tenant_id": payload.tenant_id,
+            "tenant_id": tenant_key,
             "email": payload.email,
             "company_name": payload.company_name,
             "status": "received",
@@ -135,7 +104,7 @@ async def ingest_lead_event(
             "WhipstitchLeadWorkflow",
             {
                 "event_id": event_id,
-                "tenant_id": payload.tenant_id,
+                "tenant_id": tenant_key,
                 "email": payload.email,
                 "company_name": payload.company_name,
                 "idempotency_key": idempotency_key,
@@ -161,28 +130,21 @@ async def ingest_lead_event(
 )
 async def get_event_status(
     event_id: str,
-    x_api_key: str = Header(..., alias="X-API-Key"),
+    tenant: Tenant = Depends(resolve_tenant),
 ):
-    if x_api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key header",
-        )
-
     try:
         lead_uuid = uuid.UUID(event_id)
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid event_id UUID format")
 
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(LeadEvent).where(LeadEvent.id == lead_uuid))
+        result = await session.execute(
+            select(LeadEvent).where(LeadEvent.id == lead_uuid, LeadEvent.tenant_id == tenant.id)
+        )
         lead_event = result.scalar_one_or_none()
 
         if not lead_event:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event '{event_id}' not found")
-
-        tenant_result = await session.execute(select(Tenant).where(Tenant.id == lead_event.tenant_id))
-        tenant = tenant_result.scalar_one_or_none()
 
         # Fetch enrichment summary if available
         enrich_result = await session.execute(

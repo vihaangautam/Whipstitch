@@ -383,6 +383,15 @@ export async function testAPIKeyConnection(provider, apiKey) {
   return await res.json();
 }
 
+export async function rotateIngestKey() {
+  const res = await fetch(`${BASE_URL}/v1/settings/ingest-key/rotate`, {
+    method: "POST",
+    headers,
+  });
+  if (!res.ok) throw new Error("Failed to generate ingest key");
+  return await res.json();
+}
+
 export async function testStoredAPIKey(provider, tenantId = "trifid_media") {
   const res = await fetch(`${BASE_URL}/v1/settings/api-keys/${provider}/test-stored?tenant_id=${tenantId}`, {
     method: "POST",

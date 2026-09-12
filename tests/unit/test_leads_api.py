@@ -40,8 +40,9 @@ async def test_leads_list_mocked():
     mock_enrich_res = MagicMock()
     mock_enrich_res.scalar_one_or_none.return_value = None
 
+    # Tenant now comes from the authenticated session (resolve_tenant), not a query the
+    # route runs itself — so the first result here is the leads query.
     mock_session.execute.side_effect = [
-        mock_tenant_res,
         mock_leads_res,
         mock_qual_res,
         mock_enrich_res,
