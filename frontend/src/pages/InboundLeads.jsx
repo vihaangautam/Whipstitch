@@ -129,7 +129,7 @@ export default function InboundLeads({ currentTenant }) {
                       </span>
                     </td>
                     <td className="py-4 px-6 capitalize text-slate-600 font-medium">
-                      {lead.provider_used || 'apollo'}
+                      {lead.provider_used || <span className="text-slate-400">Not yet enriched</span>}
                     </td>
                     <td className="py-4 px-6">
                       {getStatusBadge(lead.status)}
@@ -176,7 +176,7 @@ export default function InboundLeads({ currentTenant }) {
                   <div>
                     <div className="text-xs text-slate-500 font-semibold">Qualification Score</div>
                     <div className="text-3xl font-extrabold text-slate-900 mt-1">
-                      {drawerData?.qualification?.lead_score || selectedLead.lead_score || 85}
+                      {drawerData?.qualification?.lead_score ?? '--'}
                       <span className="text-slate-400 text-sm font-normal">/100</span>
                     </div>
                   </div>
@@ -195,14 +195,22 @@ export default function InboundLeads({ currentTenant }) {
                       <span className="text-slate-500">Contact Email:</span>
                       <span className="text-slate-900 font-medium">{selectedLead.email}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Primary Provider:</span>
-                      <span className="capitalize font-medium text-slate-900">{selectedLead.provider_used || 'Apollo.io'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Industry:</span>
-                      <span className="font-medium text-slate-900">B2B SaaS / Commerce</span>
-                    </div>
+                    {drawerData?.enrichment ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Primary Provider:</span>
+                          <span className="capitalize font-medium text-slate-900">{drawerData.enrichment.provider_used}</span>
+                        </div>
+                        {drawerData.enrichment.data?.industry && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Industry:</span>
+                            <span className="font-medium text-slate-900">{drawerData.enrichment.data.industry}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-slate-400 italic">Not yet enriched.</div>
+                    )}
                   </div>
                 </div>
 
@@ -212,18 +220,24 @@ export default function InboundLeads({ currentTenant }) {
                     Structured 3-Part Outreach Pitch
                   </h3>
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs sm:text-sm space-y-3 text-slate-800 leading-relaxed">
-                    <div>
-                      <strong className="text-emerald-800 block mb-0.5">1. Observation Hook:</strong>
-                      "Noticed {selectedLead.company_name} is actively expanding enterprise pipeline automation."
-                    </div>
-                    <div>
-                      <strong className="text-blue-800 block mb-0.5">2. Capability Link:</strong>
-                      "We automate waterfall contact enrichment and MEDDPICC deal qualification with zero billing overhead."
-                    </div>
-                    <div>
-                      <strong className="text-slate-900 block mb-0.5">3. Low-Friction Ask:</strong>
-                      "Worth sending over a 2-page diagnostic blueprint?"
-                    </div>
+                    {drawerData?.qualification?.outreach_draft ? (
+                      <>
+                        <div>
+                          <strong className="text-emerald-800 block mb-0.5">1. Observation Hook:</strong>
+                          "{drawerData.qualification.outreach_draft.observation_hook}"
+                        </div>
+                        <div>
+                          <strong className="text-blue-800 block mb-0.5">2. Capability Link:</strong>
+                          "{drawerData.qualification.outreach_draft.capability_link}"
+                        </div>
+                        <div>
+                          <strong className="text-slate-900 block mb-0.5">3. Low-Friction Ask:</strong>
+                          "{drawerData.qualification.outreach_draft.low_friction_ask}"
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-slate-400 italic">Not yet qualified — no outreach draft generated.</div>
+                    )}
                   </div>
                 </div>
               </div>

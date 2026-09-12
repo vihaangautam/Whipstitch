@@ -57,8 +57,10 @@ async def list_inbound_leads(
                     "email": l.email,
                     "company_name": l.company_name,
                     "status": l.status,
-                    "lead_score": qual.lead_score if qual else (88 if l.status in ["scoring", "synced"] else None),
-                    "provider_used": enrich.provider_used if enrich else "apollo",
+                    # null, not an invented 88 or "apollo" — this row hasn't actually been
+                    # scored/enriched yet, and the frontend renders that honestly ('--').
+                    "lead_score": qual.lead_score if qual else None,
+                    "provider_used": enrich.provider_used if enrich else None,
                     "created_at": l.created_at.isoformat() if l.created_at else None,
                     "updated_at": l.updated_at.isoformat() if l.updated_at else None,
                 }
@@ -103,6 +105,9 @@ async def get_inbound_lead_detail(
         )
         crm_record = crm_res.scalar_one_or_none()
 
+        # Each section is null, not an invented one, when that stage of the pipeline
+        # hasn't actually run for this lead yet — the frontend renders that honestly
+        # ("Not yet enriched" etc.) instead of showing fabricated data as if it were real.
         return {
             "id": str(lead.id),
             "email": lead.email,
@@ -111,28 +116,29 @@ async def get_inbound_lead_detail(
             "created_at": lead.created_at.isoformat() if lead.created_at else None,
             "raw_payload": lead.raw_payload or {},
             "enrichment": {
-                "provider_used": enrich.provider_used if enrich else "apollo",
-                "fallback_triggered": enrich.fallback_triggered if enrich else False,
-                "data": enrich.raw_response if enrich else {
-                    "employee_count": 220,
-                    "industry": "Fintech & Payments",
-                    "geography": "Bengaluru, India",
-                    "tech_stack": ["Shopify", "Klaviyo", "HubSpot", "Google Analytics"],
-                },
-            },
+                "provider_used": enrich.provider_used,
+                "fallback_triggered": enrich.fallback_triggered,
+                "data": enrich.raw_response,
+            }
+            if enrich
+            else None,
             "qualification": {
-                "lead_score": qual.lead_score if qual else 88,
-                "fit_reasoning": qual.fit_reasoning if qual else f"Strong ICP fit: {lead.company_name} is actively scaling digital commerce.",
+                "lead_score": qual.lead_score,
+                "fit_reasoning": qual.fit_reasoning,
                 "outreach_draft": {
-                    "observation_hook": qual.observation_hook if qual else f"Noticed {lead.company_name} is actively scaling in Fintech.",
-                    "capability_link": qual.capability_link if qual else "We manage 200+ vetted UGC creators driving 3x ROAS.",
-                    "low_friction_ask": qual.low_friction_ask if qual else "Worth sending over a 2-page creator shortlist?",
+                    "observation_hook": qual.observation_hook,
+                    "capability_link": qual.capability_link,
+                    "low_friction_ask": qual.low_friction_ask,
                 },
-                "confidence_score": qual.confidence_score if qual else 0.92,
-            },
+                "confidence_score": qual.confidence_score,
+            }
+            if qual
+            else None,
             "crm_sync": {
-                "crm_provider": crm_record.crm_provider if crm_record else "hubspot",
-                "crm_record_id": crm_record.crm_record_id if crm_record else "hs-8f2a1b9c",
-                "sync_status": crm_record.sync_status if crm_record else "synced",
-            },
+                "crm_provider": crm_record.crm_provider,
+                "crm_record_id": crm_record.crm_record_id,
+                "sync_status": crm_record.sync_status,
+            }
+            if crm_record
+            else None,
         }
