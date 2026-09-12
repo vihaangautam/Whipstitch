@@ -242,8 +242,8 @@ function TimelineStage({ moment, engine, body, Preview, index, progress }) {
       {/* marker */}
       <div
         className={`absolute left-0 top-0 hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[13px] font-bold transition-colors duration-500 ${active
-            ? 'bg-slate-900 border border-slate-900 text-white'
-            : 'bg-white border border-slate-300 text-slate-400'
+          ? 'bg-slate-900 border border-slate-900 text-white'
+          : 'bg-white border border-slate-300 text-slate-400'
           }`}
       >
         {active && !reduce && (
@@ -821,10 +821,6 @@ export default function LandingPage({ onPrimary, onSignIn }) {
                 The sales research team you don't have — generated, and
                 staged for your review.
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-full px-2.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Workflow engine operational
-              </div>
             </div>
 
             {/* What it produces */}
