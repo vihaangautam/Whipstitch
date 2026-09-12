@@ -133,6 +133,11 @@ class SaveAPIKeyRequest(BaseModel):
     api_key: str = Field(..., description="Raw API key plaintext")
 
 
+class TestAPIKeyRequest(BaseModel):
+    provider: str
+    api_key: str = Field(..., description="Raw API key plaintext, sent in the body — never a query param")
+
+
 class APIKeyInfoResponse(BaseModel):
     id: str
     provider: str

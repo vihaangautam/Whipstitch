@@ -374,7 +374,17 @@ export async function deleteAPIKey(provider, tenantId = "trifid_media") {
 }
 
 export async function testAPIKeyConnection(provider, apiKey) {
-  const res = await fetch(`${BASE_URL}/v1/settings/api-keys/test?provider=${provider}&api_key=${encodeURIComponent(apiKey)}`, {
+  const res = await fetch(`${BASE_URL}/v1/settings/api-keys/test`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ provider, api_key: apiKey }),
+  });
+  if (!res.ok) throw new Error("Connection test request failed");
+  return await res.json();
+}
+
+export async function testStoredAPIKey(provider, tenantId = "trifid_media") {
+  const res = await fetch(`${BASE_URL}/v1/settings/api-keys/${provider}/test-stored?tenant_id=${tenantId}`, {
     method: "POST",
     headers,
   });

@@ -20,7 +20,8 @@ import {
   fetchAPIKeys,
   saveAPIKey,
   deleteAPIKey,
-  testAPIKeyConnection
+  testAPIKeyConnection,
+  testStoredAPIKey
 } from '../api';
 
 const PROVIDER_METADATA = [
@@ -140,15 +141,19 @@ export default function BYOKSettings({ currentTenant }) {
 
   const handleTest = async (provider) => {
     const activeKey = keysList.find((k) => k.provider === provider);
-    const candidateKey = inputValues[provider] || (activeKey ? 'sk-existing' : '');
-    if (!candidateKey) {
+    const typedKey = inputValues[provider];
+    if (!typedKey && !activeKey) {
       alert('Please enter a key to test.');
       return;
     }
 
     setTestingProvider(provider);
     try {
-      const res = await testAPIKeyConnection(provider, candidateKey);
+      // A freshly typed key gets tested directly; an already-saved key is tested
+      // server-side against its real decrypted value instead of a fake placeholder.
+      const res = typedKey
+        ? await testAPIKeyConnection(provider, typedKey)
+        : await testStoredAPIKey(provider, currentTenant);
       setTestResults((prev) => ({ ...prev, [provider]: res }));
     } catch (err) {
       setTestResults((prev) => ({
