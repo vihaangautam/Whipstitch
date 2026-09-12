@@ -42,6 +42,9 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
   const totalQualified = pipelineData?.funnel?.qualified_high_fit ?? 0;
   const totalSynced = pipelineData?.funnel?.synced_crm ?? 0;
 
+  const duplicatesBlocked = pipelineData?.duplicates_blocked ?? null;
+  const duplicatePreventionRate = pipelineData?.duplicate_prevention_rate ?? null;
+
   const kpis = [
     {
       title: 'Active Workflows Tracked',
@@ -69,8 +72,8 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
     },
     {
       title: 'Duplicate Prevention Rate',
-      value: '100%',
-      change: 'Zero CRM collisions',
+      value: duplicatePreventionRate != null ? `${duplicatePreventionRate}%` : '—',
+      change: duplicatesBlocked != null ? `${duplicatesBlocked} blocked` : 'Not tracked',
       sub: 'Distributed idempotency locks on company domain',
       icon: ShieldCheck,
       color: 'text-indigo-700 bg-indigo-50 border-indigo-200',
@@ -107,6 +110,7 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
   const providerCounts = pipelineData?.provider_counts || {};
   const apolloUsed = summaryData?.apollo_credits_used ?? 0;
   const apolloMax = summaryData?.apollo_credits_max ?? 50;
+  const maxProviderCount = Math.max(1, ...Object.values(providerCounts));
 
   const providers = [
     {
@@ -124,7 +128,7 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
       share: `${providerCounts['serper'] || 0} leads`,
       count: `${providerCounts['serper'] || 0} leads`,
       quota: 'Free quota active',
-      quotaPct: 15,
+      quotaPct: Math.round(((providerCounts['serper'] || 0) / maxProviderCount) * 100),
       color: 'bg-blue-600',
     },
     {
@@ -133,7 +137,7 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
       share: `${providerCounts['scraper'] || 0} leads`,
       count: `${providerCounts['scraper'] || 0} leads`,
       quota: 'Unlimited / Local',
-      quotaPct: 0,
+      quotaPct: Math.round(((providerCounts['scraper'] || 0) / maxProviderCount) * 100),
       color: 'bg-slate-700',
     },
     {
@@ -142,44 +146,44 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
       share: `${providerCounts['gemini'] || 0} leads`,
       count: `${providerCounts['gemini'] || 0} leads`,
       quota: '100% Free Tier',
-      quotaPct: 5,
+      quotaPct: Math.round(((providerCounts['gemini'] || 0) / maxProviderCount) * 100),
       color: 'bg-amber-600',
     },
   ];
 
+  const slaTimedTotal = pipelineData?.sla_timed_total ?? 0;
+  const slaBucketCounts = pipelineData?.sla_buckets ?? { instant: 0, fast: 0, standard: 0, delayed: 0 };
+  const slaPct = (n) => (slaTimedTotal > 0 ? Math.round((n / slaTimedTotal) * 100) : 0);
   const slaBuckets = [
-    { label: 'Instant (< 30 sec)', pct: 80, count: `${Math.round(totalInbound * 0.8)} leads`, color: 'bg-emerald-500' },
-    { label: 'Fast (30s – 2 min)', pct: 15, count: `${Math.round(totalInbound * 0.15)} leads`, color: 'bg-blue-500' },
-    { label: 'Standard (2m – 3 min)', pct: 5, count: `${Math.round(totalInbound * 0.05)} leads`, color: 'bg-amber-500' },
-    { label: 'Delayed (> 3 min)', pct: 0, count: '0 leads', color: 'bg-rose-500' },
+    { label: 'Instant (< 30 sec)', pct: slaPct(slaBucketCounts.instant), count: `${slaBucketCounts.instant} leads`, color: 'bg-emerald-500' },
+    { label: 'Fast (30s – 2 min)', pct: slaPct(slaBucketCounts.fast), count: `${slaBucketCounts.fast} leads`, color: 'bg-blue-500' },
+    { label: 'Standard (2m – 3 min)', pct: slaPct(slaBucketCounts.standard), count: `${slaBucketCounts.standard} leads`, color: 'bg-amber-500' },
+    { label: 'Delayed (> 3 min)', pct: slaPct(slaBucketCounts.delayed), count: `${slaBucketCounts.delayed} leads`, color: 'bg-rose-500' },
   ];
+  const slaFastOrBetterPct = slaTimedTotal > 0
+    ? Math.round(((slaBucketCounts.instant + slaBucketCounts.fast) / slaTimedTotal) * 100)
+    : null;
 
-  const modelCounts = pipelineData?.model_counts || {};
-  const geminiCount = modelCounts['gemini-2.5-flash'] || modelCounts['gemini-2.0-flash'] || Object.values(modelCounts).reduce((a, b) => a + b, 0);
+  const FEATURE_LABELS = {
+    qualification: 'Inbound Lead Qualification',
+    medpicc: 'MEDDPICC & Deal Scoring',
+    battlecard: 'Competitor Rebuttal Playbooks',
+    battlecard_competitor_id: 'Competitor Identification',
+    meeting_briefing: 'Call Prep Briefings',
+    champion_kit: 'Buying Committee Executive Discovery',
+  };
+  const humanizeFeature = (f) => FEATURE_LABELS[f] || f.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const tokenUsage = [
-    {
-      model: 'Gemini 2.5 Flash',
-      role: 'MEDDPICC & Deal Scoring',
-      tokens: geminiCount > 0 ? `${(geminiCount * 1200).toLocaleString()}` : '0',
-      avgLatency: '1.1s',
-      cost: '$0.00',
-    },
-    {
-      model: 'Gemini 2.5 Flash',
-      role: 'Competitor Rebuttal Playbooks',
-      tokens: 'Cached',
-      avgLatency: '0.8s',
-      cost: '$0.00',
-    },
-    {
-      model: 'Gemini 2.5 Flash',
-      role: 'Buying Committee Executive Discovery',
-      tokens: 'Zero-shot',
-      avgLatency: '0.9s',
-      cost: '$0.00',
-    },
-  ];
+  const tokenUsageRaw = pipelineData?.token_usage ?? [];
+  const tokenUsage = tokenUsageRaw.map((row) => ({
+    model: row.model,
+    role: humanizeFeature(row.feature),
+    tokens: row.total_tokens.toLocaleString(),
+    avgLatency: `${row.avg_latency_seconds}s`,
+    cost: `$${row.estimated_cost_usd.toFixed(row.estimated_cost_usd > 0 ? 4 : 2)}`,
+  }));
+  const totalTokensAll = tokenUsageRaw.reduce((sum, r) => sum + r.total_tokens, 0);
+  const totalCostAll = tokenUsageRaw.reduce((sum, r) => sum + r.estimated_cost_usd, 0);
 
   return (
     <div className="space-y-7 w-full max-w-[1600px] mx-auto px-1 sm:px-2">
@@ -260,7 +264,7 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
               </p>
             </div>
             <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-              100% Ingestion Reliability
+              {totalInbound.toLocaleString()} leads ingested
             </span>
           </div>
 
@@ -289,7 +293,9 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Redis distributed idempotency lock guarantees zero duplicate leads across CRM.</span>
             </span>
-            <span className="font-semibold text-slate-800 shrink-0">0 Duplicates</span>
+            <span className="font-semibold text-slate-800 shrink-0">
+              {duplicatesBlocked != null ? `${duplicatesBlocked} Duplicates Blocked` : 'Not tracked'}
+            </span>
           </div>
         </div>
 
@@ -327,7 +333,11 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
 
           <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>95% of leads are qualified and in rep hands in under 2 minutes.</span>
+            <span>
+              {slaFastOrBetterPct != null
+                ? `${slaFastOrBetterPct}% of leads are qualified and in rep hands in under 2 minutes.`
+                : 'No qualified leads yet to measure SLA.'}
+            </span>
           </div>
         </div>
       </div>
@@ -398,28 +408,34 @@ export default function PipelineAnalytics({ summaryData, currentTenant = 'trifid
                 AI Model & Token Telemetry
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                {geminiCount > 0 ? `${(geminiCount * 1.2).toFixed(1)}k` : '0'} tokens processed on Google Gemini 2.5 Flash
+                {totalTokensAll > 0 ? totalTokensAll.toLocaleString() : '0'} tokens processed across recorded LLM calls
               </p>
             </div>
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
-              $0.00 Total Spend
+              ${totalCostAll.toFixed(2)} Total Spend
             </span>
           </div>
 
           <div className="space-y-3">
-            {tokenUsage.map((item, idx) => (
-              <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1.5">
-                <div className="flex justify-between font-bold text-slate-900">
-                  <span>{item.role}</span>
-                  <span className="text-emerald-700 font-semibold">{item.cost}</span>
-                </div>
-                <div className="flex justify-between text-slate-500 text-[11px]">
-                  <span>Model: <strong className="text-slate-700">{item.model}</strong></span>
-                  <span>Tokens: <strong className="text-slate-700">{item.tokens}</strong></span>
-                  <span>Avg: <strong className="text-slate-700">{item.avgLatency}</strong></span>
-                </div>
+            {tokenUsage.length === 0 ? (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500">
+                No LLM calls recorded yet.
               </div>
-            ))}
+            ) : (
+              tokenUsage.map((item, idx) => (
+                <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex justify-between font-bold text-slate-900">
+                    <span>{item.role}</span>
+                    <span className="text-emerald-700 font-semibold">{item.cost}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500 text-[11px]">
+                    <span>Model: <strong className="text-slate-700">{item.model}</strong></span>
+                    <span>Tokens: <strong className="text-slate-700">{item.tokens}</strong></span>
+                    <span>Avg: <strong className="text-slate-700">{item.avgLatency}</strong></span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">

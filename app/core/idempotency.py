@@ -52,8 +52,26 @@ class IdempotencyManager:
             # Duplicate hit: read cached state
             cached_json = await redis_conn.get(state_key)
             cached_state = json.loads(cached_json) if cached_json else {"status": "processing"}
+            await redis_conn.incr(f"idempotency_duplicates_total:{tenant_id}")
             logger.info("idempotency_duplicate_detected", lock_key=lock_key, cached_state=cached_state)
             return False, cached_state
+        finally:
+            if not self.redis_client:
+                await redis_conn.aclose()
+
+    async def get_duplicate_count(self, tenant_id: str) -> Optional[int]:
+        """Real count of duplicate ingest attempts blocked by the Redis lock, or None if Redis is unreachable."""
+        try:
+            redis_conn = await self._get_redis()
+        except Exception as e:
+            logger.warning("idempotency_duplicate_count_unavailable", error=str(e))
+            return None
+        try:
+            value = await redis_conn.get(f"idempotency_duplicates_total:{tenant_id}")
+            return int(value) if value is not None else 0
+        except Exception as e:
+            logger.warning("idempotency_duplicate_count_unavailable", error=str(e))
+            return None
         finally:
             if not self.redis_client:
                 await redis_conn.aclose()

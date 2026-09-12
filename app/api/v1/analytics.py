@@ -7,6 +7,7 @@ from sqlalchemy import desc, func, select
 
 from app.core.apollo_budget import ApolloBudgetGuard
 from app.core.config import settings
+from app.core.idempotency import IdempotencyManager
 from app.core.logging import get_logger
 from app.db.models import (
     CRMSyncRecord,
@@ -16,6 +17,7 @@ from app.db.models import (
     ExecutionAuditLog,
     LeadEvent,
     LLMQualification,
+    LLMUsageLog,
     OutboundProspect,
     SLAEscalation,
     Tenant,
@@ -226,6 +228,63 @@ async def get_pipeline_analytics(
         )
         model_counts = {row[0]: row[1] for row in model_res.all()}
 
+        # Speed-to-lead: real deltas between webhook receipt and qualification completion
+        sla_buckets = {"instant": 0, "fast": 0, "standard": 0, "delayed": 0}
+        if tenant_uuid:
+            timing_res = await session.execute(
+                select(LeadEvent.created_at, func.min(LLMQualification.created_at))
+                .join(LLMQualification, LLMQualification.lead_source_id == LeadEvent.id)
+                .where(LeadEvent.tenant_id == tenant_uuid, LLMQualification.lead_source_type == "inbound")
+                .group_by(LeadEvent.id, LeadEvent.created_at)
+            )
+            for received_at, qualified_at in timing_res.all():
+                if received_at is None or qualified_at is None:
+                    continue
+                seconds = (qualified_at - received_at).total_seconds()
+                if seconds < 30:
+                    sla_buckets["instant"] += 1
+                elif seconds < 120:
+                    sla_buckets["fast"] += 1
+                elif seconds <= 180:
+                    sla_buckets["standard"] += 1
+                else:
+                    sla_buckets["delayed"] += 1
+        sla_timed_total = sum(sla_buckets.values())
+
+        # Duplicate prevention: real counter incremented by the Redis idempotency lock, not a fabricated rate
+        duplicates_blocked = await IdempotencyManager().get_duplicate_count(tenant_id)
+        total_attempts = total_inbound + (duplicates_blocked or 0)
+        duplicate_prevention_rate = (
+            round((duplicates_blocked / total_attempts) * 100, 1)
+            if duplicates_blocked is not None and total_attempts > 0
+            else None
+        )
+
+        # Token telemetry per feature, from actual LLM call logs (app/core/llm_router.py._log_usage)
+        usage_res = await session.execute(
+            select(
+                LLMUsageLog.feature,
+                LLMUsageLog.provider,
+                LLMUsageLog.model,
+                func.count(LLMUsageLog.id),
+                func.sum(LLMUsageLog.total_tokens),
+                func.avg(LLMUsageLog.latency_seconds),
+                func.sum(LLMUsageLog.estimated_cost_usd),
+            ).group_by(LLMUsageLog.feature, LLMUsageLog.provider, LLMUsageLog.model)
+        )
+        token_usage = [
+            {
+                "feature": row[0],
+                "provider": row[1],
+                "model": row[2],
+                "calls": row[3],
+                "total_tokens": int(row[4] or 0),
+                "avg_latency_seconds": round(float(row[5]), 2) if row[5] is not None else 0.0,
+                "estimated_cost_usd": round(float(row[6] or 0.0), 4),
+            }
+            for row in usage_res.all()
+        ]
+
         return {
             "tenant_id": tenant_id,
             "funnel": {
@@ -236,6 +295,11 @@ async def get_pipeline_analytics(
             },
             "provider_counts": provider_counts,
             "model_counts": model_counts,
+            "sla_buckets": sla_buckets,
+            "sla_timed_total": sla_timed_total,
+            "duplicates_blocked": duplicates_blocked,
+            "duplicate_prevention_rate": duplicate_prevention_rate,
+            "token_usage": token_usage,
         }
 
 
