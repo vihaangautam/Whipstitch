@@ -1,8 +1,8 @@
 # Whipstitch — Master Executive Product Guide & Architecture Manual
 
 > **Document Classification:** Single Source of Truth (SSOT) — Master Product & Architecture Manual  
-> **Release Version:** Pre-Revenue Working Demo (Single Default Tenant, Free-Tier Infra)  
-> **Last Updated:** September 12, 2026 — reflects the codebase through commit `058defa`  
+> **Release Version:** Pre-Revenue Working Demo (Real Multi-Tenant Isolation, Free-Tier Infra)  
+> **Last Updated:** September 13, 2026 — reflects the codebase through commit `c1079b3`  
 > **Target Audience:** The founder (as a live design doc), and anyone evaluating this as a portfolio/technical artifact  
 > **Core Stack:** FastAPI (Python 3.12) · Temporal.io (optional, falls back to in-process execution) · PostgreSQL 16 (Supabase) / SQLite local fallback · Redis (Upstash, optional) · React 18 · Vite 6 · Tailwind CSS  
 > **What this document is not:** a claim of production traffic, paying customers, or compliance certification. Section 0 states plainly what is real, what is mocked, and what is missing before anything else.
@@ -11,27 +11,32 @@
 
 ## 0. Honest Status Snapshot — Read This First
 
-This section exists because the rest of the document was originally written as aspirational product marketing, with invented metrics (`1,248 leads`, `98.4% SLA`, `94% match rate`) presented as if they were live production numbers. They were never real. This section replaces that framing with what's actually true as of the latest push.
+This section exists because the rest of the document was originally written as aspirational product marketing, with invented metrics (`1,248 leads`, `98.4% SLA`, `94% match rate`) presented as if they were live production numbers. They were never real. This section replaces that framing with what's actually true as of the latest push, across two work sessions: Sept 12 (BYOK/analytics security and honesty pass) and Sept 13 (multi-tenancy, CI, load testing, observability, LLM eval harness).
 
 **What's real and working:**
 - The core pipeline logic: inbound webhook ingestion with Redis idempotency locks, a 5-tier enrichment waterfall with real fallback code paths, MEDDPICC scoring with hard-cap rules, structured LLM output via Pydantic schemas, and a real Temporal-or-in-process execution fallback.
-- Pipeline Analytics (`/analytics` view) — as of this push, every number on that page is computed from real Postgres/Redis data (funnel counts, SLA latency buckets from real timestamps, LLM token/cost telemetry from `llm_usage_logs`, a real Redis-backed duplicate counter). It used to be hardcoded; it isn't anymore.
-- BYOK key storage — AES-256 Fernet encryption at rest, and as of this push every BYOK endpoint requires the same `X-API-Key` auth every other route uses (it didn't before — see 3.9).
-- 100 backend unit tests passing; both frontend and backend build clean.
+- **Real tenant isolation, enforced server-side.** Every route derives the caller's workspace from their authenticated session (JWT) or a per-tenant webhook key — never from a client-supplied string. Regression-tested with 11 real cross-tenant breach attempts (`tests/unit/test_tenant_isolation.py`) that fail against the pre-fix code and pass against the current code.
+- **CI on every push** (`.github/workflows/ci.yml`): the backend test suite against both the SQLite-degraded path and a real Postgres 16 + Redis 7, plus a migrations-apply job and the frontend build. No CI existed before Sept 13.
+- **Real, measured load-test numbers** in `markdownfiles/BENCHMARK.md` — k6 against a real local stack, not hand-typed. The first real run found ingestion took 6.4s under load (Temporal/Redis connect timeouts with no bound); fixed, now ~550ms without Temporal running, ~250ms median with it running for real.
+- **Request-scoped correlation IDs and Prometheus metrics** (`GET /metrics`) — every HTTP request carries an `X-Request-ID` through every log line it produces; request count/latency tracked by route pattern.
+- **An LLM eval harness** (`tests/evals/`, run manually — real API calls, not part of CI) that checks the MEDDPICC scoring rubric's actual claims against 5 real transcripts: the Rule 6.2/6.7 hard caps, Hinglish verbatim preservation, and an anti-hallucination check on every "direct" evidence quote. Running it once found that real MEDDPICC diagnosis had been silently degrading to a hardcoded mock scorecard for every deal, regardless of transcript — see below.
+- Pipeline Analytics (`/analytics` view) — every number is computed from real Postgres/Redis data (funnel counts, SLA latency buckets from real timestamps, LLM token/cost telemetry from `llm_usage_logs`, a real Redis-backed duplicate counter).
+- BYOK key storage — AES-256 Fernet encryption at rest, real per-tenant auth on every endpoint, a working ingest-key rotation flow in the UI.
+- 125 backend unit tests passing (100 → 118 → 125 across the two sessions); both frontend and backend build clean.
+
+**The single most important finding, so it doesn't get buried:** the eval harness's first real run discovered that **real deal diagnostics were never actually scored by an LLM.** `app/core/llm_router.py`'s Gemini call used a 30s timeout against a reasoning-variant model that regularly spent 6,600+ tokens "thinking" before writing output on the MEDDPICC schema, timing out silently; Groq's call had no `max_tokens` set and truncated mid-response, failing schema validation. Both fell through to `generate_mock_medpicc()` — a hardcoded scorecard, identical regardless of what the transcript said. Every deal diagnosis this product had ever produced against a real user or demo was that same static scorecard. Fixed (disable Gemini's thinking budget, set explicit `max_tokens` on Groq/OpenAI); verified with all 5 golden cases now passing against a real model.
 
 **What's mocked or stubbed by design:**
 - Apollo.io is mocked by default (`MOCK_APOLLO=true`) because the free tier is a hard 50 credits/month — this is a deliberate, documented constraint, not a bug.
 - The "6-Signal Account Radar," "7-Filter Champion Kit," and competitor battlecards are real LLM-generated content, but they've never been validated against an actual sales team's real accounts — they're synthesized from whatever public signal the enrichment waterfall can find, which for most companies is thin.
 
-**What's missing for this to be a real SaaS, not a demo:**
-- **No multi-tenant self-serve product.** There is one default tenant (`trifid_media`) baked into nearly every route's default parameter. Onboarding a second real customer means code changes, not a signup form.
+**What's still missing for this to be a real SaaS, not a demo:**
+- **No self-serve signup UI, no billing, no plans.** Registration (`/v1/auth/register`) works and correctly provisions a real isolated tenant — that part is real now — but there's no pricing, payment, or usage-metering layer on top of it.
 - **No URL routing.** The entire app is one page with React state (`currentView`) switching between views — there is no `/dashboard`, no `/inbound`, no shareable link, no browser back button, and a page refresh drops you back to the start. Every "Route: `/xyz`" in Section 2 below describes an in-app view, not an actual URL.
-- **No billing, no plans, no usage metering tied to a customer identity.**
 - **Runs on free-tier infra that sleeps.** Render's free plan spins the service down after inactivity; a cron-job.org keep-alive ping was added specifically to fight this (see `/ping` route), which is itself a sign this isn't provisioned like a real paying product yet.
-- **Security posture is young.** In this same push, a full audit of the BYOK feature found and fixed: zero authentication on every key-management endpoint, API keys sent as plaintext URL query parameters, a silent data-loss bug when saving a key for an unseen tenant, and a "Test Ping" button that tested a fake placeholder string instead of the real stored key. These were real, exploitable bugs that existed until today — the kind of thing that should make anyone cautious about trusting other unaudited corners of the app.
-- **No real customer has ever used this.** Every case study, company name, and dollar figure in Section 7 is an illustrative persona written to pressure-test the design, not a testimonial.
+- **No real customer has ever used this.** Every case study, company name, and dollar figure in Section 7 is an illustrative persona written to pressure-test the design, not a testimonial. The 6-Signal Radar and Champion Kit's real-world usefulness is still unvalidated — see Section 9.
 
-**Bottom line:** this is a well-built technical prototype that demonstrates real distributed-systems and AI-orchestration craft. It is not, today, something a stranger could sign up for and trust with their sales pipeline. See Section 8 for current operational status and Section 9 for what closing that gap actually requires.
+**Bottom line:** this went from "well-built prototype with an undiscovered systemic auth hole and a silently-broken core AI feature" to "well-built prototype with real tenant isolation, real CI, real measured performance, and a verified-working AI diagnosis path" in the space of two sessions. It is still not, today, something a stranger could sign up for and pay for — there's no billing and no proven real-world usage of the AI outputs. See Section 8 for current operational status and Section 9 for what's left.
 
 ---
 
@@ -75,6 +80,7 @@ This section exists because the rest of the document was originally written as a
    - [3.7 AES-256 Fernet Cryptographic Vault & In-Memory Decryption](#37-aes-256-fernet-cryptographic-vault--in-memory-decryption)
    - [3.8 User Authentication & Single Unified Profile Architecture (`Sales Representative`)](#38-user-authentication--single-unified-profile-architecture-sales-representative)
    - [3.9 Recent Hardening — What Was Actually Fixed on Sept 12, 2026](#39-recent-hardening--what-was-actually-fixed-on-sept-12-2026)
+   - [3.10 Recent Hardening — Sept 13, 2026 (Multi-Tenancy, CI, Load Testing, Observability, Evals)](#310-recent-hardening--sept-13-2026-multi-tenancy-ci-load-testing-observability-evals)
 4. [AI Logic, Prompt Engineering & Mathematical Evaluation Rubrics](#4-ai-logic-prompt-engineering--mathematical-evaluation-rubrics)
    - [4.1 Inbound Qualification Prompt & Pydantic Validation](#41-inbound-qualification-prompt--pydantic-validation)
    - [4.2 Evidence-Based MEDDPICC 8-Box Diagnostic Engine](#42-evidence-based-medpicc-8-box-diagnostic-engine)
@@ -83,6 +89,7 @@ This section exists because the rest of the document was originally written as a
    - [4.5 5-Stage Blackboard Competitor Battlecard Reasoning Prompts](#45-5-stage-blackboard-competitor-battlecard-reasoning-prompts)
    - [4.6 7-Filter Champion Selling Kit Synthesis Prompts](#46-7-filter-champion-selling-kit-synthesis-prompts)
    - [4.7 6-Signal Autonomous Account Radar Classification & Viability Boosts](#47-6-signal-autonomous-account-radar-classification--viability-boosts)
+   - [4.8 LLM Eval Harness — Checking the Rubric Against a Real Model](#48-llm-eval-harness--checking-the-rubric-against-a-real-model)
 5. [Data Models, Database Schema & Relational Entity Graph](#5-data-models-database-schema--relational-entity-graph)
 6. [Complete REST API Route Catalog](#6-complete-rest-api-route-catalog)
 7. [Real-World Business Use Cases & Step-by-Step User Journeys](#7-real-world-business-use-cases--step-by-step-user-journeys)
@@ -586,6 +593,21 @@ All five were confirmed by directly exercising the running application (`TestCli
 
 ---
 
+### 3.10 Recent Hardening — Sept 13, 2026 (Multi-Tenancy, CI, Load Testing, Observability, Evals)
+
+A second pass, run as five phases end to end, each committed and tested before moving to the next.
+
+1. **Systemic tenant isolation gap, not just the BYOK one.** The Sept 12 fix closed one router; the same pattern existed in 10 more routes across `leads.py`, `deals.py`, `outbound.py`, `meetings.py`, `battlecards.py`, `committee.py`, `signals.py`, and `tenant.py` — all defaulted `tenant_id` to `"trifid_media"` and trusted it from the client, and several (`deals.py` most seriously — call transcripts and buyer evidence) had no authentication at all. Fixed with a `resolve_tenant` dependency: JWT sessions resolve to the user's own workspace, the shared app-wide key resolves only to the default one, and object lookups (`Deal.id == ...`) are now scoped by tenant, not just UUID. Webhook ingestion moved to per-tenant keys (`tenants.ingest_key_hash`) since a machine caller has no session to derive a tenant from. Regression-proven with 11 real breach attempts in `tests/unit/test_tenant_isolation.py` — confirmed to fail against the pre-fix code by literally reverting `app/` and re-running them.
+2. **No CI existed.** Added `.github/workflows/ci.yml`: backend tests against the degraded (no Postgres/Redis) path, backend tests against a real Postgres 16 + Redis 7 with migrations applied first, and the frontend build. Running the suite against real Postgres for the first time surfaced 24 failures SQLite had been silently hiding (asyncpg event-loop binding, the sync TestClient colliding with the async engine's pool, foreign-key ordering in test fixtures) — all fixed.
+3. **`BENCHMARK.md` was fabricated and its own load-test script had never been run.** Ran it for real (k6 against a live local stack) and found ingestion took up to 6.4s under load — `Client.connect()` to Temporal and `Redis.from_url()` both had no connect-specific timeout, so an unreachable host (the actual state of every deployment of this app) cost seconds per request before falling back. Fixed with a bounded `app/core/temporal_client.py` helper and `socket_connect_timeout` on every Redis client. Also found `docker-compose.yml`'s Temporal service had an invalid `DB` driver value (`postgresql` instead of `postgres12`) — it could never have started. Verified the fix with a real Postgres + Redis + Temporal + worker stack, including killing the worker mid-load and confirming zero lost or duplicated work on restart.
+4. **Added request-scoped observability.** Every HTTP request now gets an `X-Request-ID` bound through structlog's contextvars and a `GET /metrics` Prometheus endpoint (request count and latency by route pattern, not raw path — avoids per-UUID cardinality blowup).
+5. **Built an LLM eval harness and it immediately found the biggest bug of either session.** `tests/evals/` checks the MEDDPICC rubric's actual claims (hard caps, Hinglish verbatim preservation, no fabricated evidence quotes) against 5 real hand-written transcripts, run against a real model — not the deterministic mock, which can't exercise any of this since it ignores its input entirely. First run: every case fell through to the mock. Root cause: Gemini's reasoning variant blew a 30s timeout on this schema (6,600+ internal "thinking" tokens), and Groq had no `max_tokens` set and truncated mid-response. **This means every real MEDDPICC deal diagnosis this product has ever produced was that same hardcoded scorecard, regardless of transcript.** Fixed (disable Gemini's thinking budget, set explicit `max_tokens`); all 5 golden cases now pass against a real model.
+6. **Lead detail API fabricated data for unprocessed leads**, the same pattern as items 1 and 3 from Sept 12: a lead with no real enrichment/qualification yet was shown a fake `88/100` score, `"apollo"` provider, and an invented "Fintech & Payments, 220 employees" profile. The frontend compounded it — the outreach-draft section never read the real API response at all, always rendering the same three hardcoded sentences. Fixed: both now render an honest empty state ("Not yet enriched.", "Not yet qualified") instead of fabricated data, verified live by ingesting a real lead with no worker running and inspecting its detail drawer.
+
+Every one of these six was found by actually running the code — a real cross-tenant request, a real load test, a real LLM call — not by reading it and reasoning about what it probably does. That is the pattern worth repeating for whatever gets built next.
+
+---
+
 ## 4. AI Logic, Prompt Engineering & Mathematical Evaluation Rubrics
 
 Whipstitch replaces subjective sales opinions with strict mathematical qualification rubrics, verbatim evidence extraction, and tailored prompt architectures.
@@ -678,6 +700,17 @@ In `app/services/signals/autonomous_signal_agent.py`, incoming account signals a
 
 ---
 
+### 4.8 LLM Eval Harness — Checking the Rubric Against a Real Model
+
+Every rule above (the 6.2/6.7 hard caps, the Hinglish preservation rule) is a claim about how the LLM behaves — not something a unit test with a mocked response can verify, since a mock only proves the Python around the LLM call handles a given response correctly. `tests/evals/` checks the claim itself, against a real model:
+
+- **5 hand-written golden transcripts** (`tests/evals/golden_medpicc_cases.py`), each paired with a checkable invariant: a founder who verbally commits budget directly should not trigger the Economic Buyer cap; a manager with no founder access should; a champion with zero committee access should trigger the Champion cap even when the Economic Buyer is separately verified; a Hinglish commitment must appear verbatim, not translated; a vague, low-urgency call should score low.
+- **A universal anti-hallucination check** on every case: any evidence quote marked `evidence_basis="direct"` is fuzzy-matched (via `difflib`) against the source transcript — a "direct" quote with no resemblance to anything actually said is flagged as fabricated, regardless of which golden case it came from.
+- **Deliberately not part of CI or `tests/unit`.** Real API calls, real tokens, real wall-clock time (~40s for 5 cases). Run on demand: `python -m pytest tests/evals -v`. Skips cleanly (not a failure) when no real `GEMINI_API_KEY`/`GROQ_API_KEY`/`OPENAI_API_KEY` is configured, since the deterministic mock fallback returns the same fixed scorecard regardless of input and can't exercise any of this.
+- **What running it once actually found**, Sept 13, 2026: every golden case fell through to the mock. Real diagnosis had never been happening — see 3.10 for the root cause and fix. This is the harness doing exactly its job: not validating a healthy system, but catching a completely broken one that every other test in the suite had missed because they all mock the LLM call.
+
+---
+
 ## 5. Data Models, Database Schema & Relational Entity Graph
 
 Whipstitch implements a fully relational, ACID-compliant database schema with foreign key relationships, UUID primary keys, and JSONB telemetry storage:
@@ -723,7 +756,7 @@ Whipstitch implements a fully relational, ACID-compliant database schema with fo
 ```
 
 ### Table Dictionary (verified against `app/db/models.py` as of this push):
-1. **`tenants`**: Multi-tenant organizations (`id`, `tenant_key`, `name`, `config` JSONB, `is_active`, `created_at`).
+1. **`tenants`**: Multi-tenant organizations (`id`, `tenant_key`, `name`, `config` JSONB, `is_active`, `ingest_key_hash` — SHA-256 of the tenant's webhook key, added Sept 13, 2026 so machine callers no longer authenticate as "whichever tenant the request body names" — `created_at`).
 2. **`users`**: Auth profiles (`id`, `tenant_id`, `email`, `hashed_password`, `full_name`, `role`, `is_active`, `created_at`, `updated_at`).
 3. **`lead_events`**: Inbound webhook leads (`id`, `tenant_id`, `idempotency_key`, `source`, `email`, `company_name`, `raw_payload` JSONB, `status`, `created_at`).
 4. **`enrichment_results`**: One row per waterfall enrichment attempt (`id`, `lead_source_type`, `lead_source_id`, `provider_used`, `raw_response` JSONB, `fallback_triggered`, `created_at`).
@@ -789,13 +822,15 @@ The table below was regenerated by grepping every `@router.get/post/put/delete` 
 | `GET` | `/v1/settings/api-keys` | Lists masked keys for a tenant. Same auth fix applies. |
 | `DELETE` | `/v1/settings/api-keys/{provider}` | Revokes a key. Same auth fix applies. |
 | `POST` | `/v1/settings/api-keys/test` | Tests a freshly-typed key. Body-based as of this push, was a URL query param before (leaked into logs). |
-| `POST` | `/v1/settings/api-keys/{provider}/test-stored` | **New this push.** Decrypts and tests the already-saved key server-side, so "Test Ping" reflects reality instead of a placeholder string. |
-| `GET` | `/v1/tenants/{tenant_id}/config` | Reads ICP/scoring/SLA config. |
-| `POST` | `/v1/tenants/{tenant_id}/config` | Updates ICP/scoring/SLA config. |
+| `POST` | `/v1/settings/api-keys/{provider}/test-stored` | Decrypts and tests the already-saved key server-side, so "Test Ping" reflects reality instead of a placeholder string. |
+| `POST` | `/v1/settings/ingest-key/rotate` | **New Sept 13, 2026.** Issues a fresh per-tenant webhook ingest key, shown once (only its SHA-256 hash is stored). Required once webhook auth stopped trusting a client-supplied `tenant_id`. |
+| `GET` | `/v1/tenants/{tenant_id}/config` | Reads ICP/scoring/SLA config. Tenant comes from the session; the `{tenant_id}` in the path is checked against it, not trusted on its own (Sept 13). |
+| `POST` | `/v1/tenants/{tenant_id}/config` | Updates ICP/scoring/SLA config. Same check applies. |
 | `GET` | `/v1/analytics/summary` | KPI summary — real DB aggregates. |
 | `GET` | `/v1/analytics/leads-over-time` | Daily time series for the velocity chart. |
-| `GET` | `/v1/analytics/pipeline` | Funnel, provider/model breakdowns, SLA buckets, duplicate count, token telemetry — the endpoint that powers Pipeline Analytics, fully real as of this push. |
+| `GET` | `/v1/analytics/pipeline` | Funnel, provider/model breakdowns, SLA buckets, duplicate count, token telemetry — the endpoint that powers Pipeline Analytics, fully real. |
 | `GET` | `/v1/analytics/audit-logs` | Recent workflow/activity execution log entries. |
+| `GET` | `/metrics` | **New Sept 13, 2026.** Prometheus text format — request count and latency histograms by method/route-pattern/status. No auth (standard for a scrape endpoint; not tenant data). |
 
 ---
 
@@ -915,33 +950,39 @@ The table below was regenerated by grepping every `@router.get/post/put/delete` 
 
 This section states what was actually run and observed, on the date stated, with no rounding up. It replaces an earlier version of this section that referenced a stale test count and a browser-recording artifact from an unrelated local tool path that no longer applies to this repo.
 
-### 8.1 Automated Test Suite — verified Sept 12, 2026
+### 8.1 Automated Test Suite — verified Sept 13, 2026
 ```bash
 python -m pytest tests/unit -q
-============================== 100 passed, 7 warnings in 12.39s ==============================
+============================== 125 passed, 4 warnings in ~13s ==============================
 ```
-All 100 unit tests pass, including the BYOK vault crypto round-trip tests. This is unit-level coverage with mocked dependencies — there is no `tests/integration` suite currently exercised against a live Postgres/Redis/Temporal stack (`docker-compose.test.yml` exists but wasn't run as part of verifying this document).
+125 unit tests pass (100 on Sept 12 → 118 after the tenant-isolation and observability work → 125 after the eval-driven LLM fixes). Verified in three configurations, not just one: the SQLite-degraded path, a real Postgres 16, and a real Postgres 16 + Redis 7 together — running against real Postgres for the first time surfaced 24 failures the SQLite path had been silently hiding (see 3.10). `tests/evals/` (5 LLM eval cases against a real model) is separate and intentionally not part of this count or CI — see 4.7.
 
-### 8.2 Frontend Production Build — verified Sept 12, 2026
+### 8.2 Continuous Integration — added Sept 13, 2026
+`.github/workflows/ci.yml` runs on every push: backend tests against the degraded path, backend tests against real Postgres + Redis with migrations applied first, and the frontend build. Did not exist before this date — 100+ passing tests meant nothing if nobody ran them before merging.
+
+### 8.3 Frontend Production Build — verified Sept 13, 2026
 ```bash
 npm run build
 ✓ built in ~6s
 dist/index.html                   1.72 kB
-dist/assets/index-*.css          57.25 kB
-dist/assets/index-*.js          735.20 kB   (216.85 kB gzip)
+dist/assets/index-*.css          57.29 kB
+dist/assets/index-*.js          737.96 kB   (217.38 kB gzip)
 ```
 Builds clean. Vite flags the JS bundle as larger than its 500 kB warning threshold — not broken, but worth code-splitting before this ships to real users on slower connections.
 
-### 8.3 Live Endpoint Verification — verified Sept 12, 2026
+### 8.4 Load Testing — real numbers, verified Sept 13, 2026
+See `markdownfiles/BENCHMARK.md` in full. Headline: `POST /v1/events/ingest` at 1,000 req/min for 3 minutes, 0% errors, p95 546ms without Temporal running / p95 1.16s with a real Temporal + worker actually dispatching sagas. The first real run measured p95 at 6.4s before the Temporal/Redis connect-timeout bug (3.10) was found and fixed.
+
+### 8.5 Live Endpoint Verification — verified Sept 12, 2026
 The deployed instance at `whipstitch.onrender.com` was queried directly:
 - `GET /ping` → `200 OK`, 2-byte body, confirming the app itself is healthy.
 - The keep-alive cron job on cron-job.org reports "Failed (output too large)" on every run anyway — not because the app is broken, but because Render's Cloudflare edge serves the response as `Transfer-Encoding: chunked` with no `Content-Length`, which appears to trip cron-job.org's size guard regardless of actual body size. The HTTP request still reaches the origin and still resets Render's spin-down timer; only cron-job.org's own dashboard reporting is wrong.
 
-### 8.4 Deployment Reality
-- Single Render free-tier web service, Supabase Postgres, Upstash Redis (optional — the app degrades to in-process/in-memory behavior without it, per `app/db/session.py`'s `ResilientSessionFactory` and the in-memory idempotency fallback noted in `app/api/health.py`).
+### 8.6 Deployment Reality
+- Single Render free-tier web service, Supabase Postgres, Upstash Redis (optional — the app degrades to in-process/in-memory behavior without it, per `app/db/session.py`'s `ResilientSessionFactory` and the process-local idempotency fallback in `app/core/idempotency.py`).
 - `MOCK_APOLLO=true` by default; real Apollo credits are never spent outside a deliberate demo-recording session.
-- One tenant (`trifid_media`) exists in practice. Every route's `tenant_id` defaults to it. There is no onboarding flow that provisions a second tenant end-to-end without a developer touching code or the database directly.
-- No CI pipeline currently runs these tests automatically on push — they were run manually to produce the numbers above.
+- Real multi-tenancy exists in the code (Sept 13) — registration provisions an isolated tenant + user — but only one tenant (`trifid_media`) has ever actually been used in practice. There's still no self-serve signup UI or billing on top of the working registration API.
+- The deployed Render instance has not yet been redeployed with the Sept 13 changes as of this writing — everything in 3.10 and 8.1–8.4 is verified locally against real Postgres/Redis/Temporal in Docker, not yet against the live `whipstitch.onrender.com` URL.
 
 ---
 
@@ -949,18 +990,19 @@ The deployed instance at `whipstitch.onrender.com` was queried directly:
 
 The previous version of this roadmap (WhatsApp voice agents, global customs trade radar, autonomous contract negotiation) described a Series-A company's feature backlog, not the next steps for a single-tenant demo with no customers. It's replaced below with a roadmap ordered by what actually blocks the next milestone, not by what sounds impressive.
 
-### Phase 1 — Make it safe to show a real stranger (before anything else)
-This is the gap between "portfolio demo" and "thing I'd let someone sign up for."
-- **Real multi-tenancy.** Remove the `tenant_id: str = "trifid_media"` default scattered across every route; require it to come from the authenticated user's session, not a client-supplied string anyone can change to read another tenant's data (the BYOK bug fixed this push is exactly this class of problem — it's worth auditing every other router for the same pattern).
-- **A real signup flow** that provisions a tenant, seeds sane defaults, and doesn't require touching the database by hand.
-- **URL routing** (`react-router` or equivalent) so views are shareable, bookmarkable, and survive a refresh.
-- **CI on push** — the 100 passing tests mean nothing if nobody runs them before merging.
-- **A second, independent security pass** on every router, given that the BYOK auth gap sat there undetected. It's the kind of bug that's usually not alone.
+### Phase 1 — Make it safe to show a real stranger (before anything else) — done, Sept 13, 2026
+This was the gap between "portfolio demo" and "thing I'd let someone sign up for." All five items from the prior version of this roadmap are now shipped, tested, and documented in 3.10:
+- ~~Real multi-tenancy~~ — done. `resolve_tenant` derives the workspace from the session, never the client; 11 real breach-attempt tests guard the regression.
+- ~~A real signup flow~~ — done at the API level. `/v1/auth/register` provisions an isolated tenant + user correctly. (Still no self-serve UI or billing on top of it — see Phase 2.)
+- ~~CI on push~~ — done. `.github/workflows/ci.yml`, three jobs, real Postgres + Redis.
+- ~~A second, independent security pass~~ — done, and it found what it was looking for: the same client-trusted-tenant_id pattern in 10 more routes, several with no auth at all.
+- **Still open: URL routing.** `react-router` (or equivalent) so views are shareable, bookmarkable, and survive a refresh. Lower risk than the security items, so it was deliberately deferred — genuinely just not done yet.
 
 ### Phase 2 — Prove it works on one real account
 - Get one real design partner (even the founder's own outbound motion) running through the full flow with real Apollo credits, real HubSpot sync, real call transcripts — not seeded/mock data.
 - Instrument what actually happens when the enrichment waterfall's later tiers (Crawl4AI, LLM synthesis) fire for real, since those are the ones no test currently exercises against live websites.
-- Decide, from real usage, whether the 6-Signal Radar and 7-Filter Champion Kit produce outreach a rep would actually send, or generic AI-shaped filler — this can't be answered from code review.
+- **Partially answered already, by accident:** the eval harness (3.10, item 5) proved MEDDPICC diagnosis was never actually running against a real model until this session — a stronger and more useful finding than "run it and see," since it's a concrete, fixed bug rather than an open question. The same question is still fully open for the **6-Signal Radar and 7-Filter Champion Kit**: do they produce outreach a rep would actually send, or generic AI-shaped filler? That still can't be answered from code review, and unlike MEDDPICC, nothing has verified those two features' LLM calls are even succeeding end-to-end against a real model — the eval-harness pattern from `tests/evals/test_medpicc_eval.py` is the template to extend to them next.
+- Self-serve signup UI and a billing layer on top of the now-working registration API — the API-level gap is closed, the product-level gap (a human who isn't a developer being able to sign up) is not.
 
 ### Phase 3 — Only after 1 and 2 are true
 The original roadmap's ideas aren't bad, they're just premature. In rough order of plausibility once there's a real usage base to justify them:
@@ -974,18 +1016,18 @@ The original roadmap's ideas aren't bad, they're just premature. In rough order 
 ## 10. Conclusion: Market Fit & Honest Recommendation
 
 ### What this actually is
-A well-engineered technical prototype of a revenue-intelligence platform. The distributed-systems work is real: Temporal sagas with a genuine in-process fallback, a resilient Postgres/SQLite database layer, a multi-LLM cascade with cost-aware BYOK routing, Redis-backed idempotency and rate limiting, and (as of this push) analytics that reflect actual data instead of invented numbers. That's a legitimately strong demonstration of backend engineering judgment — the kind of thing worth showing an engineering interviewer or a technical co-founder.
+A well-engineered technical prototype of a revenue-intelligence platform, and — after two sessions of actually running the code instead of reading it — a demonstrably more honest one. The distributed-systems work is real: Temporal sagas with a genuine in-process fallback (now with a bounded connect timeout instead of a 6.4s stall), a resilient Postgres/SQLite database layer, a multi-LLM cascade with cost-aware BYOK routing and enforced tenant isolation, Redis-backed idempotency and rate limiting, real CI, real load-test numbers, and an eval harness that caught the single largest bug either session found. That combination — not just building the thing, but building the harness that proves it works and then acting on what it finds — is a stronger demonstration of backend engineering judgment than the architecture alone.
 
 ### What it is not, yet
-A SaaS a stranger could find, sign up for, and trust. There's no self-serve onboarding, no billing, no URL routing, no proven multi-tenant isolation, and — until today — an unauthenticated endpoint that let anyone delete anyone else's API keys. Zero real customers have ever used it. Every dollar figure, percentage, and customer name in Sections 1 and 7 is illustrative, not measured.
+A SaaS a stranger could find, sign up for, and pay for. Registration now correctly provisions an isolated tenant — that part is real — but there's still no self-serve UI polish, no billing, and no URL routing. Zero real customers have ever used it, and the 6-Signal Radar / Champion Kit's real-world usefulness is exactly as unvalidated as it was before (their MEDDPICC sibling's bug is fixed; theirs hasn't even been checked). Every dollar figure, percentage, and customer name in Sections 1 and 7 is illustrative, not measured.
 
 ### Where it could plausibly fit in the market
 - **Not a Gong/Clari/ZoomInfo competitor today.** Those companies win on breadth of integrations, enterprise trust (SOC2, SSO, uptime SLAs), and sales motion — none of which Whipstitch has, and matching them is a multi-year, well-funded effort.
-- **The more honest wedge is the bottom of the market Gong/Clari ignore**: solo consultants and 2–10 person agencies (the exact personas in Section 7's case studies) who currently use nothing, or a spreadsheet, because $15–50k/year tools are absurd at their scale. A free-compute, BYOK, single-operator tool that does inbound triage + deal-health diagnosis + call prep is a real gap — *if* it can survive one real user's first week without the kind of bug this session found.
-- **India-specific product decisions (Hinglish transcript handling, INR formatting, founder-led-SMB buyer tiers) are a genuine, underserved angle** — most Western sales tools don't bother with this, and it's a legitimate differentiator if the target market really is Indian agencies/SMBs rather than global enterprise.
+- **The more honest wedge is the bottom of the market Gong/Clari ignore**: solo consultants and 2–10 person agencies (the exact personas in Section 7's case studies) who currently use nothing, or a spreadsheet, because $15–50k/year tools are absurd at their scale. A free-compute, BYOK, single-operator tool that does inbound triage + deal-health diagnosis + call prep is a real gap — and as of this session, the deal-health diagnosis part is now verified to actually work against a real model, which it wasn't before.
+- **India-specific product decisions (Hinglish transcript handling, INR formatting, founder-led-SMB buyer tiers) are a genuine, underserved angle** — most Western sales tools don't bother with this, and it's a legitimate differentiator if the target market really is Indian agencies/SMBs rather than global enterprise. The eval harness's Hinglish-preservation case is the first real evidence this claim holds up against an actual model, not just the prompt's wording.
 
 ### Honest recommendation
-Don't scale the feature list further. Everything in Phase 3 of the roadmap above should stay parked. The single highest-leverage next move is Phase 1: get this safe and coherent enough that one real, non-technical stranger could use it unsupervised for a week without hitting a wall or a security hole — then decide, from what actually happens, whether Phase 2 is worth pursuing at all.
+Phase 1 (safety) is done — don't re-litigate it, but do extend the same discipline (write the test that can actually catch the bug, then run it) to the two features that haven't gotten it yet: the 6-Signal Radar and Champion Kit, using `tests/evals/test_medpicc_eval.py` as the template. That, plus URL routing, is the realistic Phase 2. Everything in Phase 3 of the roadmap above should stay parked until a real user — even an internal one — has run the full flow end to end.
 
 ---
 *End of Whipstitch Master Executive Product Guide.*
