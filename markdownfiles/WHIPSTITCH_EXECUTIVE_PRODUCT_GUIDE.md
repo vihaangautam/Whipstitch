@@ -1,10 +1,37 @@
 # Whipstitch — Master Executive Product Guide & Architecture Manual
 
 > **Document Classification:** Single Source of Truth (SSOT) — Master Product & Architecture Manual  
-> **Release Version:** 1.0.0-Enterprise (Ground 0 Production Verified)  
-> **Last Updated:** September 2026  
-> **Target Audience:** Account Executives (AEs), Sales Development Reps (SDRs), Agency Founders, RevOps Leaders, System Architects, Full-Stack Engineers  
-> **Core Stack:** FastAPI (Python 3.12) · Temporal.io · PostgreSQL 16 / SQLite (`whipstitch_local.db`) · Redis 7.2 · React 18 · Vite 6 · Tailwind CSS · Plus Jakarta Sans  
+> **Release Version:** Pre-Revenue Working Demo (Single Default Tenant, Free-Tier Infra)  
+> **Last Updated:** September 12, 2026 — reflects the codebase through commit `058defa`  
+> **Target Audience:** The founder (as a live design doc), and anyone evaluating this as a portfolio/technical artifact  
+> **Core Stack:** FastAPI (Python 3.12) · Temporal.io (optional, falls back to in-process execution) · PostgreSQL 16 (Supabase) / SQLite local fallback · Redis (Upstash, optional) · React 18 · Vite 6 · Tailwind CSS  
+> **What this document is not:** a claim of production traffic, paying customers, or compliance certification. Section 0 states plainly what is real, what is mocked, and what is missing before anything else.
+
+---
+
+## 0. Honest Status Snapshot — Read This First
+
+This section exists because the rest of the document was originally written as aspirational product marketing, with invented metrics (`1,248 leads`, `98.4% SLA`, `94% match rate`) presented as if they were live production numbers. They were never real. This section replaces that framing with what's actually true as of the latest push.
+
+**What's real and working:**
+- The core pipeline logic: inbound webhook ingestion with Redis idempotency locks, a 5-tier enrichment waterfall with real fallback code paths, MEDDPICC scoring with hard-cap rules, structured LLM output via Pydantic schemas, and a real Temporal-or-in-process execution fallback.
+- Pipeline Analytics (`/analytics` view) — as of this push, every number on that page is computed from real Postgres/Redis data (funnel counts, SLA latency buckets from real timestamps, LLM token/cost telemetry from `llm_usage_logs`, a real Redis-backed duplicate counter). It used to be hardcoded; it isn't anymore.
+- BYOK key storage — AES-256 Fernet encryption at rest, and as of this push every BYOK endpoint requires the same `X-API-Key` auth every other route uses (it didn't before — see 3.9).
+- 100 backend unit tests passing; both frontend and backend build clean.
+
+**What's mocked or stubbed by design:**
+- Apollo.io is mocked by default (`MOCK_APOLLO=true`) because the free tier is a hard 50 credits/month — this is a deliberate, documented constraint, not a bug.
+- The "6-Signal Account Radar," "7-Filter Champion Kit," and competitor battlecards are real LLM-generated content, but they've never been validated against an actual sales team's real accounts — they're synthesized from whatever public signal the enrichment waterfall can find, which for most companies is thin.
+
+**What's missing for this to be a real SaaS, not a demo:**
+- **No multi-tenant self-serve product.** There is one default tenant (`trifid_media`) baked into nearly every route's default parameter. Onboarding a second real customer means code changes, not a signup form.
+- **No URL routing.** The entire app is one page with React state (`currentView`) switching between views — there is no `/dashboard`, no `/inbound`, no shareable link, no browser back button, and a page refresh drops you back to the start. Every "Route: `/xyz`" in Section 2 below describes an in-app view, not an actual URL.
+- **No billing, no plans, no usage metering tied to a customer identity.**
+- **Runs on free-tier infra that sleeps.** Render's free plan spins the service down after inactivity; a cron-job.org keep-alive ping was added specifically to fight this (see `/ping` route), which is itself a sign this isn't provisioned like a real paying product yet.
+- **Security posture is young.** In this same push, a full audit of the BYOK feature found and fixed: zero authentication on every key-management endpoint, API keys sent as plaintext URL query parameters, a silent data-loss bug when saving a key for an unseen tenant, and a "Test Ping" button that tested a fake placeholder string instead of the real stored key. These were real, exploitable bugs that existed until today — the kind of thing that should make anyone cautious about trusting other unaudited corners of the app.
+- **No real customer has ever used this.** Every case study, company name, and dollar figure in Section 7 is an illustrative persona written to pressure-test the design, not a testimonial.
+
+**Bottom line:** this is a well-built technical prototype that demonstrates real distributed-systems and AI-orchestration craft. It is not, today, something a stranger could sign up for and trust with their sales pipeline. See Section 8 for current operational status and Section 9 for what closing that gap actually requires.
 
 ---
 
@@ -25,6 +52,7 @@
 ```
 
 ### Table of Contents
+0. [Honest Status Snapshot — Read This First](#0-honest-status-snapshot--read-this-first)
 1. [Executive Product Overview & Value Proposition](#1-executive-product-overview--value-proposition)
 2. [Complete Page-by-Page Product Guide (All 10 Pages & Every UI Element)](#2-complete-page-by-page-product-guide-all-10-pages--every-ui-element)
    - [2.1 Executive Dashboard (`/dashboard`)](#21-executive-dashboard-executivedashboardjsx)
@@ -46,6 +74,7 @@
    - [3.6 Real-Time Server-Sent Events (`SSE`) Streaming Architecture](#36-real-time-server-sent-events-sse-streaming-architecture)
    - [3.7 AES-256 Fernet Cryptographic Vault & In-Memory Decryption](#37-aes-256-fernet-cryptographic-vault--in-memory-decryption)
    - [3.8 User Authentication & Single Unified Profile Architecture (`Sales Representative`)](#38-user-authentication--single-unified-profile-architecture-sales-representative)
+   - [3.9 Recent Hardening — What Was Actually Fixed on Sept 12, 2026](#39-recent-hardening--what-was-actually-fixed-on-sept-12-2026)
 4. [AI Logic, Prompt Engineering & Mathematical Evaluation Rubrics](#4-ai-logic-prompt-engineering--mathematical-evaluation-rubrics)
    - [4.1 Inbound Qualification Prompt & Pydantic Validation](#41-inbound-qualification-prompt--pydantic-validation)
    - [4.2 Evidence-Based MEDDPICC 8-Box Diagnostic Engine](#42-evidence-based-medpicc-8-box-diagnostic-engine)
@@ -62,7 +91,8 @@
    - [Case Study C: BlueSky ColdChain Logistics (Physical Operations / Supply Chain pitching Quick-Commerce)](#case-study-c-bluesky-coldchain-logistics-physical-operations--supply-chain-pitching-quick-commerce)
    - [Case Study D: Freelance Consultant / Boutique Agency (Selling SEO/Content retainers under an agency shell)](#case-study-d-freelance-consultant--boutique-agency-selling-seocontent-retainers-under-an-agency-shell)
 8. [Current Operational Status, Testing & Ground 0 Verification](#8-current-operational-status-testing--ground-0-verification)
-9. [Future Product Roadmap & Evolution (Milestones 11+)](#9-future-product-roadmap--evolution-milestones-11)
+9. [Future Product Roadmap & What It Actually Takes to Get There](#9-future-product-roadmap--what-it-actually-takes-to-get-there)
+10. [Conclusion: Market Fit & Honest Recommendation](#10-conclusion-market-fit--honest-recommendation)
 
 ---
 
@@ -90,6 +120,8 @@ Unlike legacy CRM database wrappers or superficial sales copilot plug-ins, Whips
 | **3** | **Rep Hallucination & Split-Attention Deal Reviews** | Sales reps frequently mark deals as "Commit" based on subjective conversational vibes rather than verified economic buyer sign-off, resulting in 40%+ quarterly revenue forecast misses. | Gong/Clari/Accord hierarchy: **Diagnosis ➔ Evidence ➔ Prescribed Action**. Evaluates deals across 8 MEDDPICC boxes with strict verbatim quote rules and automatic score hard caps. |
 | **4** | **Bloated SaaS "Seat Taxes" & Data Markups** | Enterprise tools (ZoomInfo, Gong, Clari, Salesloft) charge $15,000–$50,000 in annual per-seat licensing with opaque platform markups on third-party AI APIs. | **Bring-Your-Own-Key (BYOK) AES-256 Vault**: Zero seat taxes. Runs on ₹0 default compute tiers (Gemini / Groq) and enables customers to supply their own raw API keys. |
 
+> **On the numbers above**: the industry pain points (speed-to-lead conversion loss, rep research time, seat pricing) are cited from general published research and are real, well-documented problems. The specific outcomes attributed to Whipstitch in the right-hand column — "94% verified match rate," "sub-15-minute escalations" — describe what the architecture is *designed* to achieve, not a measured result from real usage. See Section 0 for what's actually been verified.
+
 ---
 
 ### 1.3 Global vs. Indian Market Versatility
@@ -108,6 +140,8 @@ Whipstitch is engineered natively to support both fast-moving Indian commercial 
 ---
 
 ## 2. Complete Page-by-Page Product Guide (All 10 Pages & Every UI Element)
+
+> **Two honesty notes before the walkthrough:** (1) Every "**Route**: `/xyz`" label below names an in-app *view*, not a real URL — the app is a single page (`App.jsx`) that swaps components based on React state (`currentView`), with no router, no deep links, and no state persisted across a refresh. (2) Every specific number in the widget mockups below (`1,248 Leads`, `98.4%`, `84/100`) is illustrative sample data showing what a populated dashboard *would* look like — it is not a measurement of a running system with real traffic, because none exists yet.
 
 The Whipstitch user interface is organized into a clean, desktop sidebar with two primary functional tiers: **Pipeline Workspace** and **Intelligence & Logic**. Every page strictly adheres to an enterprise light-mode design system with **Plus Jakarta Sans** typography, `#F8FAFC` slate canvas, `#FFFFFF` high-contrast cards, and `#059669` Deal Green accents. There is **zero engineering jargon or mention of internal phases** anywhere on the user interface.
 
@@ -350,7 +384,8 @@ The Whipstitch user interface is organized into a clean, desktop sidebar with tw
    - In-memory volatile decryption during active workflow execution.
    - Masked key storage (`sk-...8f12`).
    - Zero customer data retention for LLM model retraining.
-   - Immediate live connection test button verifying credentials before saving.
+   - Immediate live connection test button verifying credentials before saving. As of Sept 12, 2026, testing an already-saved key decrypts and tests the *real* stored value server-side (`POST /v1/settings/api-keys/{provider}/test-stored`) instead of a placeholder string that always gave a false result.
+3. **Security fixes shipped Sept 12, 2026** (found via direct end-to-end testing, not a report): every BYOK endpoint now requires the same `X-API-Key` header every other route requires — previously it required nothing, so any caller could read, overwrite, or delete another tenant's keys by guessing a `tenant_id`. The connectivity-test endpoint no longer accepts the key as a URL query parameter (it was landing in access logs). Saving a key for a tenant that doesn't exist yet now creates the tenant row instead of silently writing an unretrievable orphan record.
 
 ---
 
@@ -372,22 +407,19 @@ The Whipstitch user interface is organized into a clean, desktop sidebar with tw
 ### 2.9 Pipeline Analytics (`PipelineAnalytics.jsx`)
 * **Route**: `/analytics`
 * **Target Personas**: Chief Revenue Officer, Head of Sales Ops, Finance Director.
-* **Core Value Proposition**: Real-time quantitative reporting tracking speed-to-lead compliance, conversion funnel drop-offs, and zero-cost cloud spend.
+* **Core Value Proposition**: Quantitative reporting tracking speed-to-lead compliance, conversion funnel drop-offs, and cloud spend.
+* **Status as of this push**: this page was fully de-hardcoded on Sept 12, 2026. Every widget below now reads from real Postgres/Redis data instead of fabricated constants, and correctly renders an honest empty/"not tracked" state when there's no real activity yet — which, for the single default tenant, is most of the time.
 
-#### Key Analytical Widgets:
+#### Key Analytical Widgets (now backed by real data):
 1. **Top 4 KPI Vital Signs**:
-   - *Lead Conversion Velocity*: Median hours from webhook submission to qualified rep alert (`1.8 hrs`, -34% faster).
-   - *3-Minute SLA Compliance*: Percentage of leads enriched, scored, and synced within 3 minutes (`99.4%`).
-   - *Monthly Platform Cloud Spend*: Actual infrastructure compute cost (`$0.00`, 100% Free Tier via Apollo credit guard + Gemini quota).
-   - *Duplicate Prevention Rate*: Rate of prevented duplicate CRM records via Redis distributed locks (`100%`).
-2. **4-Stage Inbound Conversion Funnel**:
-   - Ingested (`1,248`) ➔ Enriched (`1,248`, 100%) ➔ Qualified (`974`, 78%) ➔ Synced to CRM (`1,248`, 100%).
-3. **Data Provider Waterfall & Budget Guards**:
-   - Usage breakdown for Apollo.io (`42/50 credits used`), Google Serper (`450/2,500 queries`), Web Scraper, and Gemini Flash synthesis.
-4. **Speed-to-Lead SLA Distribution**:
-   - Latency buckets: Instant (<30s: `64%`), Fast (30s–2m: `31%`), Standard (2m–3m: `4.4%`), Delayed (>3m: `0.6%`).
-5. **AI Model & Token Telemetry**:
-   - Token volume tracked across `842.5k Gemini Flash tokens` at `$0.00 spend` with `1.2s average latency`.
+   - *Active Workflows Tracked*: real count of `execution_audit_log` rows in the last 24h.
+   - *SLA Compliance Rate*: real `1 - (sla_escalations / total_inbound)`, defaulting to 100% only when zero leads have run (vacuously true, not measured).
+   - *Monthly Platform Cloud Spend*: real Apollo credit usage from the Redis-backed `ApolloBudgetGuard`, `$0.00` because BYOK LLM cost is only charged when a tenant supplies their own key.
+   - *Duplicate Prevention Rate*: real count from a Redis counter incremented on every idempotency-lock rejection (`app/core/idempotency.py`); shows "Not tracked" instead of a fake number when Redis has no data yet.
+2. **4-Stage Inbound Conversion Funnel**: real counts from `lead_events` → `enrichment_results` → `llm_qualifications` (score ≥ 75) → `crm_sync_records`, queried live per tenant.
+3. **Data Provider Waterfall & Budget Guards**: real `provider_used` group-by counts from `enrichment_results`; Apollo's bar reflects the real credit cap, other providers' bars scale to relative real usage instead of a fixed fake percentage.
+4. **Speed-to-Lead SLA Distribution**: real latency buckets computed from `LeadEvent.created_at` → `LLMQualification.created_at` deltas per lead, not a fabricated 80/15/5/0 split.
+5. **AI Model & Token Telemetry**: real `total_tokens`, `avg_latency_seconds`, and `estimated_cost_usd` per feature, pulled from the `llm_usage_logs` table that every LLM call already writes to (`app/core/llm_router.py`).
 
 ---
 
@@ -541,6 +573,19 @@ Whipstitch implements an enterprise-grade user authentication and identity syste
 
 ---
 
+### 3.9 Recent Hardening — What Was Actually Fixed on Sept 12, 2026
+This subsection exists so the record of what was broken doesn't quietly disappear once it's fixed — a changelog, not a marketing claim.
+
+1. **Pipeline Analytics was entirely fabricated.** Every KPI, funnel percentage, SLA bucket, and token count on `/analytics` was a hardcoded constant or a made-up multiplier, regardless of the tenant's real data. Fixed by wiring the frontend to real queries against `lead_events`, `enrichment_results`, `llm_qualifications`, `crm_sync_records`, `sla_escalations`, and the (already-populated but previously unused) `llm_usage_logs` table, plus a new real Redis counter for duplicate-lock rejections.
+2. **BYOK settings had zero authentication.** `app/api/v1/settings.py` was the only `/v1/*` router with no `X-API-Key` check, while every sibling router had one. Confirmed live: a request with no auth headers at all could save, list, and delete any tenant's provider keys. Fixed by adding the same `verify_api_key` dependency used everywhere else.
+3. **API keys were sent as URL query parameters.** `POST /v1/settings/api-keys/test?provider=...&api_key=...` put the plaintext secret in the URL, which lands in server/proxy access logs and browser history. Fixed by moving it into the POST body.
+4. **Saving a key for a brand-new tenant silently orphaned it.** `save_api_key` minted a random UUID instead of creating the tenant row, so the key existed in the database but could never be found again by `list_api_keys` — a silent dead write on SQLite, and a hard foreign-key crash on real Postgres. Fixed by creating the tenant record on first save, matching what `ingest.py` already does.
+5. **"Test Ping" on an already-saved key tested a fake string.** The frontend sent the literal placeholder `'sk-existing'` instead of the real stored key, producing false "valid" results for some providers and false "invalid" results for others — regardless of whether the real key worked. Fixed by adding a server-side `test-stored` endpoint that decrypts and tests the actual stored value.
+
+All five were confirmed by directly exercising the running application (`TestClient` calls against live routes), not by static code review alone — the same standard the rest of this document should be held to going forward.
+
+---
+
 ## 4. AI Logic, Prompt Engineering & Mathematical Evaluation Rubrics
 
 Whipstitch replaces subjective sales opinions with strict mathematical qualification rubrics, verbatim evidence extraction, and tailored prompt architectures.
@@ -677,64 +722,86 @@ Whipstitch implements a fully relational, ACID-compliant database schema with fo
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Table Dictionary:
-1. **`tenants`**: Multi-tenant organizations (`id`, `name`, `domain`, `track`, `config_json`, `created_at`).
-2. **`leads`**: Inbound webhook leads (`id`, `tenant_id`, `email`, `company_name`, `lead_score`, `provider_used`, `status`, `enrichment_json`, `created_at`).
-3. **`deals`**: Commercial pipeline opportunities (`id`, `tenant_id`, `deal_name`, `company_name`, `deal_size`, `currency`, `current_stage`, `buyer_tier`, `created_at`).
-4. **`deal_diagnostics`**: Historical MEDDPICC audit runs (`id`, `deal_id`, `total_score`, `stage_recommendation`, `raw_transcript`, `summary`, `created_at`).
-5. **`medpicc_scores`**: Individual scores for each of the 8 boxes (`id`, `diagnostic_id`, `box_name`, `score`, `max_score`, `status`, `reasoning`).
-6. **`evidence_quotes`**: Verbatim customer quotes (`id`, `medpicc_score_id`, `speaker_name`, `speaker_role`, `quote_text`, `timestamp`).
-7. **`buying_committee_members`**: Stakeholders on the account (`id`, `deal_id`, `name`, `title`, `buying_role`, `engagement_status`, `email`).
-8. **`user_api_keys`**: Encrypted credentials in the BYOK vault (`id`, `tenant_id`, `provider`, `encrypted_key`, `key_hint`, `is_valid`, `updated_at`).
-9. **`users`**: User identity and authentication profiles (`id`, `tenant_id`, `email`, `hashed_password`, `full_name`, `role="sales_representative"`, `is_active`, `created_at`, `updated_at`).
-10. **`audit_logs`**: System audit trail (`id`, `tenant_id`, `event_type`, `description`, `created_at`).
+### Table Dictionary (verified against `app/db/models.py` as of this push):
+1. **`tenants`**: Multi-tenant organizations (`id`, `tenant_key`, `name`, `config` JSONB, `is_active`, `created_at`).
+2. **`users`**: Auth profiles (`id`, `tenant_id`, `email`, `hashed_password`, `full_name`, `role`, `is_active`, `created_at`, `updated_at`).
+3. **`lead_events`**: Inbound webhook leads (`id`, `tenant_id`, `idempotency_key`, `source`, `email`, `company_name`, `raw_payload` JSONB, `status`, `created_at`).
+4. **`enrichment_results`**: One row per waterfall enrichment attempt (`id`, `lead_source_type`, `lead_source_id`, `provider_used`, `raw_response` JSONB, `fallback_triggered`, `created_at`).
+5. **`llm_qualifications`**: Structured qualification output (`id`, `lead_source_type`, `lead_source_id`, `lead_score`, `fit_reasoning`, `observation_hook`, `capability_link`, `low_friction_ask`, `confidence_score`, `model_used`, `created_at`).
+6. **`crm_sync_records`**: CRM sync outcomes (`id`, `lead_source_type`, `lead_source_id`, `crm_provider`, `crm_record_id`, `sync_status`, `synced_at`).
+7. **`sla_escalations`**: SLA breach events (`id`, `lead_source_type`, `lead_source_id`, `triggered_at`, `resolved_at`, `slack_message_id`).
+8. **`outbound_prospects`**: Discovered outbound accounts (`id`, `tenant_id`, `company_name`, `domain`, `industry`, `scrape_status`, `decision_maker_name/title/linkedin`, `signals_json`, `fit_markdown`).
+9. **`user_api_keys`**: Encrypted BYOK credentials (`id`, `tenant_id`, `provider`, `encrypted_key`, `key_masked`, `is_active`, `created_at`, `updated_at`).
+10. **`llm_usage_logs`**: Real per-call LLM telemetry (`id`, `tenant_id`, `feature`, `provider`, `model`, `input_tokens`, `output_tokens`, `total_tokens`, `estimated_cost_usd`, `latency_seconds`, `is_byok`, `success`, `created_at`) — this is what now powers the AI Model & Token Telemetry widget in Pipeline Analytics.
+11. **`deals`**, **`deal_diagnostics`**, **`medpicc_scores`**, **`evidence_quotes`**: MEDDPICC diagnosis chain, one deal → many diagnostic runs → 8 box scores each → verbatim evidence quotes per score.
+12. **`meetings`**: Cached pre-call briefings and champion kits (`briefing_json`, `champion_kit_json` JSONB, so regenerating is cache-first).
+13. **`tenant_battlecards`**: Cached competitor battlecards per tenant+competitor pair (unique index enforced).
+14. **`buying_committee_members`**: Stakeholder roster per deal (`name`, `role`, `tag`, `status`, `email`, `linkedin_url`).
+15. **`execution_audit_log`**: Workflow/activity execution trail (`workflow_id`, `workflow_type`, `activity_name`, `status`, `started_at`, `completed_at`, `error_message`) — powers the "Active Workflows Tracked" KPI.
 
 ---
 
 ## 6. Complete REST API Route Catalog
 
-All routes are authenticated via `Bearer <JWT_TOKEN>` or `X-API-Key` header and versioned under `/v1/`.
+The table below was regenerated by grepping every `@router.get/post/put/delete` decorator in `app/api/` against its router's `prefix=`, not copied from an earlier draft — it reflects what actually exists in the code as of this push. Most routes require the `X-API-Key` header (`verify_api_key` dependency, defined per-router); `auth.py` routes use JWT instead.
 
-| Method | Endpoint Route | Request Body / Parameters | Description & System Action |
-|---|---|---|---|
-| `GET` | `/health` | None | System health check (database, redis, active workers). |
-| `POST` | `/v1/auth/login` | `UserLoginRequest` | Authenticates user (email/password), verifies PBKDF2 hash, issues 7-day JWT access token. |
-| `POST` | `/v1/auth/register` | `UserRegisterRequest` | Registers new user account with default `sales_representative` role. |
-| `POST` | `/v1/auth/demo-login` | None | **1-Click Instant Sign-In** as Alex Morgan (Sales Representative) with auto-seeding. |
-| `GET` | `/v1/auth/me` | Bearer Token / API Key | Returns authenticated user profile, role, and tenant binding. |
-| `POST` | `/v1/ingest` | `IngestLeadRequest` | Sub-second webhook ingestion with Redis idempotency lock. |
-| `GET` | `/v1/leads` | `tenant_id`, `search`, `status` | Lists enriched and scored inbound leads. |
-| `GET` | `/v1/leads/{id}` | `id` | Returns full firmographic profile and outreach draft. |
-| `GET` | `/v1/outbound/prospects` | `tenant_id` | Lists staged outbound prospects awaiting rep review. |
-| `POST` | `/v1/outbound/trigger` | `tenant_id`, `batch_size` | Launches outbound discovery saga (resilient fallback). |
-| `POST` | `/v1/outbound/prospects/{id}/approve` | `action` (`approve`/`reject`) | 1-click approves or rejects staged prospect. |
-| `GET` | `/v1/deals` | `tenant_id` | Lists pipeline deals with current stages and scores. |
-| `POST` | `/v1/deals` | `DealCreateRequest` | Creates a new pipeline opportunity. |
-| `POST` | `/v1/deals/{id}/diagnose` | `file` or `raw_text` | Parses transcript & runs MEDDPICC audit (resilient fallback). |
-| `GET` | `/v1/deals/{id}/scorecard` | `id` | Fetches latest 8-box scorecard, gaps, and verbatim quotes. |
-| `POST` | `/v1/deals/{id}/score-override` | `box_name`, `new_score`, `notes` | Rep manual override of diagnostic score with notes. |
-| `GET` | `/v1/deals/{id}/report/pdf` | `id` | Generates downloadable ReportLab executive PDF deal memo. |
-| `GET` | `/v1/deals/{id}/committee` | `id` | Returns buying committee power map. |
-| `GET` | `/v1/deals/{id}/committee/stream` | `role` | **Real-Time SSE Stream** tracking Apollo/Serper executive discovery. |
-| `POST` | `/v1/deals/{id}/committee` | `name`, `title`, `role`, `email` | Adds discovered executive to committee roster. |
-| `GET` | `/v1/meetings` | `tenant_id` | Lists scheduled customer meetings. |
-| `POST` | `/v1/meetings` | `MeetingCreateRequest` | Creates a new meeting record linked to an open deal. |
-| `GET` | `/v1/meetings/{id}/briefing` | `id` | Generates pre-call briefing & attendee psychographics. |
-| `GET` | `/v1/meetings/{id}/champion-kit` | `id` | Generates the 7-Filter Champion Internal Selling Brief. |
-| `GET` | `/v1/battlecards` | None | Lists verified competitor playbooks. |
-| `GET` | `/v1/battlecards/{id}` | `id` | Returns 5-stage blackboard results, kill-shots, objections. |
-| `POST` | `/v1/battlecards/generate` | `competitor_name`, `buyer_company` | Synthesizes custom competitor battlecard using AI. |
-| `GET` | `/v1/signals` | None | Returns active account trigger radar events. |
-| `GET` | `/v1/settings/byok` | `tenant_id` | Lists configured BYOK key providers with masked hints. |
-| `POST` | `/v1/settings/byok` | `provider`, `raw_key` | Encrypts with AES-256 and vaults credential. |
-| `POST` | `/v1/settings/byok/test` | `provider`, `raw_key` | Runs immediate live connection test against provider API. |
-| `POST` | `/v1/tenants/{id}/config` | `TenantConfig` | Updates ICP boundaries, scoring weights, and SLA timers. |
-| `GET` | `/v1/analytics/summary` | `tenant_id` | Returns high-level KPI vital signs and cloud spend. |
-| `GET` | `/v1/analytics/leads-over-time` | `tenant_id`, `days` | Returns daily series data for velocity chart. |
+| Method | Endpoint Route | Description |
+|---|---|---|
+| `GET` | `/ping` | Minimal keep-alive body for uptime pingers (added because cron-job.org's size guard chokes on anything bigger). |
+| `GET` | `/health` | Postgres/Redis/Temporal liveness check; degrades to "degraded" (200) rather than "unhealthy" when Redis/Temporal are absent. |
+| `POST` | `/v1/auth/register` | Creates a user account, hashes password (PBKDF2-HMAC-SHA256), issues a JWT. |
+| `POST` | `/v1/auth/login` | Authenticates and issues a JWT. |
+| `POST` | `/v1/auth/demo-login` | Issues a JWT for the seeded demo user without a password — evaluation convenience, not a real auth path. |
+| `GET` | `/v1/auth/me` | Returns the authenticated user's profile. |
+| `POST` | `/v1/auth/onboarding` | Updates onboarding-related profile fields. |
+| `POST` | `/v1/events/ingest` | Webhook ingestion with the Redis idempotency lock; starts `WhipstitchLeadWorkflow` on Temporal, or nothing if Temporal is unreachable (fire-and-forget, logged as a warning). |
+| `GET` | `/v1/events/{event_id}/status` | Polls ingestion/enrichment/qualification status for one lead. |
+| `GET` | `/v1/leads` | Lists inbound leads with search/status filters. |
+| `GET` | `/v1/leads/{lead_id}` | Full lead detail. |
+| `POST` | `/v1/outbound/trigger` | Launches an outbound discovery batch. |
+| `GET` | `/v1/outbound/prospects` | Lists staged outbound prospects. |
+| `POST` | `/v1/outbound/prospects/{prospect_id}/approve` | Approves/rejects a staged prospect. |
+| `POST` | `/v1/deals` | Creates a deal. |
+| `GET` | `/v1/deals` | Lists deals for a tenant. |
+| `POST` | `/v1/deals/{deal_id}/transcript` | Attaches a call transcript to a deal. |
+| `POST` | `/v1/deals/{deal_id}/diagnose` | Runs the MEDDPICC diagnostic against the attached transcript. |
+| `GET` | `/v1/deals/{deal_id}/medpicc` | Latest 8-box scorecard with evidence quotes. |
+| `GET` | `/v1/deals/{deal_id}/medpicc/pdf` | Downloadable PDF deal memo (ReportLab). |
+| `GET` | `/v1/deals/{deal_id}/follow-up` | Generated follow-up email draft. |
+| `GET` | `/v1/deals/{deal_id}/committee` | Buying committee roster. |
+| `POST` | `/v1/deals/{deal_id}/committee` | Adds a committee member. |
+| `POST` | `/v1/deals/{deal_id}/committee/auto-find` | Kicks off Apollo/Serper executive discovery for a missing role. |
+| `GET` | `/v1/deals/{deal_id}/committee/stream` | Server-Sent-Events stream of discovery progress. |
+| `GET` | `/v1/meetings` | Lists meetings. |
+| `POST` | `/v1/meetings` | Creates a meeting. |
+| `POST` | `/v1/meetings/{meeting_id}/prep` | Triggers briefing/champion-kit generation. |
+| `GET` | `/v1/meetings/{meeting_id}/briefing` | Pre-call briefing (cached in `meetings.briefing_json`). |
+| `GET` | `/v1/meetings/{meeting_id}/champion-kit` | 7-Filter Champion Kit (cached in `meetings.champion_kit_json`). |
+| `GET` | `/v1/battlecards` | Lists cached competitor battlecards. |
+| `GET` | `/v1/battlecards/{competitor_id}` | One battlecard's full detail. |
+| `POST` | `/v1/battlecards/generate` | Generates one competitor battlecard via the 5-stage blackboard orchestrator. |
+| `POST` | `/v1/battlecards/auto-generate` | Batch-generates battlecards for multiple competitors. |
+| `GET` | `/v1/signals` | Lists active account signals. |
+| `POST` | `/v1/signals/scan` | Runs a signal scan. |
+| `POST` | `/v1/signals/ingest` | Records a new signal. |
+| `GET` | `/v1/signals/account/{account_name}/score` | Account opportunity score from accumulated signals. |
+| `POST` | `/v1/settings/api-keys` | Encrypts and stores/updates a BYOK provider key. **Requires `X-API-Key` as of Sept 12, 2026 — previously open.** |
+| `GET` | `/v1/settings/api-keys` | Lists masked keys for a tenant. Same auth fix applies. |
+| `DELETE` | `/v1/settings/api-keys/{provider}` | Revokes a key. Same auth fix applies. |
+| `POST` | `/v1/settings/api-keys/test` | Tests a freshly-typed key. Body-based as of this push, was a URL query param before (leaked into logs). |
+| `POST` | `/v1/settings/api-keys/{provider}/test-stored` | **New this push.** Decrypts and tests the already-saved key server-side, so "Test Ping" reflects reality instead of a placeholder string. |
+| `GET` | `/v1/tenants/{tenant_id}/config` | Reads ICP/scoring/SLA config. |
+| `POST` | `/v1/tenants/{tenant_id}/config` | Updates ICP/scoring/SLA config. |
+| `GET` | `/v1/analytics/summary` | KPI summary — real DB aggregates. |
+| `GET` | `/v1/analytics/leads-over-time` | Daily time series for the velocity chart. |
+| `GET` | `/v1/analytics/pipeline` | Funnel, provider/model breakdowns, SLA buckets, duplicate count, token telemetry — the endpoint that powers Pipeline Analytics, fully real as of this push. |
+| `GET` | `/v1/analytics/audit-logs` | Recent workflow/activity execution log entries. |
 
 ---
 
 ## 7. Real-World Business Use Cases & Step-by-Step User Journeys
+
+> **These are illustrative personas, not customers.** Trifid Media, FinFlow/ApexPay, BlueSky ColdChain, Nykaa, Zepto, and every named individual below are hypothetical scenarios written to pressure-test whether the product's design decisions hold up against plausible real workflows. Whipstitch has no paying customers and none of these interactions have happened. Treat the specific numbers (scores, dollar amounts, latencies) as design targets illustrated with invented data, not measured outcomes.
 
 ---
 
@@ -846,107 +913,79 @@ All routes are authenticated via `Bearer <JWT_TOKEN>` or `X-API-Key` header and 
 
 ## 8. Current Operational Status, Testing & Ground 0 Verification
 
-Whipstitch has undergone rigorous automated testing and end-to-end browser verification.
+This section states what was actually run and observed, on the date stated, with no rounding up. It replaces an earlier version of this section that referenced a stale test count and a browser-recording artifact from an unrelated local tool path that no longer applies to this repo.
 
-### 8.1 Automated Test Suite Verification
+### 8.1 Automated Test Suite — verified Sept 12, 2026
 ```bash
-# Executed in workspace root (Python 3.12)
-python -m pytest tests/unit tests/integration -q
-============================== 81 passed, 6 warnings in 15.77s ==============================
+python -m pytest tests/unit -q
+============================== 100 passed, 7 warnings in 12.39s ==============================
 ```
-- **100% Pass Rate (81 / 81 Tests Passing)**:
-  - Unit Tests: `test_analytics_api.py`, `test_apollo_budget.py`, `test_battlecard_blackboard.py`, `test_byok_vault.py`, `test_champion_kit_filters.py`, `test_committee_api.py`, `test_crm_sync.py`, `test_document_parser.py`, `test_enrichment_waterfall.py`, `test_hinglish_diagnostic.py`, `test_idempotency.py`, `test_ingest_payload.py`, `test_leads_api.py`, `test_llm_qualification.py`, `test_llm_router.py`, `test_medpicc_rubrics.py`, `test_rate_limiter.py`, `test_serper_profiling.py`, `test_signal_agent.py`, `test_signal_extraction.py`, `test_sla_escalation.py`, `test_tenant_config.py`.
-  - Integration Tests: `test_battlecards_api.py`, `test_deals_api.py`, `test_meetings_api.py`, `test_outbound_pipeline.py`.
+All 100 unit tests pass, including the BYOK vault crypto round-trip tests. This is unit-level coverage with mocked dependencies — there is no `tests/integration` suite currently exercised against a live Postgres/Redis/Temporal stack (`docker-compose.test.yml` exists but wasn't run as part of verifying this document).
 
-### 8.2 Frontend Production Build
+### 8.2 Frontend Production Build — verified Sept 12, 2026
 ```bash
 npm run build
-✓ built in 4.73s
-dist/index.html                   0.85 kB
-dist/assets/index-DkL3mO2-.css   42.18 kB
-dist/assets/index-CpK3nN1-.js   412.60 kB
+✓ built in ~6s
+dist/index.html                   1.72 kB
+dist/assets/index-*.css          57.25 kB
+dist/assets/index-*.js          735.20 kB   (216.85 kB gzip)
 ```
-- **0 Compile Errors**: Zero ESLint or JSX syntax warnings.
+Builds clean. Vite flags the JS bundle as larger than its 500 kB warning threshold — not broken, but worth code-splitting before this ships to real users on slower connections.
 
-### 8.3 Ground 0 Browser Session Recording
-- Full autonomous browser walkthrough recorded in artifact:  
-  [`ground_zero_test_1788855629132.webp`](file:///C:/Users/ASUS/.gemini/antigravity-ide/brain/c09dc82e-499b-4f82-a7e2-425d51212650/ground_zero_test_1788855629132.webp).
-- Verified live on `http://localhost:5173`:
-  - Active tenant: `Trifid Media India · Prod`.
-  - Inbound webhook intake and lead drawer inspection.
-  - Outbound prospecting batch trigger and approval flow.
-  - Real-time SSE Buying Committee discovery streaming.
-  - Meeting Prep attendee dossier generation and 7-Filter Champion Kit export.
-  - Competitor Battlecard tabs, kill-shots, and live trigger radar hooks.
+### 8.3 Live Endpoint Verification — verified Sept 12, 2026
+The deployed instance at `whipstitch.onrender.com` was queried directly:
+- `GET /ping` → `200 OK`, 2-byte body, confirming the app itself is healthy.
+- The keep-alive cron job on cron-job.org reports "Failed (output too large)" on every run anyway — not because the app is broken, but because Render's Cloudflare edge serves the response as `Transfer-Encoding: chunked` with no `Content-Length`, which appears to trip cron-job.org's size guard regardless of actual body size. The HTTP request still reaches the origin and still resets Render's spin-down timer; only cron-job.org's own dashboard reporting is wrong.
+
+### 8.4 Deployment Reality
+- Single Render free-tier web service, Supabase Postgres, Upstash Redis (optional — the app degrades to in-process/in-memory behavior without it, per `app/db/session.py`'s `ResilientSessionFactory` and the in-memory idempotency fallback noted in `app/api/health.py`).
+- `MOCK_APOLLO=true` by default; real Apollo credits are never spent outside a deliberate demo-recording session.
+- One tenant (`trifid_media`) exists in practice. Every route's `tenant_id` defaults to it. There is no onboarding flow that provisions a second tenant end-to-end without a developer touching code or the database directly.
+- No CI pipeline currently runs these tests automatically on push — they were run manually to produce the numbers above.
 
 ---
 
-## 9. Future Product Roadmap & Evolution (Milestones 11+)
+## 9. Future Product Roadmap & What It Actually Takes to Get There
 
-Whipstitch's architecture is modular, scalable, and built for rapid enterprise expansion. The following major product milestones represent the official development roadmap:
+The previous version of this roadmap (WhatsApp voice agents, global customs trade radar, autonomous contract negotiation) described a Series-A company's feature backlog, not the next steps for a single-tenant demo with no customers. It's replaced below with a roadmap ordered by what actually blocks the next milestone, not by what sounds impressive.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 WHIPSTITCH OFFICIAL PRODUCT ROADMAP                              │
-├───────────────────────────────────┬──────────────────────────────────┬───────────────────────────┤
-│ MILESTONE 11: CONVERSATIONAL AGENT│ MILESTONE 12: DEEP CRM ECOSYSTEM │ MILESTONE 13: COMPLIANCE  │
-│ • WhatsApp Business API Inbound   │ • Native Salesforce 2-Way Sync   │ • SOC2 Type II Framework  │
-│   Drip & Rescheduling             │ • Zoho CRM & HubSpot Custom      │ • Granular RBAC (SDR/AE/  │
-│ • Autonomous Voice AI Follow-Up   │   Pipeline Objects               │   Manager Permissions)    │
-│   (Twilio / ElevenLabs)           │ • Automated Call Recording Sync  │ • Custom Enterprise VPC   │
-├───────────────────────────────────┼──────────────────────────────────┼───────────────────────────┤
-│ MILESTONE 14: GLOBAL TRADE RADAR  │ MILESTONE 15: AGENTIC NEGOTIATION│ MILESTONE 16: REP QUOTAS  │
-│ • Import/Export Bill of Lading    │ • Autonomous SOW Contract Audit  │ • Rep Win-Rate Heatmaps   │
-│   Displacement Intelligence       │ • Redline Risk Highlighting      │ • Automated Deal Coaching │
-│ • Overseas Supplier Replacement   │ • Margin Preservation Playbooks  │   Scorecards & Leaderboard│
-└───────────────────────────────────┴──────────────────────────────────┴───────────────────────────┘
-```
+### Phase 1 — Make it safe to show a real stranger (before anything else)
+This is the gap between "portfolio demo" and "thing I'd let someone sign up for."
+- **Real multi-tenancy.** Remove the `tenant_id: str = "trifid_media"` default scattered across every route; require it to come from the authenticated user's session, not a client-supplied string anyone can change to read another tenant's data (the BYOK bug fixed this push is exactly this class of problem — it's worth auditing every other router for the same pattern).
+- **A real signup flow** that provisions a tenant, seeds sane defaults, and doesn't require touching the database by hand.
+- **URL routing** (`react-router` or equivalent) so views are shareable, bookmarkable, and survive a refresh.
+- **CI on push** — the 100 passing tests mean nothing if nobody runs them before merging.
+- **A second, independent security pass** on every router, given that the BYOK auth gap sat there undetected. It's the kind of bug that's usually not alone.
 
-### Detailed Roadmap Milestone Specifications:
+### Phase 2 — Prove it works on one real account
+- Get one real design partner (even the founder's own outbound motion) running through the full flow with real Apollo credits, real HubSpot sync, real call transcripts — not seeded/mock data.
+- Instrument what actually happens when the enrichment waterfall's later tiers (Crawl4AI, LLM synthesis) fire for real, since those are the ones no test currently exercises against live websites.
+- Decide, from real usage, whether the 6-Signal Radar and 7-Filter Champion Kit produce outreach a rep would actually send, or generic AI-shaped filler — this can't be answered from code review.
 
-#### Milestone 11: WhatsApp Business API & Autonomous Voice AI Follow-Up
-* **Business Rationale**: In Indian and APAC commercial markets, 75%+ of B2B deal velocity occurs over WhatsApp rather than email.
-* **Technical Deliverables**:
-  - Official WhatsApp Business Cloud API integration (`/v1/integrations/whatsapp`).
-  - Automated WhatsApp drip sequences triggered when inbound webhooks arrive or deals stall at *Rule 6.2 (Unverified Budget Owner)*.
-  - Autonomous Voice AI follow-up caller using **Twilio Voice + ElevenLabs + Groq Llama 3.3 70B** to contact unworked inbound leads in under 60 seconds and qualify meeting availability.
-
-#### Milestone 12: Deep Multi-CRM Bidirectional Synchronization
-* **Business Rationale**: Enterprise customers demand continuous, zero-drift synchronization with legacy CRM instances without manual CSV exports.
-* **Technical Deliverables**:
-![alt text](image.png)  - Native **Salesforce Enterprise REST API** integration supporting custom opportunity stages, contact roles, and MEDDPICC custom fields.
-  - **Zoho CRM** integration for Indian mid-market customers.
-  - Automated bidirectional transcript synchronization from Zoom, Google Meet, and Microsoft Teams cloud recordings.
-
-#### Milestone 13: Enterprise Multi-Tenant RBAC & SOC2 Type II Certification
-* **Business Rationale**: Unlocks sales to Fortune 500 enterprises, banks, and healthcare companies that require strict data segregation.
-* **Technical Deliverables**:
-  - JWT / OAuth2 Single Sign-On (SSO) with Okta, Google Workspace, and Microsoft Azure AD.
-  - Granular Role-Based Access Control (RBAC):
-    * *SDR Role*: View inbound leads, trigger outbound batches, stage prospects.
-    * *Account Executive Role*: Access Deal Health, run diagnostics, view meeting prep dossiers.
-    * *Sales Director / RevOps Role*: Full access to ICP Studio, BYOK Vault, and Pipeline Analytics.
-  - SOC2 Type II automated compliance logging and immutable audit logs.
-
-#### Milestone 14: Global Trade Customs & Bill of Lading Displacement Radar
-* **Business Rationale**: Enables physical supply chain, logistics, and manufacturing clients to displace incumbent overseas vendors.
-* **Technical Deliverables**:
-  - Vector similarity search over public customs import records (US Customs, Indian Port Authority).
-  - Automatically identifies domestic buyers importing high-tariff goods and triggers personalized displacement battlecards to supply chain directors.
-
-#### Milestone 15: Autonomous SOW Contract Redline & Margin Guardian
-* **Business Rationale**: Agencies and IT service providers frequently suffer from "scope creep" and lose 15–20% of deal margins during contract negotiations.
-* **Technical Deliverables**:
-  - Autonomous document auditor parsing `.docx` and `.pdf` SOW contracts against agreed MEDDPICC Decision Criteria.
-  - Automatically flags unfavorable payment terms (e.g. replacing 50% advance with Net-90 days) and generates executive counter-proposals to preserve gross margins.
+### Phase 3 — Only after 1 and 2 are true
+The original roadmap's ideas aren't bad, they're just premature. In rough order of plausibility once there's a real usage base to justify them:
+- Deeper CRM sync (Salesforce, not just HubSpot) — justified once a real customer asks for it, not before.
+- WhatsApp-based inbound follow-up — genuinely a strong fit for the Indian SMB/agency segment this product's own case studies target, but Twilio/WhatsApp API costs money per message the moment it's real, which conflicts with the zero-cost-compute pitch until there's revenue to fund it.
+- SOC2 / enterprise RBAC / SSO — only relevant once an enterprise buyer is actually in a sales cycle asking for it; building it speculatively is exactly the kind of premature abstraction this project's own engineering culture (see `CLAUDE.md`) argues against.
+- Voice AI follow-up, customs-data trade radar, autonomous contract redlining — interesting ideas, zero evidence of demand yet. Revisit only if Phase 2 surfaces a real customer asking for them.
 
 ---
 
-## 10. Conclusion & Architectural Summary
+## 10. Conclusion: Market Fit & Honest Recommendation
 
-Whipstitch represents a paradigm shift in revenue operations. By marrying **durable distributed orchestration (Temporal.io)**, **resilient dual-mode database storage (PostgreSQL/SQLite)**, **zero-cost compute economics (Gemini/Groq)**, and **anti-sentiment MEDDPICC evaluation**, Whipstitch transforms pipeline management from an exercise in rep speculation into an objective, mathematical science.
+### What this actually is
+A well-engineered technical prototype of a revenue-intelligence platform. The distributed-systems work is real: Temporal sagas with a genuine in-process fallback, a resilient Postgres/SQLite database layer, a multi-LLM cascade with cost-aware BYOK routing, Redis-backed idempotency and rate limiting, and (as of this push) analytics that reflect actual data instead of invented numbers. That's a legitimately strong demonstration of backend engineering judgment — the kind of thing worth showing an engineering interviewer or a technical co-founder.
 
-Whether deployed by an independent growth consultant pitching ₹28 Lakh retainers to quick-commerce unicorns or an enterprise revenue organization managing $120k ARR SaaS contracts, Whipstitch guarantees lightning speed-to-lead, verified buying committee alignment, and predictable closed-won revenue.
+### What it is not, yet
+A SaaS a stranger could find, sign up for, and trust. There's no self-serve onboarding, no billing, no URL routing, no proven multi-tenant isolation, and — until today — an unauthenticated endpoint that let anyone delete anyone else's API keys. Zero real customers have ever used it. Every dollar figure, percentage, and customer name in Sections 1 and 7 is illustrative, not measured.
+
+### Where it could plausibly fit in the market
+- **Not a Gong/Clari/ZoomInfo competitor today.** Those companies win on breadth of integrations, enterprise trust (SOC2, SSO, uptime SLAs), and sales motion — none of which Whipstitch has, and matching them is a multi-year, well-funded effort.
+- **The more honest wedge is the bottom of the market Gong/Clari ignore**: solo consultants and 2–10 person agencies (the exact personas in Section 7's case studies) who currently use nothing, or a spreadsheet, because $15–50k/year tools are absurd at their scale. A free-compute, BYOK, single-operator tool that does inbound triage + deal-health diagnosis + call prep is a real gap — *if* it can survive one real user's first week without the kind of bug this session found.
+- **India-specific product decisions (Hinglish transcript handling, INR formatting, founder-led-SMB buyer tiers) are a genuine, underserved angle** — most Western sales tools don't bother with this, and it's a legitimate differentiator if the target market really is Indian agencies/SMBs rather than global enterprise.
+
+### Honest recommendation
+Don't scale the feature list further. Everything in Phase 3 of the roadmap above should stay parked. The single highest-leverage next move is Phase 1: get this safe and coherent enough that one real, non-technical stranger could use it unsupervised for a week without hitting a wall or a security hole — then decide, from what actually happens, whether Phase 2 is worth pursuing at all.
 
 ---
 *End of Whipstitch Master Executive Product Guide.*
